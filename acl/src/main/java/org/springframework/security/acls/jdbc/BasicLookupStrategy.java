@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.sql.DataSource;
 
@@ -348,10 +349,9 @@ public final class BasicLookupStrategy implements LookupStrategy {
 
                         // No need to check for nulls, as guaranteed non-null by ObjectIdentity.getIdentifier() interface contract
                         String identifier = oid.getIdentifier().toString();
-                        long id = (Long.valueOf(identifier)).longValue();
 
                         // Inject values
-                        ps.setLong((2 * i) + 1, id);
+                        ps.setString((2 * i) + 1, identifier);
                         ps.setString((2 * i) + 2, type);
                         i++;
                     }
@@ -545,8 +545,18 @@ public final class BasicLookupStrategy implements LookupStrategy {
 
             if (acl == null) {
                 // Make an AclImpl and pop it into the Map
+
+                // If the Java type is a String, check to see if it could be a UUID.
+                Serializable identifier = (Serializable) rs.getObject("object_id_identity");
+                if (identifier.getClass().isAssignableFrom(String.class)) {
+                    try {
+                        identifier = UUID.fromString((String) identifier);
+                    } catch (IllegalArgumentException e) {
+                        // The String is not a UUID
+                    }
+                }
                 ObjectIdentity objectIdentity = new ObjectIdentityImpl(rs.getString("class"),
-                        Long.valueOf(rs.getLong("object_id_identity")));
+                        identifier);
 
                 Acl parentAcl = null;
                 long parentAclId = rs.getLong("parent_object");
