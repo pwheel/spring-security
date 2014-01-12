@@ -26,10 +26,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import javax.sql.DataSource;
 
+import org.springframework.core.convert.ConversionService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementSetter;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -91,7 +91,8 @@ public final class BasicLookupStrategy implements LookupStrategy {
         + "acl_sid.sid as ace_sid,  "
         + "acli_sid.principal as acl_principal, "
         + "acli_sid.sid as acl_sid, "
-        + "acl_class.class "
+        + "acl_class.class, "
+        + "acl_class.class_id_type  "
         + "from acl_object_identity "
         + "left join acl_sid acli_sid on acli_sid.id = acl_object_identity.owner_sid "
         + "left join acl_class on acl_class.id = acl_object_identity.object_id_class   "
@@ -112,6 +113,7 @@ public final class BasicLookupStrategy implements LookupStrategy {
     private PermissionFactory permissionFactory = new DefaultPermissionFactory();
     private final AclCache aclCache;
     private final PermissionGrantingStrategy grantingStrategy;
+    private ConversionService conversionService = null;
     private final JdbcTemplate jdbcTemplate;
     private int batchSize = 50;
 
@@ -153,7 +155,16 @@ public final class BasicLookupStrategy implements LookupStrategy {
         this.grantingStrategy = grantingStrategy;
         fieldAces.setAccessible(true);
         fieldAcl.setAccessible(true);
+        this.conversionService = conversionService;
+    }
 
+    public BasicLookupStrategy(DataSource dataSource, AclCache aclCache,
+                               AclAuthorizationStrategy aclAuthorizationStrategy,
+                               PermissionGrantingStrategy grantingStrategy,
+                               ConversionService conversionService) {
+        this(dataSource, aclCache, aclAuthorizationStrategy, grantingStrategy);
+        Assert.notNull(conversionService, "conversionService required");
+        this.conversionService = conversionService;
     }
 
     //~ Methods ========================================================================================================
@@ -546,14 +557,12 @@ public final class BasicLookupStrategy implements LookupStrategy {
             if (acl == null) {
                 // Make an AclImpl and pop it into the Map
 
-                // If the Java type is a String, check to see if it could be a UUID.
+                // If the Java type is a String, check to see if we can convert it to the target id type, e.g. UUID.
                 Serializable identifier = (Serializable) rs.getObject("object_id_identity");
-                if (identifier.getClass().isAssignableFrom(String.class)) {
-                    try {
-                        identifier = UUID.fromString((String) identifier);
-                    } catch (IllegalArgumentException e) {
-                        // The String is not a UUID
-                    }
+                if (isString(identifier) && hasValidClassIdType(rs)
+                        && canConvertFromStringTo(classIdTypeFrom(rs))) {
+
+                    identifier = convertFromStringTo((String) identifier, classIdTypeFrom(rs));
                 }
                 ObjectIdentity objectIdentity = new ObjectIdentityImpl(rs.getString("class"),
                         identifier);
@@ -610,6 +619,42 @@ public final class BasicLookupStrategy implements LookupStrategy {
                 }
             }
         }
+    }
+
+    private boolean hasValidClassIdType(ResultSet resultSet) throws SQLException {
+        boolean hasClassIdType = false;
+        try {
+            hasClassIdType = classIdTypeFrom(resultSet) != null;
+        } catch (SQLException e) {
+        }
+        return hasClassIdType;
+    }
+
+    private <T  extends Serializable> Class<T> classIdTypeFrom(ResultSet resultSet) throws SQLException {
+        return classIdTypeFrom(resultSet.getString("class_id_type"));
+    }
+
+    private <T extends Serializable> Class<T> classIdTypeFrom(String className) {
+        Class targetType = null;
+        if (className != null) {
+            try {
+                targetType = Class.forName(className);
+            } catch (ClassNotFoundException e) {
+            }
+        }
+        return targetType;
+    }
+
+    private <T> boolean canConvertFromStringTo(Class<T> targetType) {
+        return conversionService != null && conversionService.canConvert(String.class, targetType);
+    }
+
+    private <T extends Serializable> T convertFromStringTo(String identifier, Class<T> targetType) {
+        return conversionService.convert(identifier, targetType);
+    }
+
+    private boolean isString(Serializable object) {
+        return object.getClass().isAssignableFrom(String.class);
     }
 
     private class StubAclParent implements Acl {

@@ -15,6 +15,7 @@ create table acl_sid(
 create table acl_class(
     id bigserial not null primary key,
     class varchar(100) not null,
+    class_id_type varchar(100),
     constraint unique_uk_2 unique(class)
 );
 
