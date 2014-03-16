@@ -16,6 +16,7 @@ buildscript {
 
 apply plugin: 'sonar-runner'
 apply plugin: 'base'
+apply plugin: 'maven'
 
 description = 'Spring Security'
 
@@ -92,6 +93,19 @@ configure(javaProjects) {
     apply from: "$rootDir/gradle/javaprojects.gradle"
     apply from: "$rootDir/gradle/release-checks.gradle"
     apply from: "$rootDir/gradle/maven-deployment.gradle"
+
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                repository(url: 'http://foals:8082/nexus/content/repositories/releases') {
+                    authentication(userName: 'jenkins', password: 'Jenk1ns');
+                }
+                snapshotRepository(url: 'http://foals:8082/nexus/content/repositories/snapshots') {
+                    authentication(userName: 'jenkins', password: 'Jenk1ns');
+                }
+            }
+        }
+    }
 }
 
 configure(coreModuleProjects) {
@@ -189,4 +203,17 @@ artifacts {
 
 task wrapper(type: Wrapper) {
     gradleVersion = '1.10-rc-2'
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: 'http://foals:8082/nexus/content/repositories/releases') {
+                authentication(userName: 'jenkins', password: 'Jenk1ns');
+            }
+            snapshotRepository(url: 'http://foals:8082/nexus/content/repositories/snapshots') {
+                authentication(userName: 'jenkins', password: 'Jenk1ns');
+            }
+        }
+    }
 }
