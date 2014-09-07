@@ -60,6 +60,8 @@ ext.sampleProjects = subprojects.findAll { project -> project.name.startsWith('s
 ext.itestProjects = subprojects.findAll { project -> project.name.startsWith('itest') }
 ext.coreModuleProjects = javaProjects - sampleProjects - itestProjects
 ext.aspectjProjects = [project(':spring-security-aspects'), project(':spring-security-samples-aspectj-xml')]
+ext.cloudbeesUsername = System.properties['cloudbeesUsername']
+ext.cloudbeesPassword = System.properties['cloudbeesPassword']
 
 configure(allprojects - javaProjects) {
     task afterEclipseImport {
@@ -87,6 +89,17 @@ configure(subprojects - coreModuleProjects - project(':spring-security-samples-m
     }
 }
 
+configurations {
+    deployerJars
+}
+
+dependencies {
+    // your dependencies
+
+    // to use WebDav protocol on upload
+    deployerJars 'org.apache.maven.wagon:wagon-webdav-jackrabbit:2.6'
+}
+
 configure(javaProjects) {
     ext.TOMCAT_GRADLE = "$rootDir/gradle/tomcat.gradle"
     ext.WAR_SAMPLE_GRADLE = "$rootDir/gradle/war-sample.gradle"
@@ -94,15 +107,19 @@ configure(javaProjects) {
     apply from: "$rootDir/gradle/release-checks.gradle"
     apply from: "$rootDir/gradle/maven-deployment.gradle"
 
+    dependencies {
+        deployerJars 'org.apache.maven.wagon:wagon-webdav-jackrabbit:2.6'
+    }
+
     uploadArchives {
         repositories {
             mavenDeployer {
-                repository(url: 'http://foals:8082/nexus/content/repositories/releases') {
-                    authentication(userName: 'jenkins', password: 'Jenk1ns');
+                configuration = configurations.deployerJars
+                configureAuth = {
+                    authentication(userName: cloudbeesUsername, password: cloudbeesPassword)
                 }
-                snapshotRepository(url: 'http://foals:8082/nexus/content/repositories/snapshots') {
-                    authentication(userName: 'jenkins', password: 'Jenk1ns');
-                }
+                repository(url: 'dav:https://repository-pwheel.forge.cloudbees.com/release/', configureAuth)
+                snapshotRepository(url: 'dav:https://repository-pwheel.forge.cloudbees.com/snapshot/', configureAuth)
             }
         }
     }
@@ -208,12 +225,12 @@ task wrapper(type: Wrapper) {
 uploadArchives {
     repositories {
         mavenDeployer {
-            repository(url: 'http://foals:8082/nexus/content/repositories/releases') {
-                authentication(userName: 'jenkins', password: 'Jenk1ns');
+            configuration = configurations.deployerJars
+            configureAuth = {
+                authentication(userName: cloudbeesUsername, password: cloudbeesPassword)
             }
-            snapshotRepository(url: 'http://foals:8082/nexus/content/repositories/snapshots') {
-                authentication(userName: 'jenkins', password: 'Jenk1ns');
-            }
+            repository(url: 'dav:https://repository-pwheel.forge.cloudbees.com/release/', configureAuth)
+            snapshotRepository(url: 'dav:https://repository-pwheel.forge.cloudbees.com/snapshot/', configureAuth)
         }
     }
 }
