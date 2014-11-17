@@ -1,5 +1,6 @@
 def String[] modules = [
     'core',
+    'data',
     'remoting',
     'web',
     'ldap',
@@ -9,7 +10,9 @@ def String[] modules = [
     'openid',
     'taglibs',
     'aspects',
-    'crypto'
+    'crypto',
+    'messaging',
+    'test'
 ]
 
 def String[] samples = [
@@ -17,6 +20,8 @@ def String[] samples = [
     'contacts-xml',
     'openid-xml',
     'aspectj-xml',
+    'aspectj-jc',
+    'data-jc',
     'gae-xml',
     'dms-xml',
     'preauth-xml',

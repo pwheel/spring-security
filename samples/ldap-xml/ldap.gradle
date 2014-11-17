@@ -12,10 +12,15 @@ configurations {
 }
 
 dependencies {
+    compile project(':spring-security-taglibs'),
+            jstlDependencies
 
     runtime project(':spring-security-web'),
             project(':spring-security-config'),
             project(':spring-security-ldap'),
             "org.slf4j:jcl-over-slf4j:$slf4jVersion",
-            "ch.qos.logback:logback-classic:$logbackVersion"
+            "ch.qos.logback:logback-classic:$logbackVersion",
+            apachedsDependencies
+
+    integrationTestCompile gebDependencies
 }

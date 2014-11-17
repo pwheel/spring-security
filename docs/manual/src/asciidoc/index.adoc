@@ -126,7 +126,7 @@ Today Spring Security enjoys a strong and active open source community. There ar
 
 [[release-numbering]]
 === Release Numbering
-It is useful to understand how Spring Security release numbers work, as it will help you identify the effort (or lack thereof) involved in migrating to future releases of the project. Each release uses a standard triplet of integers: MAJOR.MINOR.PATCH. The intent is that MAJOR versions are incompatible, large-scale upgrades of the API. MINOR versions should largely retain source and binary compatibility with older minor versions, thought there may be some design changes and incompatible udates. PATCH level should be perfectly compatible, forwards and backwards, with the possible exception of changes which are to fix bugs and defects.
+It is useful to understand how Spring Security release numbers work, as it will help you identify the effort (or lack thereof) involved in migrating to future releases of the project. Each release uses a standard triplet of integers: MAJOR.MINOR.PATCH. The intent is that MAJOR versions are incompatible, large-scale upgrades of the API. MINOR versions should largely retain source and binary compatibility with older minor versions, thought there may be some design changes and incompatible updates. PATCH level should be perfectly compatible, forwards and backwards, with the possible exception of changes which are to fix bugs and defects.
 
 The extent to which you are affected by changes will depend on how tightly integrated your code is. If you are doing a lot of customization you are more likely to be affected than if you are using a simple namespace configuration.
 
@@ -198,9 +198,9 @@ If you are using a milestone or release candidate version, you will need to ensu
 ----
 
 [[maven-bom]]
-===== Using Spring 4 and Maven
+===== Spring Framework Bom
 
-Spring Security builds against Spring Framework {spring-version}, but is also tested against Spring Framework {spring4-version}. This means you can use Spring Security {spring-security-version} with Spring Framework {spring4-version}. The problem that many users will have is that Spring Security's transitive dependencies resolve Spring Framework {spring-version} causing all sorts of strange classpath problems.
+Spring Security builds against Spring Framework {spring-version}, but should work with 4.0.x. The problem that many users will have is that Spring Security's transitive dependencies resolve Spring Framework {spring-version} which can cause strange classpath problems.
 
 One (tedious) way to circumvent this issue would be to include all the Spring Framework modules in a http://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html#Dependency_Management[<dependencyManagement>] section of your pom. An alternative approach is to include the `spring-framework-bom` within your `<dependencyManagement>` section of your `pom.xml` as shown below:
 
@@ -213,7 +213,7 @@ One (tedious) way to circumvent this issue would be to include all the Spring Fr
       <dependency>
         <groupId>org.springframework</groupId>
         <artifactId>spring-framework-bom</artifactId>
-        <version>{spring4-version}</version>
+        <version>{spring-version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -221,7 +221,7 @@ One (tedious) way to circumvent this issue would be to include all the Spring Fr
 </dependencyManagement>
 ----
 
-This will ensure that all the transitive dependencies of Spring Security use the Spring {spring4-version} modules.
+This will ensure that all the transitive dependencies of Spring Security use the Spring {spring-version} modules.
 
 NOTE: This approach uses Maven's "bill of materials" (BOM) concept and is only available in Maven 2.0.9+. For additional details about how dependencies are resolved refer to http://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html[Maven's Introduction to the Dependency Mechanism documentation].
 
@@ -274,9 +274,9 @@ repositories {
 ----
 
 [[gradle-resolutionStrategy]]
-===== Using Spring 4 and Gradle
+===== Using Spring 4.0.x and Gradle
 
-By default Gradle will use the newest version when resolving transitive versions. This means that often times no additional work is necessary when running Spring Security {spring-security-version} with Spring Framework {spring4-version}. However, at times there can be issues that come up so it is best to mitigate this using http://www.gradle.org/docs/current/dsl/org.gradle.api.artifacts.ResolutionStrategy.html[Gradle's ResolutionStrategy] as shown below:
+By default Gradle will use the newest version when resolving transitive versions. This means that often times no additional work is necessary when running Spring Security {spring-security-version} with Spring Framework {spring-version}. However, at times there can be issues that come up so it is best to mitigate this using http://www.gradle.org/docs/current/dsl/org.gradle.api.artifacts.ResolutionStrategy.html[Gradle's ResolutionStrategy] as shown below:
 
 .build.gradle
 [source,groovy]
@@ -285,13 +285,13 @@ By default Gradle will use the newest version when resolving transitive versions
 configurations.all {
     resolutionStrategy.eachDependency { DependencyResolveDetails details ->
         if (details.requested.group == 'org.springframework') {
-            details.useVersion '{spring4-version}'
+            details.useVersion '{spring-version}'
         }
     }
 }
 ----
 
-This will ensure that all the transitive dependencies of Spring Security use the Spring {spring4-version} modules.
+This will ensure that all the transitive dependencies of Spring Security use the Spring {spring-version} modules.
 
 NOTE: This example uses Gradle 1.9, but may need modifications to work in future versions of Gradle since this is an incubating feature within Gradle.
 
@@ -430,6 +430,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
 }
 ----
+
+NOTE: The name of the configureGlobal method is not important. However, it is important to only configure AuthenticationManagerBuilder in a class annotated with either `@EnableWebSecurity`, `@EnableWebMvcSecurity`, `@EnableGlobalMethodSecurity`, or `@EnableGlobalAuthentication`. Doing otherwise has unpredictable results.
 
 There really isn't much to this configuration, but it does a lot. You can find a summary of the features below:
 
@@ -689,7 +691,7 @@ public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception 
 
 ==== LDAP Authentication
 
-You can find the updates to suppport LDAP based authentication. The https://github.com/spring-projects/spring-security/tree/master/samples/lda-jc[ldap-jc sample] provides a complete example of using LDAP based authentication.
+You can find the updates to suppport LDAP based authentication. The https://github.com/spring-projects/spring-security/tree/master/samples/ldap-jc[ldap-jc sample] provides a complete example of using LDAP based authentication.
 
 [source,java]
 ----
@@ -807,7 +809,7 @@ public class MultiHttpSecurityConfig {
 [[jc-method]]
 === Method Security
 
-From version 2.0 onwards Spring Security has improved support substantially for adding security to your service layer methods. It provides support for JSR-250 annotation security as well as the framework’s original @Secured annotation. From 3.0 you can also make use of new <<el-access,expression-based annotations>>. You can apply security to a single bean, using the intercept-methods element to decorate the bean declaration, or you can secure multiple beans across the entire service layer using the AspectJ style pointcuts.
+From version 2.0 onwards Spring Security has improved support substantially for adding security to your service layer methods. It provides support for JSR-250 annotation security as well as the framework���s original @Secured annotation. From 3.0 you can also make use of new <<el-access,expression-based annotations>>. You can apply security to a single bean, using the intercept-methods element to decorate the bean declaration, or you can secure multiple beans across the entire service layer using the AspectJ style pointcuts.
 
 ==== EnableGlobalMethodSecurity
 
@@ -822,7 +824,7 @@ public class MethodSecurityConfig {
 }
 ----
 
-Adding an annotation to a method (on an class or interface) would then limit the access to that method accordingly. Spring Security’s native annotation support defines a set of attributes for the method. These will be passed to the AccessDecisionManager for it to make the actual decision:
+Adding an annotation to a method (on an class or interface) would then limit the access to that method accordingly. Spring Security���s native annotation support defines a set of attributes for the method. These will be passed to the AccessDecisionManager for it to make the actual decision:
 
 [source,java]
 ----
@@ -850,7 +852,7 @@ public class MethodSecurityConfig {
 }
 ----
 
-These are standards-based and allow simple role-based constraints to be applied but do not have the power Spring Security’s native annotations. To use the new expression-based syntax, you would use
+These are standards-based and allow simple role-based constraints to be applied but do not have the power Spring Security���s native annotations. To use the new expression-based syntax, you would use
 
 [source,java]
 ----
@@ -1449,7 +1451,7 @@ The filters, aliases and namespace elements/attributes which create the filters 
 | `http/x509`
 
 |  PRE_AUTH_FILTER
-| `AstractPreAuthenticatedProcessingFilter` Subclasses
+| `AbstractPreAuthenticatedProcessingFilter` Subclasses
 | N/A
 
 |  CAS_FILTER
@@ -2076,7 +2078,7 @@ Each supported secure object type has its own interceptor class, which is a subc
 
 [[tech-intro-config-attributes]]
 ===== What are Configuration Attributes?
-A "configuration attribute" can be thought of as a String that has special meaning to the classes used by`AbstractSecurityInterceptor`. They are represented by the interface `ConfigAttribute` within the framework. They may be simple role names or have more complex meaning, depending on the how sophisticated the `AccessDecisionManager` implementation is. The `AbstractSecurityInterceptor` is configured with a `SecurityMetadataSource` which it uses to look up the attributes for a secure object. Usually this configuration will be hidden from the user. Configuration attributes will be entered as annotations on secured methods or as access attributes on secured URLs. For example, when we saw something like `<intercept-url pattern='/secure/**' access='ROLE_A,ROLE_B'/>` in the namespace introduction, this is saying that the configuration attributes `ROLE_A` and `ROLE_B` apply to web requests matching the given pattern. In practice, with the default `AccessDecisionManager` configuration, this means that anyone who has a `GrantedAuthority` matching either of these two attributes will be allowed access. Strictly speaking though, they are just attributes and the interpretation is dependent on the `AccessDecisionManager` implementation. The use of the prefix `ROLE_` is a marker to indicate that these attributes are roles and should be consumed by Spring Security's`RoleVoter`. This is only relevant when a voter-based `AccessDecisionManager` is in use. We'll see how the `AccessDecisionManager` is implemented in the <<authz-arch,authorization chapter>>.
+A "configuration attribute" can be thought of as a String that has special meaning to the classes used by `AbstractSecurityInterceptor`. They are represented by the interface `ConfigAttribute` within the framework. They may be simple role names or have more complex meaning, depending on the how sophisticated the `AccessDecisionManager` implementation is. The `AbstractSecurityInterceptor` is configured with a `SecurityMetadataSource` which it uses to look up the attributes for a secure object. Usually this configuration will be hidden from the user. Configuration attributes will be entered as annotations on secured methods or as access attributes on secured URLs. For example, when we saw something like `<intercept-url pattern='/secure/**' access='ROLE_A,ROLE_B'/>` in the namespace introduction, this is saying that the configuration attributes `ROLE_A` and `ROLE_B` apply to web requests matching the given pattern. In practice, with the default `AccessDecisionManager` configuration, this means that anyone who has a `GrantedAuthority` matching either of these two attributes will be allowed access. Strictly speaking though, they are just attributes and the interpretation is dependent on the `AccessDecisionManager` implementation. The use of the prefix `ROLE_` is a marker to indicate that these attributes are roles and should be consumed by Spring Security's`RoleVoter`. This is only relevant when a voter-based `AccessDecisionManager` is in use. We'll see how the `AccessDecisionManager` is implemented in the <<authz-arch,authorization chapter>>.
 
 
 ===== RunAsManager
@@ -2934,7 +2936,7 @@ The beans required in an application context to enable remember-me services are 
 </bean>
 
 <bean id="rememberMeAuthenticationProvider" class=
- "org.springframework.security.authentication.rememberme.RememberMeAuthenticationProvider">
+ "org.springframework.security.authentication.RememberMeAuthenticationProvider">
   <property name="key" value="springRocks"/>
 </bean>
 ----
@@ -3122,8 +3124,7 @@ public class WebSecurityConfig extends
 
 [[csrf-include-csrf-token-form]]
 ===== Form Submissions
-The last step is to ensure that you include the CSRF token in all PATCH, POST, PUT, and DELETE methods. This can be done using the _csrf request attribute to obtain the current CsrfToken. An example of doing this with a JSP is shown below:
-
+The last step is to ensure that you include the CSRF token in all PATCH, POST, PUT, and DELETE methods. One way to approach this is to use the `_csrf` request attribute to obtain the current `CsrfToken`. An example of doing this with a JSP is shown below:
 
 [source,xml]
 ----
@@ -3138,9 +3139,11 @@ The last step is to ensure that you include the CSRF token in all PATCH, POST, P
 </form>
 ----
 
+An easier approach is to use <<the-csrfInput-tag,the csrfInput tag>> from the Spring Security JSP tag library.
+
 [NOTE]
 ====
-If you are using Spring MVC <form:form> tag or http://www.thymeleaf.org/whatsnew21.html#reqdata[Thymeleaf 2.1+], the `CsrfToken` is automatically included for you using the `CsrfRequestDataValueProcessor`.
+If you are using Spring MVC `<form:form>` tag or http://www.thymeleaf.org/whatsnew21.html#reqdata[Thymeleaf 2.1+], and you replace `@EnableWebSecurity` with `@EnableWebMvcSecurity`, the `CsrfToken` is automatically included for you (using the `CsrfRequestDataValueProcessor`).
 ====
 
 [[csrf-include-csrf-token-ajax]]
@@ -3159,6 +3162,8 @@ If you using JSON, then it is not possible to submit the CSRF token within an HT
   </head>
   <!-- ... -->
 ----
+
+Instead of manually creating the meta tags, you can use the simpler <<the-csrfmetatags-tag,csrfMetaTags tag>> from the Spring Security JSP tag library.
 
 You can then include the token within all your Ajax requests. If you were using jQuery, this could be done with the following:
 
@@ -3244,7 +3249,7 @@ There are two options to using CSRF protection with multipart/form-data. Each op
 
 [NOTE]
 ====
-More information about using multipart forms with Spring can be found within the http://docs.spring.io/spring/docs/3.2.x/spring-framework-reference/html/mvc.html#mvc-multipart[17.10 Spring's multipart (file upload) support] section of the Spring reference.
+Before you integrate Spring Security's CSRF protection with multipart file upload, ensure that you can upload without the CSRF protection first. More information about using multipart forms with Spring can be found within the http://docs.spring.io/spring/docs/3.2.x/spring-framework-reference/html/mvc.html#mvc-multipart[17.10 Spring's multipart (file upload) support] section of the Spring reference and the http://docs.spring.io/spring/docs/3.2.x/javadoc-api/org/springframework/web/multipart/support/MultipartFilter.html[MultipartFilter javadoc].
 ====
 
 [[csrf-multipartfilter]]
@@ -3278,13 +3283,12 @@ To ensure `MultipartFilter` is specified before the Spring Security filter with 
 </filter>
 <filter-mapping>
     <filter-name>MultipartFilter</filter-name>
-    <servlet-name>/*</servlet-name>
+    <url-pattern>/*</url-pattern>
 </filter-mapping>
 <filter-mapping>
     <filter-name>springSecurityFilterChain</filter-name>
     <url-pattern>/*</url-pattern>
 </filter-mapping>
-
 ----
 
 [[csrf-include-csrf-token-in-action]]
@@ -3562,7 +3566,7 @@ public class WebSecurityConfig extends
 
 [[headers-frame-options]]
 ==== X-Frame-Options
-Allowing your website to be added to a frame can be a security issue. For example, using clever CSS styling users could be tricked into clicking on something that they were not intending (http://www.youtube.com/watch?v=3mk0RySeNsU[video demo]). For example, a user that is logged into their bank might click a button that grants access to other users. This sort of attack is known ashttp://en.wikipedia.org/wiki/Clickjacking[Clickjacking].
+Allowing your website to be added to a frame can be a security issue. For example, using clever CSS styling users could be tricked into clicking on something that they were not intending (http://www.youtube.com/watch?v=3mk0RySeNsU[video demo]). For example, a user that is logged into their bank might click a button that grants access to other users. This sort of attack is known as http://en.wikipedia.org/wiki/Clickjacking[Clickjacking].
 
 [NOTE]
 ====
@@ -5033,6 +5037,88 @@ The permissions are passed to the `PermissionFactory` defined in the application
 This tag also supports the `var` attribute, in the same way as the `authorize` tag.
 
 
+=== The csrfInput Tag
+If CSRF protection is enabled, this tag inserts a hidden form field with the correct name and value for the CSRF protection token. If CSRF protection is not enabled, this tag outputs nothing.
+
+Normally Spring Security automatically inserts a CSRF form field for any `<form:form>` tags you use, but if for some reason you cannot use `<form:form>`, `csrfInput` is a handy replacement.
+
+You should place this tag within an HTML `<form></form>` block, where you would normally place other input fields. Do NOT place this tag within a Spring `<form:form></form:form>` block—Spring Security handles Spring forms automatically.
+
+[source,xml]
+----
+    <form method="post" action="/do/something">
+        <sec:csrfInput />
+        Name:<br />
+        <input type="text" name="name" />
+        ...
+    </form>
+----
+
+
+=== The csrfMetaTags Tag
+If CSRF protection is enabled, this tag inserts meta tags containing the CSRF protection token form field and header names and CSRF protection token value. These meta tags are useful for employing CSRF protection within JavaScript in your applications.
+
+You should place `csrfMetaTags` within an HTML `<head></head>` block, where you would normally place other meta tags. Once you use this tag, you can access the form field name, header name, and token value easily using JavaScript. JQuery is used in this example to make the task easier.
+
+[source,xml]
+----
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>CSRF Protected JavaScript Page</title>
+        <meta name="description" content="This is the description for this page" />
+        <sec:csrfMetaTags />
+        <script type="text/javascript" language="javascript">
+
+            var csrfParameter = $("meta[name='_csrf_parameter']").attr("content");
+            var csrfHeader = $("meta[name='_csrf_header']").attr("content");
+            var csrfToken = $("meta[name='_csrf']").attr("content");
+
+            // using XMLHttpRequest directly to send an x-www-form-urlencoded request
+            var ajax = new XMLHttpRequest();
+            ajax.open("POST", "http://www.example.org/do/something", true);
+            ajax.setRequestHeader("Content-Type", "application/x-www-form-urlencoded data");
+            ajax.send(csrfParameter + "=" + csrfToken + "&name=John&...");
+
+            // using XMLHttpRequest directly to send a non-x-www-form-urlencoded request
+            var ajax = new XMLHttpRequest();
+            ajax.open("POST", "http://www.example.org/do/something", true);
+            ajax.setRequestHeader(csrfHeader, csrfToken);
+            ajax.send("...");
+
+            // using JQuery to send an x-www-form-urlencoded request
+            var data = {};
+            data[csrfParameter] = csrfToken;
+            data["name"] = "John";
+            ...
+            $.ajax({
+                url: "http://www.example.org/do/something",
+                type: "POST",
+                data: data,
+                ...
+            });
+
+            // using JQuery to send a non-x-www-form-urlencoded request
+            var headers = {};
+            headers[csrfHeader] = csrfToken;
+            $.ajax({
+                url: "http://www.example.org/do/something",
+                type: "POST",
+                headers: headers,
+                ...
+            });
+
+        <script>
+    </head>
+    <body>
+        ...
+    </body>
+</html>
+----
+
+If CSRF protection is not enabled, `csrfMetaTags` outputs nothing.
+
+
 [[jaas]]
 == Java Authentication and Authorization Service (JAAS) Provider
 
@@ -5473,7 +5559,9 @@ The next step is to specify `serviceProperties` and the `authenticationDetailsSo
   <property name="serviceProperties" ref="serviceProperties"/>
   <property name="authenticationDetailsSource">
     <bean class=
-      "org.springframework.security.cas.web.authentication.ServiceAuthenticationDetailsSource"/>
+      "org.springframework.security.cas.web.authentication.ServiceAuthenticationDetailsSource">
+      <constructor-arg ref="serviceProperties"/>
+    </bean>
   </property>
 </bean>
 ----
@@ -6028,7 +6116,7 @@ DDL statements are given for the HSQLDB database. You can use these as a guideli
 
 
 === User Schema
-The standard JDBC implementation of the `UserDetailsService` (`JdbcDaoImpl`) requires tables to load the password, account status (enabled or disabled) and a list of authorities (roles) for the user.
+The standard JDBC implementation of the `UserDetailsService` (`JdbcDaoImpl`) requires tables to load the password, account status (enabled or disabled) and a list of authorities (roles) for the user. You will need to adjust this schema to match the database dialect you are using.
 
 [source]
 ----
@@ -6036,51 +6124,57 @@ The standard JDBC implementation of the `UserDetailsService` (`JdbcDaoImpl`) req
 create table users(
     username varchar_ignorecase(50) not null primary key,
     password varchar_ignorecase(50) not null,
-    enabled boolean not null);
+    enabled boolean not null
+);
 
 create table authorities (
     username varchar_ignorecase(50) not null,
     authority varchar_ignorecase(50) not null,
-    constraint fk_authorities_users foreign key(username) references users(username));
-    create unique index ix_auth_username on authorities (username,authority);
+    constraint fk_authorities_users foreign key(username) references users(username)
+);
+create unique index ix_auth_username on authorities (username,authority);
 ----
 
 ==== Group Authorities
-Spring Security 2.0 introduced support for group authorities in `JdbcDaoImpl`. The table structure if groups are enabled is as follows:
+Spring Security 2.0 introduced support for group authorities in `JdbcDaoImpl`. The table structure if groups are enabled is as follows. You will need to adjust this schema to match the database dialect you are using.
 
 [source]
 ----
 
 create table groups (
-  id bigint generated by default as identity(start with 0) primary key,
-  group_name varchar_ignorecase(50) not null);
+    id bigint generated by default as identity(start with 0) primary key,
+    group_name varchar_ignorecase(50) not null
+);
 
 create table group_authorities (
-  group_id bigint not null,
-  authority varchar(50) not null,
-  constraint fk_group_authorities_group foreign key(group_id) references groups(id));
+    group_id bigint not null,
+    authority varchar(50) not null,
+    constraint fk_group_authorities_group foreign key(group_id) references groups(id)
+);
 
 create table group_members (
-  id bigint generated by default as identity(start with 0) primary key,
-  username varchar(50) not null,
-  group_id bigint not null,
-  constraint fk_group_members_group foreign key(group_id) references groups(id));
+    id bigint generated by default as identity(start with 0) primary key,
+    username varchar(50) not null,
+    group_id bigint not null,
+    constraint fk_group_members_group foreign key(group_id) references groups(id)
+);
 ----
 
 Remember that these tables are only required if you are using the provided JDBC `UserDetailsService` implementation. If you write your own  or choose to implement `AuthenticationProvider` without a `UserDetailsService`, then you have complete freedom over how you store the data, as long as the interface contract is satisfied.
 
 
 === Persistent Login (Remember-Me) Schema
-This table is used to store data used by the more secure <<remember-me-persistent-token,persistent token>> remember-me implementation. If you are using `JdbcTokenRepositoryImpl` either directly or through the namespace, then you will need this table.
+This table is used to store data used by the more secure <<remember-me-persistent-token,persistent token>> remember-me implementation. If you are using `JdbcTokenRepositoryImpl` either directly or through the namespace, then you will need this table. Remember to adjust this schema to match the database dialect you are using.
 
 [source]
 ----
 
 create table persistent_logins (
-  username varchar(64) not null,
-  series varchar(64) primary key,
-  token varchar(64) not null,
-  last_used timestamp not null);
+    username varchar(64) not null,
+    series varchar(64) primary key,
+    token varchar(64) not null,
+    last_used timestamp not null
+);
 
 ----
 
@@ -6095,91 +6189,263 @@ There are four tables used by the Spring Security <<domain-acls,ACL>> implementa
 
 It is assumed that the database will auto-generate the primary keys for each of the identities. The `JdbcMutableAclService` has to be able to retrieve these when it has created a new row in the `acl_sid` or `acl_class` tables. It has two properties which define the SQL needed to retrieve these values `classIdentityQuery` and `sidIdentityQuery`. Both of these default to `call identity()`
 
-==== Hypersonic SQL
+The ACL artifact JAR contains files for creating the ACL schema in HyperSQL (HSQLDB), PostgreSQL, MySQL/MariaDB, Microsoft SQL Server, and Oracle Database. These schemas are also demonstrated in the following sections.
+
+==== HyperSQL
 The default schema works with the embedded HSQLDB database that is used in unit tests within the framework.
 
-[source]
+[source,ddl]
 ----
 
-create table acl_sid (
-  id bigint generated by default as identity(start with 100) not null primary key,
-  principal boolean not null,
-  sid varchar_ignorecase(100) not null,
-  constraint unique_uk_1 unique(sid,principal) );
+create table acl_sid(
+    id bigint generated by default as identity(start with 100) not null primary key,
+    principal boolean not null,
+    sid varchar_ignorecase(100) not null,
+    constraint unique_uk_1 unique(sid,principal)
+);
 
-create table acl_class (
-  id bigint generated by default as identity(start with 100) not null primary key,
-  class varchar_ignorecase(100) not null,
-  constraint unique_uk_2 unique(class) );
+create table acl_class(
+    id bigint generated by default as identity(start with 100) not null primary key,
+    class varchar_ignorecase(100) not null,
+    constraint unique_uk_2 unique(class)
+);
 
-create table acl_object_identity (
-  id bigint generated by default as identity(start with 100) not null primary key,
-  object_id_class bigint not null,
-  object_id_identity bigint not null,
-  parent_object bigint,
-  owner_sid bigint not null,
-  entries_inheriting boolean not null,
-  constraint unique_uk_3 unique(object_id_class,object_id_identity),
-  constraint foreign_fk_1 foreign key(parent_object)references acl_object_identity(id),
-  constraint foreign_fk_2 foreign key(object_id_class)references acl_class(id),
-  constraint foreign_fk_3 foreign key(owner_sid)references acl_sid(id) );
+create table acl_object_identity(
+    id bigint generated by default as identity(start with 100) not null primary key,
+    object_id_class bigint not null,
+    object_id_identity bigint not null,
+    parent_object bigint,
+    owner_sid bigint,
+    entries_inheriting boolean not null,
+    constraint unique_uk_3 unique(object_id_class,object_id_identity),
+    constraint foreign_fk_1 foreign key(parent_object)references acl_object_identity(id),
+    constraint foreign_fk_2 foreign key(object_id_class)references acl_class(id),
+    constraint foreign_fk_3 foreign key(owner_sid)references acl_sid(id)
+);
 
-create table acl_entry (
-  id bigint generated by default as identity(start with 100) not null primary key,
-  acl_object_identity bigint not null,ace_order int not null,sid bigint not null,
-  mask integer not null,granting boolean not null,audit_success boolean not null,
-  audit_failure boolean not null,
-  constraint unique_uk_4 unique(acl_object_identity,ace_order),
-  constraint foreign_fk_4 foreign key(acl_object_identity)
-      references acl_object_identity(id),
-  constraint foreign_fk_5 foreign key(sid) references acl_sid(id) );
+create table acl_entry(
+    id bigint generated by default as identity(start with 100) not null primary key,
+    acl_object_identity bigint not null,
+    ace_order int not null,
+    sid bigint not null,
+    mask integer not null,
+    granting boolean not null,
+    audit_success boolean not null,
+    audit_failure boolean not null,
+    constraint unique_uk_4 unique(acl_object_identity,ace_order),
+    constraint foreign_fk_4 foreign key(acl_object_identity) references acl_object_identity(id),
+    constraint foreign_fk_5 foreign key(sid) references acl_sid(id)
+);
 ----
 
 ==== PostgreSQL
 [source,ddl]
 ----
 create table acl_sid(
-  id bigserial not null primary key,
-  principal boolean not null,
-  sid varchar(100) not null,
-  constraint unique_uk_1 unique(sid,principal));
+    id bigserial not null primary key,
+    principal boolean not null,
+    sid varchar(100) not null,
+    constraint unique_uk_1 unique(sid,principal)
+);
 
 create table acl_class(
-  id bigserial not null primary key,
-  class varchar(100) not null,
-  constraint unique_uk_2 unique(class));
+    id bigserial not null primary key,
+    class varchar(100) not null,
+    constraint unique_uk_2 unique(class)
+);
 
 create table acl_object_identity(
-  id bigserial primary key,
-  object_id_class bigint not null,
-  object_id_identity bigint not null,
-  parent_object bigint,
-  owner_sid bigint,
-  entries_inheriting boolean not null,
-  constraint unique_uk_3 unique(object_id_class,object_id_identity),
-  constraint foreign_fk_1 foreign key(parent_object) references acl_object_identity(id),
-  constraint foreign_fk_2 foreign key(object_id_class) references acl_class(id),
-  constraint foreign_fk_3 foreign key(owner_sid) references acl_sid(id));
+    id bigserial primary key,
+    object_id_class bigint not null,
+    object_id_identity bigint not null,
+    parent_object bigint,
+    owner_sid bigint,
+    entries_inheriting boolean not null,
+    constraint unique_uk_3 unique(object_id_class,object_id_identity),
+    constraint foreign_fk_1 foreign key(parent_object)references acl_object_identity(id),
+    constraint foreign_fk_2 foreign key(object_id_class)references acl_class(id),
+    constraint foreign_fk_3 foreign key(owner_sid)references acl_sid(id)
+);
 
 create table acl_entry(
-  id bigserial primary key,
-  acl_object_identity bigint not null,
-  ace_order int not null,
-  sid bigint not null,
-  mask integer not null,
-  granting boolean not null,
-  audit_success boolean not null,
-  audit_failure boolean not null,
-  constraint unique_uk_4 unique(acl_object_identity,ace_order),
-  constraint foreign_fk_4 foreign key(acl_object_identity)
-      references acl_object_identity(id),
-  constraint foreign_fk_5 foreign key(sid) references acl_sid(id));
+    id bigserial primary key,
+    acl_object_identity bigint not null,
+    ace_order int not null,
+    sid bigint not null,
+    mask integer not null,
+    granting boolean not null,
+    audit_success boolean not null,
+    audit_failure boolean not null,
+    constraint unique_uk_4 unique(acl_object_identity,ace_order),
+    constraint foreign_fk_4 foreign key(acl_object_identity) references acl_object_identity(id),
+    constraint foreign_fk_5 foreign key(sid) references acl_sid(id)
+);
 ----
 
 You will have to set the `classIdentityQuery` and `sidIdentityQuery` properties of `JdbcMutableAclService` to the following values, respectively:
 
 * `select currval(pg_get_serial_sequence('acl_class', 'id'))`
 * `select currval(pg_get_serial_sequence('acl_sid', 'id'))`
+
+==== MySQL and MariaDB
+[source,ddl]
+----
+CREATE TABLE acl_sid (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    principal BOOLEAN NOT NULL,
+    sid VARCHAR(100) NOT NULL,
+    UNIQUE KEY unique_acl_sid (sid, principal)
+) ENGINE=InnoDB;
+
+CREATE TABLE acl_class (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    class VARCHAR(100) NOT NULL,
+    UNIQUE KEY uk_acl_class (class)
+) ENGINE=InnoDB;
+
+CREATE TABLE acl_object_identity (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    object_id_class BIGINT UNSIGNED NOT NULL,
+    object_id_identity BIGINT NOT NULL,
+    parent_object BIGINT UNSIGNED,
+    owner_sid BIGINT UNSIGNED,
+    entries_inheriting BOOLEAN NOT NULL,
+    UNIQUE KEY uk_acl_object_identity (object_id_class, object_id_identity),
+    CONSTRAINT fk_acl_object_identity_parent FOREIGN KEY (parent_object) REFERENCES acl_object_identity (id),
+    CONSTRAINT fk_acl_object_identity_class FOREIGN KEY (object_id_class) REFERENCES acl_class (id),
+    CONSTRAINT fk_acl_object_identity_owner FOREIGN KEY (owner_sid) REFERENCES acl_sid (id)
+) ENGINE=InnoDB;
+
+CREATE TABLE acl_entry (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    acl_object_identity BIGINT UNSIGNED NOT NULL,
+    ace_order INTEGER NOT NULL,
+    sid BIGINT UNSIGNED NOT NULL,
+    mask INTEGER UNSIGNED NOT NULL,
+    granting BOOLEAN NOT NULL,
+    audit_success BOOLEAN NOT NULL,
+    audit_failure BOOLEAN NOT NULL,
+    UNIQUE KEY unique_acl_entry (acl_object_identity, ace_order),
+    CONSTRAINT fk_acl_entry_object FOREIGN KEY (acl_object_identity) REFERENCES acl_object_identity (id),
+    CONSTRAINT fk_acl_entry_acl FOREIGN KEY (sid) REFERENCES acl_sid (id)
+) ENGINE=InnoDB;
+----
+
+==== Microsoft SQL Server
+[source,ddl]
+----
+CREATE TABLE acl_sid (
+    id BIGINT NOT NULL IDENTITY PRIMARY KEY,
+    principal BIT NOT NULL,
+    sid VARCHAR(100) NOT NULL,
+    CONSTRAINT unique_acl_sid UNIQUE (sid, principal)
+);
+
+CREATE TABLE acl_class (
+    id BIGINT NOT NULL IDENTITY PRIMARY KEY,
+    class VARCHAR(100) NOT NULL,
+    CONSTRAINT uk_acl_class UNIQUE (class)
+);
+
+CREATE TABLE acl_object_identity (
+    id BIGINT NOT NULL IDENTITY PRIMARY KEY,
+    object_id_class BIGINT NOT NULL,
+    object_id_identity BIGINT NOT NULL,
+    parent_object BIGINT,
+    owner_sid BIGINT,
+    entries_inheriting BIT NOT NULL,
+    CONSTRAINT uk_acl_object_identity UNIQUE (object_id_class, object_id_identity),
+    CONSTRAINT fk_acl_object_identity_parent FOREIGN KEY (parent_object) REFERENCES acl_object_identity (id),
+    CONSTRAINT fk_acl_object_identity_class FOREIGN KEY (object_id_class) REFERENCES acl_class (id),
+    CONSTRAINT fk_acl_object_identity_owner FOREIGN KEY (owner_sid) REFERENCES acl_sid (id)
+);
+
+CREATE TABLE acl_entry (
+    id BIGINT NOT NULL IDENTITY PRIMARY KEY,
+    acl_object_identity BIGINT NOT NULL,
+    ace_order INTEGER NOT NULL,
+    sid BIGINT NOT NULL,
+    mask INTEGER NOT NULL,
+    granting BIT NOT NULL,
+    audit_success BIT NOT NULL,
+    audit_failure BIT NOT NULL,
+    CONSTRAINT unique_acl_entry UNIQUE (acl_object_identity, ace_order),
+    CONSTRAINT fk_acl_entry_object FOREIGN KEY (acl_object_identity) REFERENCES acl_object_identity (id),
+    CONSTRAINT fk_acl_entry_acl FOREIGN KEY (sid) REFERENCES acl_sid (id)
+);
+----
+
+==== Oracle Database
+[source,ddl]
+----
+CREATE TABLE acl_sid (
+    id NUMBER(38) NOT NULL PRIMARY KEY,
+    principal NUMBER(1) NOT NULL CHECK (principal in (0, 1)),
+    sid NVARCHAR2(100) NOT NULL,
+    CONSTRAINT unique_acl_sid UNIQUE (sid, principal)
+);
+CREATE SEQUENCE acl_sid_sequence START WITH 1 INCREMENT BY 1 NOMAXVALUE;
+CREATE OR REPLACE TRIGGER acl_sid_id_trigger
+    BEFORE INSERT ON acl_sid
+    FOR EACH ROW
+BEGIN
+    SELECT acl_sid_sequence.nextval INTO :new.id FROM dual;
+END;
+
+CREATE TABLE acl_class (
+    id NUMBER(38) NOT NULL PRIMARY KEY,
+    class NVARCHAR2(100) NOT NULL,
+    CONSTRAINT uk_acl_class UNIQUE (class)
+);
+CREATE SEQUENCE acl_class_sequence START WITH 1 INCREMENT BY 1 NOMAXVALUE;
+CREATE OR REPLACE TRIGGER acl_class_id_trigger
+    BEFORE INSERT ON acl_class
+    FOR EACH ROW
+BEGIN
+    SELECT acl_class_sequence.nextval INTO :new.id FROM dual;
+END;
+
+CREATE TABLE acl_object_identity (
+    id NUMBER(38) NOT NULL PRIMARY KEY,
+    object_id_class NUMBER(38) NOT NULL,
+    object_id_identity NUMBER(38) NOT NULL,
+    parent_object NUMBER(38),
+    owner_sid NUMBER(38),
+    entries_inheriting NUMBER(1) NOT NULL CHECK (entries_inheriting in (0, 1)),
+    CONSTRAINT uk_acl_object_identity UNIQUE (object_id_class, object_id_identity),
+    CONSTRAINT fk_acl_object_identity_parent FOREIGN KEY (parent_object) REFERENCES acl_object_identity (id),
+    CONSTRAINT fk_acl_object_identity_class FOREIGN KEY (object_id_class) REFERENCES acl_class (id),
+    CONSTRAINT fk_acl_object_identity_owner FOREIGN KEY (owner_sid) REFERENCES acl_sid (id)
+);
+CREATE SEQUENCE acl_object_identity_sequence START WITH 1 INCREMENT BY 1 NOMAXVALUE;
+CREATE OR REPLACE TRIGGER acl_object_identity_id_trigger
+    BEFORE INSERT ON acl_object_identity
+    FOR EACH ROW
+BEGIN
+    SELECT acl_object_identity_sequence.nextval INTO :new.id FROM dual;
+END;
+
+CREATE TABLE acl_entry (
+    id NUMBER(38) NOT NULL PRIMARY KEY,
+    acl_object_identity NUMBER(38) NOT NULL,
+    ace_order INTEGER NOT NULL,
+    sid NUMBER(38) NOT NULL,
+    mask INTEGER NOT NULL,
+    granting NUMBER(1) NOT NULL CHECK (granting in (0, 1)),
+    audit_success NUMBER(1) NOT NULL CHECK (audit_success in (0, 1)),
+    audit_failure NUMBER(1) NOT NULL CHECK (audit_failure in (0, 1)),
+    CONSTRAINT unique_acl_entry UNIQUE (acl_object_identity, ace_order),
+    CONSTRAINT fk_acl_entry_object FOREIGN KEY (acl_object_identity) REFERENCES acl_object_identity (id),
+    CONSTRAINT fk_acl_entry_acl FOREIGN KEY (sid) REFERENCES acl_sid (id)
+);
+CREATE SEQUENCE acl_entry_sequence START WITH 1 INCREMENT BY 1 NOMAXVALUE;
+CREATE OR REPLACE TRIGGER acl_entry_id_trigger
+    BEFORE INSERT ON acl_entry
+    FOR EACH ROW
+BEGIN
+    SELECT acl_entry_sequence.nextval INTO :new.id FROM dual;
+END;
+----
 
 [[appendix-namespace]]
 == The Security Namespace

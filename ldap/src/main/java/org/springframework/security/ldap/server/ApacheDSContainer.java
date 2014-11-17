@@ -18,6 +18,7 @@ package org.springframework.security.ldap.server;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -126,6 +127,7 @@ public class ApacheDSContainer implements InitializingBean, DisposableBean, Life
 
         server = new LdapServer();
         server.setDirectoryService(service);
+        // AbstractLdapIntegrationTests assume IPv4, so we specify the same here
         server.setTransports(new TcpTransport(port));
         start();
     }
@@ -204,7 +206,7 @@ public class ApacheDSContainer implements InitializingBean, DisposableBean, Life
         try {
             importLdifs();
         } catch (Exception e) {
-            logger.error("Failed to import LDIF file(s)", e);
+            throw new RuntimeException("Failed to import LDIF file(s)", e);
         }
     }
 
@@ -259,10 +261,10 @@ public class ApacheDSContainer implements InitializingBean, DisposableBean, Life
                 ldifFile = ldifs[0].getURI().toString();
             }
             logger.info("Loading LDIF file: " + ldifFile);
-            LdifFileLoader loader = new LdifFileLoader(service.getAdminSession(), ldifFile);
+            LdifFileLoader loader = new LdifFileLoader(service.getAdminSession(), new File(ldifFile), null, getClass().getClassLoader());
             loader.execute();
         } else {
-            throw new IllegalArgumentException("More than one LDIF resource found with the supplied pattern:" + ldifResources);
+            throw new IllegalArgumentException("More than one LDIF resource found with the supplied pattern:" + ldifResources+ " Got " + Arrays.toString(ldifs));
         }
     }
 

@@ -79,9 +79,12 @@ import org.springframework.web.method.support.ModelAndViewContainer;
  *     }
  * </pre>
  *
+ * @deprecated use org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver
+ *
  * @author Rob Winch
  * @since 3.2
  */
+@Deprecated
 public final class AuthenticationPrincipalArgumentResolver implements
     HandlerMethodArgumentResolver {
 
@@ -106,7 +109,7 @@ public final class AuthenticationPrincipalArgumentResolver implements
         if(principal != null && !parameter.getParameterType().isAssignableFrom(principal.getClass())) {
             AuthenticationPrincipal authPrincipal = findMethodAnnotation(AuthenticationPrincipal.class, parameter);
             if(authPrincipal.errorOnInvalidType()) {
-                throw new ClassCastException(principal + " is not assiable to " + parameter.getParameterType());
+                throw new ClassCastException(principal + " is not assignable to " + parameter.getParameterType());
             } else {
                 return null;
             }

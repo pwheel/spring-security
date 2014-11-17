@@ -17,6 +17,8 @@ package org.springframework.security.ldap;
 
 import static org.junit.Assert.*;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.naming.Context;
@@ -99,6 +101,69 @@ public class SpringSecurityLdapTemplateITests extends AbstractLdapIntegrationTes
         assertTrue(values.contains("submanager"));
     }
 
+	@Test
+    public void testMultiAttributeRetrievalWithNullAttributeNames() {
+        Set<Map<String, List<String>>> values =
+                template.searchForMultipleAttributeValues(
+                        "ou=people",
+                        "(uid={0})",
+                        new String[]{"bob"},
+                        null);
+        assertEquals(1, values.size());
+        Map<String, List<String>> record = values.iterator().next();
+        assertAttributeValue(record, "uid", "bob");
+        assertAttributeValue(record, "objectclass", "top", "person", "organizationalPerson", "inetOrgPerson");
+        assertAttributeValue(record, "cn", "Bob Hamilton");
+        assertAttributeValue(record, "sn", "Hamilton");
+        assertFalse(record.containsKey("userPassword"));
+    }
+
+    @Test
+    public void testMultiAttributeRetrievalWithZeroLengthAttributeNames() {
+        Set<Map<String, List<String>>> values =
+                template.searchForMultipleAttributeValues(
+                        "ou=people",
+                        "(uid={0})",
+                        new String[]{"bob"},
+                        new String[0]);
+        assertEquals(1, values.size());
+        Map<String, List<String>> record = values.iterator().next();
+        assertAttributeValue(record, "uid", "bob");
+        assertAttributeValue(record, "objectclass", "top", "person", "organizationalPerson", "inetOrgPerson");
+        assertAttributeValue(record, "cn", "Bob Hamilton");
+        assertAttributeValue(record, "sn", "Hamilton");
+        assertFalse(record.containsKey("userPassword"));
+    }
+
+    @Test
+    public void testMultiAttributeRetrievalWithSpecifiedAttributeNames() {
+        Set<Map<String, List<String>>> values =
+                template.searchForMultipleAttributeValues(
+                        "ou=people",
+                        "(uid={0})",
+                        new String[]{"bob"},
+                        new String[]{
+                                "uid",
+                                "cn",
+                                "sn"
+                        });
+        assertEquals(1, values.size());
+        Map<String, List<String>> record = values.iterator().next();
+        assertAttributeValue(record, "uid", "bob");
+        assertAttributeValue(record, "cn", "Bob Hamilton");
+        assertAttributeValue(record, "sn", "Hamilton");
+        assertFalse(record.containsKey("userPassword"));
+        assertFalse(record.containsKey("objectclass"));
+    }
+
+    protected void assertAttributeValue(Map<String, List<String>> record, String attributeName, String... values) {
+        assertTrue(record.containsKey(attributeName));
+        assertEquals(values.length, record.get(attributeName).size());
+        for (int i = 0; i < values.length; i++) {
+            assertEquals(values[i], record.get(attributeName).get(i));
+        }
+    }
+
     @Test
     public void testRoleSearchForMissingAttributeFailsGracefully() {
         String param = "uid=ben,ou=people,dc=springframework,dc=org";
@@ -121,7 +186,7 @@ public class SpringSecurityLdapTemplateITests extends AbstractLdapIntegrationTes
     public void nonSpringLdapSearchCodeTestMethod() throws Exception {
         java.util.Hashtable<String, String> env = new java.util.Hashtable<String, String>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-        env.put(Context.PROVIDER_URL, "ldap://localhost:53389");
+        env.put(Context.PROVIDER_URL, "ldap://localhost:" + ApacheDSServerIntegrationTests.getServerPort());
         env.put(Context.SECURITY_PRINCIPAL, "");
         env.put(Context.SECURITY_CREDENTIALS, "");
 

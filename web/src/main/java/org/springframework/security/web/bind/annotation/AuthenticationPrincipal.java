@@ -29,6 +29,8 @@ import org.springframework.security.core.Authentication;
  * argument should be resolved to the current user rather than a user that might
  * be edited on a form.
  *
+ * @deprecated Use org.springframework.security.core.annotation.AuthenticationPrincipal instead
+ *
  * @author Rob Winch
  * @since 3.2
  */

@@ -18,25 +18,27 @@ dependencies {
     optional project(':spring-security-web'),
              project(':spring-security-ldap'),
              project(':spring-security-openid'),
-             "org.springframework:spring-web:$springVersion",
+             project(':spring-security-messaging'),
+            "org.springframework:spring-web:$springVersion",
+            "org.springframework:spring-websocket:$springVersion",
              "org.springframework:spring-webmvc:$springVersion",
              "org.aspectj:aspectjweaver:$aspectjVersion",
              "org.springframework:spring-jdbc:$springVersion",
              "org.springframework:spring-tx:$springVersion"
 
-    provided "org.apache.tomcat:tomcat-servlet-api:$servletApiVersion"
+    provided "javax.servlet:javax.servlet-api:$servletApiVersion"
 
     testCompile project(':spring-security-cas'),
                 project(':spring-security-core').sourceSets.test.output,
+                project(':spring-security-aspects'),
                 'javax.annotation:jsr250-api:1.0',
                 "org.springframework.ldap:spring-ldap-core:$springLdapVersion",
                 "org.springframework:spring-expression:$springVersion",
                 "org.springframework:spring-jdbc:$springVersion",
                 "org.springframework:spring-orm:$springVersion",
                 "org.springframework:spring-tx:$springVersion",
-                "org.spockframework:spock-core:$spockVersion",
                 "org.slf4j:jcl-over-slf4j:$slf4jVersion",
-                "org.hibernate.javax.persistence:hibernate-jpa-2.0-api:1.0.1.Final",
+                "org.eclipse.persistence:javax.persistence:2.0.5",
                 "org.hibernate:hibernate-entitymanager:4.1.0.Final",
                 "org.codehaus.groovy:groovy-all:$groovyVersion",
                 "org.apache.directory.server:apacheds-core:$apacheDsVersion",
@@ -46,11 +48,17 @@ dependencies {
                 "org.apache.directory.server:apacheds-server-jndi:$apacheDsVersion",
                 'org.apache.directory.shared:shared-ldap:0.9.15',
                 'ldapsdk:ldapsdk:4.1',
-                powerMockDependencies
-    testCompile('org.openid4java:openid4java-nodeps:0.9.6') {
-       exclude group: 'com.google.code.guice', module: 'guice'
-    }
+                powerMockDependencies,
+                 "org.hibernate:hibernate-entitymanager:3.6.10.Final",
+                "org.hsqldb:hsqldb:2.2.8",
+                spockDependencies
 
+    testCompile('org.openid4java:openid4java-nodeps:0.9.6') {
+        exclude group: 'com.google.code.guice', module: 'guice'
+    }
+    testCompile("org.springframework.data:spring-data-jpa:$springDataJpaVersion") {
+        exclude group: 'org.aspectj', module: 'aspectjrt'
+    }
 
     testRuntime "org.hsqldb:hsqldb:$hsqlVersion",
                 "cglib:cglib-nodep:2.2"

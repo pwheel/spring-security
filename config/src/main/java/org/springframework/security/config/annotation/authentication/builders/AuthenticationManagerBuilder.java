@@ -27,6 +27,7 @@ import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.config.annotation.AbstractConfiguredSecurityBuilder;
 import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.SecurityBuilder;
+import org.springframework.security.config.annotation.SecurityConfigurer;
 import org.springframework.security.config.annotation.authentication.ProviderManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configurers.ldap.LdapAuthenticationProviderConfigurer;
 import org.springframework.security.config.annotation.authentication.configurers.provisioning.InMemoryUserDetailsManagerConfigurer;
@@ -77,6 +78,9 @@ public class AuthenticationManagerBuilder extends AbstractConfiguredSecurityBuil
      */
     public AuthenticationManagerBuilder parentAuthenticationManager(
             AuthenticationManager authenticationManager) {
+        if(authenticationManager instanceof ProviderManager) {
+            eraseCredentials(((ProviderManager) authenticationManager).isEraseCredentialsAfterAuthentication());
+        }
         this.parentAuthenticationManager = authenticationManager;
         return this;
     }
@@ -134,19 +138,31 @@ public class AuthenticationManagerBuilder extends AbstractConfiguredSecurityBuil
 
     /**
      * Add JDBC authentication to the {@link AuthenticationManagerBuilder} and
-     * return a {@link JdbcUserDetailsManagerConfigurer} to allow customization of the
-     * JDBC authentication.
+     * return a {@link JdbcUserDetailsManagerConfigurer} to allow customization
+     * of the JDBC authentication.
+     *
+     * <p>
+     * When using with a persistent data store, it is best to add users external
+     * of configuration using something like <a
+     * href="http://flywaydb.org/">Flyway</a> or <a
+     * href="http://www.liquibase.org/">Liquibase</a> to create the schema and
+     * adding users to ensure these steps are only done once and that the
+     * optimal SQL is used.
+     * </p>
      *
      * <p>
      * This method also ensure that a {@link UserDetailsService} is available
      * for the {@link #getDefaultUserDetailsService()} method. Note that
      * additional {@link UserDetailsService}'s may override this
-     * {@link UserDetailsService} as the default.
+     * {@link UserDetailsService} as the default. See the <a href=
+     * "http://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#user-schema"
+     * >User Schema</a> section of the reference for the default schema.
      * </p>
      *
-     * @return a {@link JdbcUserDetailsManagerConfigurer} to allow customization of the
-     * JDBC authentication
-     * @throws Exception if an error occurs when adding the JDBC authentication
+     * @return a {@link JdbcUserDetailsManagerConfigurer} to allow customization
+     *         of the JDBC authentication
+     * @throws Exception
+     *             if an error occurs when adding the JDBC authentication
      */
     public JdbcUserDetailsManagerConfigurer<AuthenticationManagerBuilder> jdbcAuthentication()
             throws Exception {
@@ -221,7 +237,7 @@ public class AuthenticationManagerBuilder extends AbstractConfiguredSecurityBuil
 
     @Override
     protected ProviderManager performBuild() throws Exception {
-        if(authenticationProviders.isEmpty() && parentAuthenticationManager == null) {
+        if(!isConfigured()) {
             logger.debug("No authenticationProviders and no parentAuthenticationManager defined. Returning null.");
             return null;
         }
@@ -234,6 +250,26 @@ public class AuthenticationManagerBuilder extends AbstractConfiguredSecurityBuil
         }
         providerManager = postProcess(providerManager);
         return providerManager;
+    }
+
+    /**
+     * Determines if the {@link AuthenticationManagerBuilder} is configured to
+     * build a non null {@link AuthenticationManager}. This means that either a
+     * non-null parent is specified or at least one
+     * {@link AuthenticationProvider} has been specified.
+     *
+     * <p>
+     * When using {@link SecurityConfigurer} instances, the
+     * {@link AuthenticationManagerBuilder} will not be configured until the
+     * {@link SecurityConfigurer#configure(SecurityBuilder)} methods. This means
+     * a {@link SecurityConfigurer} that is last could check this method and
+     * provide a default configuration in the
+     * {@link SecurityConfigurer#configure(SecurityBuilder)} method.
+     *
+     * @return
+     */
+    public boolean isConfigured() {
+        return !authenticationProviders.isEmpty() || parentAuthenticationManager != null;
     }
 
     /**

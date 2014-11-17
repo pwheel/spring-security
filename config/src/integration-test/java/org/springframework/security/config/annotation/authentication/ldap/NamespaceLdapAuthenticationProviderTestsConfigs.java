@@ -20,6 +20,7 @@ import org.springframework.security.authentication.encoding.PlaintextPasswordEnc
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.ldap.userdetails.LdapAuthoritiesPopulator;
 import org.springframework.security.ldap.userdetails.PersonContextMapper;
 
 /**
@@ -55,13 +56,25 @@ public class NamespaceLdapAuthenticationProviderTestsConfigs {
                     .userSearchFilter("(uid={0})") // ldap-authentication-provider@user-search-filter
                     // .contextSource(contextSource) // ldap-authentication-provider@server-ref
                     .contextSource()
-                        .ldif("classpath:user.ldif") // ldap-server@ldif
+                        .ldif("classpath:users.xldif") // ldap-server@ldif
                         .managerDn("uid=admin,ou=system") // ldap-server@manager-dn
                         .managerPassword("secret") // ldap-server@manager-password
                         .port(33399) // ldap-server@port
                         .root("dc=springframework,dc=org") // ldap-server@root
                         // .url("ldap://localhost:33389/dc-springframework,dc=org") this overrides root and port and is used for external
                         ;
+        }
+    }
+
+    @Configuration
+    @EnableWebSecurity
+    static class CustomAuthoritiesPopulatorConfig extends WebSecurityConfigurerAdapter {
+        static LdapAuthoritiesPopulator LAP;
+        protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+            auth
+                .ldapAuthentication()
+                    .userSearchFilter("(uid={0})")
+                    .ldapAuthoritiesPopulator(LAP);
         }
     }
 

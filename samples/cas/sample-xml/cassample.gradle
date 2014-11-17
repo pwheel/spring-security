@@ -26,26 +26,28 @@ sourceSets {
 eclipse.classpath.plusConfigurations += configurations.integrationTestRuntime
 
 dependencies {
-    providedCompile "org.apache.tomcat:tomcat-servlet-api:$servletApiVersion"
+    providedCompile "javax.servlet:javax.servlet-api:$servletApiVersion"
 
     compile project(':spring-security-core'),
             project(':spring-security-cas'),
-            "org.jasig.cas.client:cas-client-core:3.1.12"
+            "org.jasig.cas.client:cas-client-core:3.3.3"
 
     runtime project(':spring-security-web'),
             project(':spring-security-config'),
+            "org.springframework:spring-context-support:$springVersion",
             "org.slf4j:jcl-over-slf4j:$slf4jVersion",
             "ch.qos.logback:logback-classic:$logbackVersion",
-            "net.sf.ehcache:ehcache:$ehcacheVersion"
+            "net.sf.ehcache:ehcache-core:$ehcacheVersion"
 
     integrationTestCompile project(':spring-security-cas'),
                    "org.seleniumhq.selenium:selenium-htmlunit-driver:$seleniumVersion",
-                   "org.spockframework:spock-core:$spockVersion",
                    "org.gebish:geb-spock:$gebVersion",
                    'commons-httpclient:commons-httpclient:3.1',
                    "org.eclipse.jetty:jetty-server:$jettyVersion",
                    "org.eclipse.jetty:jetty-servlet:$jettyVersion",
-                   "org.codehaus.groovy:groovy:$groovyVersion"
+                   "org.codehaus.groovy:groovy:$groovyVersion",
+                   "org.slf4j:jcl-over-slf4j:$slf4jVersion",
+                   spockDependencies
 }
 
 [jettyRun, jettyRunWar]*.configure {

@@ -36,9 +36,14 @@ import org.springframework.security.ldap.search.LdapUserSearch;
 import org.springframework.security.ldap.server.ApacheDSContainer;
 import org.springframework.security.ldap.userdetails.DefaultLdapAuthoritiesPopulator;
 import org.springframework.security.ldap.userdetails.InetOrgPersonContextMapper;
+import org.springframework.security.ldap.userdetails.LdapAuthoritiesPopulator;
 import org.springframework.security.ldap.userdetails.LdapUserDetailsMapper;
 import org.springframework.security.ldap.userdetails.PersonContextMapper;
 import org.springframework.security.ldap.userdetails.UserDetailsContextMapper;
+import org.springframework.util.Assert;
+
+import java.io.IOException;
+import java.net.ServerSocket;
 
 /**
  * Configures LDAP {@link AuthenticationProvider} in the {@link ProviderManagerBuilder}.
@@ -59,17 +64,15 @@ public class LdapAuthenticationProviderConfigurer<B extends ProviderManagerBuild
     private BaseLdapPathContextSource contextSource;
     private ContextSourceBuilder contextSourceBuilder = new ContextSourceBuilder();
     private UserDetailsContextMapper userDetailsContextMapper;
-    private PasswordEncoder passwordEncoder;
+    private Object passwordEncoder;
     private String passwordAttribute;
+    private LdapAuthoritiesPopulator ldapAuthoritiesPopulator;
 
     private LdapAuthenticationProvider build() throws Exception {
         BaseLdapPathContextSource contextSource = getContextSource();
         LdapAuthenticator ldapAuthenticator = createLdapAuthenticator(contextSource);
 
-        DefaultLdapAuthoritiesPopulator authoritiesPopulator = new DefaultLdapAuthoritiesPopulator(
-                contextSource, groupSearchBase);
-        authoritiesPopulator.setGroupRoleAttribute(groupRoleAttribute);
-        authoritiesPopulator.setGroupSearchFilter(groupSearchFilter);
+        LdapAuthoritiesPopulator authoritiesPopulator = getLdapAuthoritiesPopulator();
 
         LdapAuthenticationProvider ldapAuthenticationProvider = new LdapAuthenticationProvider(
                 ldapAuthenticator, authoritiesPopulator);
@@ -84,6 +87,17 @@ public class LdapAuthenticationProviderConfigurer<B extends ProviderManagerBuild
     }
 
     /**
+     * Specifies the {@link LdapAuthoritiesPopulator}.
+     *
+     * @param ldapAuthoritiesPopulator the {@link LdapAuthoritiesPopulator} the default is {@link DefaultLdapAuthoritiesPopulator}
+     * @return the {@link LdapAuthenticationProviderConfigurer} for further customizations
+     */
+    public LdapAuthenticationProviderConfigurer<B> ldapAuthoritiesPopulator(LdapAuthoritiesPopulator ldapAuthoritiesPopulator) {
+        this.ldapAuthoritiesPopulator = ldapAuthoritiesPopulator;
+        return this;
+    }
+
+    /**
      * Adds an {@link ObjectPostProcessor} for this class.
      *
      * @param objectPostProcessor
@@ -92,6 +106,25 @@ public class LdapAuthenticationProviderConfigurer<B extends ProviderManagerBuild
     public LdapAuthenticationProviderConfigurer<B> withObjectPostProcessor(ObjectPostProcessor<?> objectPostProcessor) {
         addObjectPostProcessor(objectPostProcessor);
         return this;
+    }
+
+    /**
+     * Gets the {@link LdapAuthoritiesPopulator} and defaults to {@link DefaultLdapAuthoritiesPopulator}
+     *
+     * @return the {@link LdapAuthoritiesPopulator}
+     */
+    private LdapAuthoritiesPopulator getLdapAuthoritiesPopulator() {
+        if(ldapAuthoritiesPopulator != null) {
+            return ldapAuthoritiesPopulator;
+        }
+
+        DefaultLdapAuthoritiesPopulator defaultAuthoritiesPopulator = new DefaultLdapAuthoritiesPopulator(
+                contextSource, groupSearchBase);
+        defaultAuthoritiesPopulator.setGroupRoleAttribute(groupRoleAttribute);
+        defaultAuthoritiesPopulator.setGroupSearchFilter(groupSearchFilter);
+
+        this.ldapAuthoritiesPopulator = defaultAuthoritiesPopulator;
+        return defaultAuthoritiesPopulator;
     }
 
     /**
@@ -120,7 +153,9 @@ public class LdapAuthenticationProviderConfigurer<B extends ProviderManagerBuild
      */
     private PasswordComparisonAuthenticator createPasswordCompareAuthenticator(BaseLdapPathContextSource contextSource) {
         PasswordComparisonAuthenticator ldapAuthenticator = new PasswordComparisonAuthenticator(contextSource);
-        ldapAuthenticator.setPasswordAttributeName(passwordAttribute);
+        if(passwordAttribute != null) {
+            ldapAuthenticator.setPasswordAttributeName(passwordAttribute);
+        }
         ldapAuthenticator.setPasswordEncoder(passwordEncoder);
         return ldapAuthenticator;
     }
@@ -175,8 +210,22 @@ public class LdapAuthenticationProviderConfigurer<B extends ProviderManagerBuild
      *
      * @param passwordEncoder the {@link PasswordEncoder} to use
      * @return the {@link LdapAuthenticationProviderConfigurer} for further customization
+     * @deprecated Use {@link #passwordEncoder(org.springframework.security.crypto.password.PasswordEncoder)} instead
      */
     public LdapAuthenticationProviderConfigurer<B> passwordEncoder(PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
+        return this;
+    }
+
+    /**
+     * Specifies the {@link org.springframework.security.crypto.password.PasswordEncoder} to be used when authenticating with
+     * password comparison.
+     *
+     * @param passwordEncoder the {@link org.springframework.security.crypto.password.PasswordEncoder} to use
+     * @return the {@link LdapAuthenticationProviderConfigurer} for further customization
+     */
+    public LdapAuthenticationProviderConfigurer<B> passwordEncoder(final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
+        Assert.notNull(passwordEncoder, "passwordEncoder must not be null.");
         this.passwordEncoder = passwordEncoder;
         return this;
     }
@@ -344,7 +393,8 @@ public class LdapAuthenticationProviderConfigurer<B extends ProviderManagerBuild
         private String ldif = "classpath*:*.ldif";
         private String managerPassword;
         private String managerDn;
-        private int port = 33389;
+        private Integer port;
+        private static final int DEFAULT_PORT = 33389;
         private String root = "dc=springframework,dc=org";
         private String url;
 
@@ -389,7 +439,7 @@ public class LdapAuthenticationProviderConfigurer<B extends ProviderManagerBuild
         }
 
         /**
-         * The port to connect to LDAP to (the default is 33389).
+         * The port to connect to LDAP to (the default is 33389 or random available port if unavailable).
          * @param port the port to connect to
          * @return the {@link ContextSourceBuilder} for further customization
          */
@@ -449,14 +499,43 @@ public class LdapAuthenticationProviderConfigurer<B extends ProviderManagerBuild
                 return contextSource;
             }
             ApacheDSContainer apacheDsContainer = new ApacheDSContainer(root, ldif);
-            apacheDsContainer.setPort(port);
+            apacheDsContainer.setPort(getPort());
             postProcess(apacheDsContainer);
             return contextSource;
         }
 
+        private int getPort() {
+            if(port == null) {
+                port = getDefaultPort();
+            }
+            return port;
+        }
+
+        private int getDefaultPort() {
+            ServerSocket serverSocket = null;
+            try {
+                try {
+                    serverSocket = new ServerSocket(DEFAULT_PORT);
+                } catch (IOException e) {
+                    try {
+                        serverSocket = new ServerSocket(0);
+                    } catch(IOException e2) {
+                        return DEFAULT_PORT;
+                    }
+                }
+                return serverSocket.getLocalPort();
+            } finally {
+                if(serverSocket != null) {
+                    try {
+                        serverSocket.close();
+                    } catch (IOException e) {}
+                }
+            }
+        }
+
         private String getProviderUrl() {
             if(url == null) {
-                return "ldap://127.0.0.1:" + port + "/" + root;
+                return "ldap://127.0.0.1:" + getPort() + "/" + root;
             }
             return url;
         }

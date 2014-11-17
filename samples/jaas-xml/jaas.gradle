@@ -12,7 +12,7 @@ configurations {
 }
 
 dependencies {
-    providedCompile "org.apache.tomcat:tomcat-servlet-api:$servletApiVersion"
+    providedCompile "javax.servlet:javax.servlet-api:$servletApiVersion"
 
     compile project(':spring-security-core'),
             "org.springframework:spring-beans:$springVersion",
@@ -23,7 +23,9 @@ dependencies {
             project(':spring-security-config'),
             project(':spring-security-taglibs'),
             "org.springframework:spring-context-support:$springVersion",
-            "javax.servlet:jstl:$jstlVersion",
+            jstlDependencies,
             "org.slf4j:jcl-over-slf4j:$slf4jVersion",
             "ch.qos.logback:logback-classic:$logbackVersion"
+
+    integrationTestCompile gebDependencies
 }

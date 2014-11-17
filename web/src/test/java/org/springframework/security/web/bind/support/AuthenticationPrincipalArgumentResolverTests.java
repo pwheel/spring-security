@@ -40,6 +40,7 @@ import org.springframework.util.ReflectionUtils;
  * @author Rob Winch
  *
  */
+@SuppressWarnings("deprecation")
 public class AuthenticationPrincipalArgumentResolverTests {
     private Object expectedPrincipal;
     private AuthenticationPrincipalArgumentResolver resolver;
