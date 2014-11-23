@@ -141,7 +141,7 @@ configure(coreModuleProjects) {
     }
     integrationTest {
         jvmArgs "-javaagent:${configurations.jacoco.asPath}=destfile=${buildDir}/jacoco.exec,includes=${project.group}.*"
-	jvmArgs += [ "-XX:MaxPermSize=256m" ]
+	    jvmArgs += [ "-XX:MaxPermSize=256m" ]
     }
     task spring4Test(type: Test) {
         jvmArgs = ['-ea', '-Xmx500m', '-XX:MaxPermSize=256M']
