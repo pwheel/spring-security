@@ -35,6 +35,7 @@ allprojects {
        mavenCentral()
        maven { url "http://repo.springsource.org/plugins-release" }
        maven { url "http://repo.terracotta.org/maven2/" }
+       maven { url "https://raw.github.com/synergian/wagon-git/releases"}
     }
 
     eclipse.project.name = "${project.name}-3.2.x"
@@ -60,7 +61,8 @@ ext.sampleProjects = subprojects.findAll { project -> project.name.startsWith('s
 ext.itestProjects = subprojects.findAll { project -> project.name.startsWith('itest') }
 ext.coreModuleProjects = javaProjects - sampleProjects - itestProjects
 ext.aspectjProjects = [project(':spring-security-aspects'), project(':spring-security-samples-aspectj-xml')]
-ext.mavenLocalGitRepoUrl = System.properties['mavenLocalGitRepoUrl']
+ext.bitBucketUsername = System.properties['bitBucketUsername']
+ext.bitBucketPassword = System.properties['bitBucketPassword']
 
 configure(allprojects - javaProjects) {
     task afterEclipseImport {
@@ -95,12 +97,20 @@ configure(javaProjects) {
     apply from: "$rootDir/gradle/release-checks.gradle"
     apply from: "$rootDir/gradle/maven-deployment.gradle"
 
+    dependencies {
+        deployerJars "ar.com.synergian:wagon-git:0.2.3"
+    }
+
     uploadArchives {
         repositories {
             mavenDeployer {
-                repository(url: 'http://foals:8082/nexus/content/repositories/releases') {
+                configuration = configurations.deployerJars
+                configureAuth = {
+                    authentication(userName: bitBucketUsername, password: bitBucketPassword)
                 }
-                snapshotRepository(url: 'http://foals:8082/nexus/content/repositories/snapshots') {
+                repository(url: 'git:releases://git@bitbucket.org:racquettrack/maven-repo.git') {
+                }
+                snapshotRepository(url: 'git:snapshots://git@bitbucket.org:racquettrack/maven-repo.git') {
                 }
             }
         }
@@ -205,13 +215,3 @@ task wrapper(type: Wrapper) {
     gradleVersion = '1.10-rc-2'
 }
 
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            repository(url: mavenLocalGitRepoUrl) {
-            }
-            snapshotRepository(url: mavenLocalGitRepoUrl) {
-            }
-        }
-    }
-}
