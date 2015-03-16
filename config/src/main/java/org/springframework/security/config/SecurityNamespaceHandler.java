@@ -41,6 +41,7 @@ import org.springframework.security.config.ldap.LdapUserServiceBeanDefinitionPar
 import org.springframework.security.config.method.GlobalMethodSecurityBeanDefinitionParser;
 import org.springframework.security.config.method.InterceptMethodsBeanDefinitionDecorator;
 import org.springframework.security.config.method.MethodSecurityMetadataSourceBeanDefinitionParser;
+import org.springframework.security.config.websocket.WebSocketMessageBrokerSecurityBeanDefinitionParser;
 import org.springframework.security.core.SpringSecurityCoreVersion;
 import org.springframework.util.ClassUtils;
 import org.w3c.dom.Element;
@@ -56,6 +57,7 @@ import org.w3c.dom.Node;
  */
 public final class SecurityNamespaceHandler implements NamespaceHandler {
     private static final String FILTER_CHAIN_PROXY_CLASSNAME = "org.springframework.security.web.FilterChainProxy";
+    private static final String MESSAGE_CLASSNAME = "org.springframework.messaging.Message";
     private final Log logger = LogFactory.getLog(getClass());
     private final Map<String, BeanDefinitionParser> parsers = new HashMap<String, BeanDefinitionParser>();
     private final BeanDefinitionDecorator interceptMethodsBDD = new InterceptMethodsBeanDefinitionDecorator();
@@ -171,10 +173,13 @@ public final class SecurityNamespaceHandler implements NamespaceHandler {
             parsers.put(Elements.DEBUG, new DebugBeanDefinitionParser());
             parsers.put(Elements.HTTP, new HttpSecurityBeanDefinitionParser());
             parsers.put(Elements.HTTP_FIREWALL, new HttpFirewallBeanDefinitionParser());
-            parsers.put(Elements.FILTER_INVOCATION_DEFINITION_SOURCE, new FilterInvocationSecurityMetadataSourceParser());
             parsers.put(Elements.FILTER_SECURITY_METADATA_SOURCE, new FilterInvocationSecurityMetadataSourceParser());
             parsers.put(Elements.FILTER_CHAIN, new FilterChainBeanDefinitionParser());
             filterChainMapBDD = new FilterChainMapBeanDefinitionDecorator();
+        }
+
+        if(ClassUtils.isPresent(MESSAGE_CLASSNAME, getClass().getClassLoader())) {
+            parsers.put(Elements.WEBSOCKET_MESSAGE_BROKER, new WebSocketMessageBrokerSecurityBeanDefinitionParser());
         }
     }
 
@@ -196,7 +201,7 @@ public final class SecurityNamespaceHandler implements NamespaceHandler {
 
     private boolean matchesVersionInternal(Element element) {
         String schemaLocation = element.getAttributeNS("http://www.w3.org/2001/XMLSchema-instance", "schemaLocation");
-        return schemaLocation.matches("(?m).*spring-security-3\\.2.*.xsd.*")
+        return schemaLocation.matches("(?m).*spring-security-4\\.0.*.xsd.*")
                  || schemaLocation.matches("(?m).*spring-security.xsd.*")
                  || !schemaLocation.matches("(?m).*spring-security.*");
     }

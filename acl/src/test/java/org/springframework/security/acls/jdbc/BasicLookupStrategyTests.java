@@ -9,15 +9,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-import org.springframework.security.acls.domain.AclAuthorizationStrategy;
-import org.springframework.security.acls.domain.AclAuthorizationStrategyImpl;
-import org.springframework.security.acls.domain.BasePermission;
-import org.springframework.security.acls.domain.ConsoleAuditLogger;
-import org.springframework.security.acls.domain.DefaultPermissionFactory;
-import org.springframework.security.acls.domain.DefaultPermissionGrantingStrategy;
-import org.springframework.security.acls.domain.EhCacheBasedAclCache;
-import org.springframework.security.acls.domain.ObjectIdentityImpl;
-import org.springframework.security.acls.domain.PrincipalSid;
+import org.springframework.security.acls.domain.*;
 import org.springframework.security.acls.model.Acl;
 import org.springframework.security.acls.model.AuditableAccessControlEntry;
 import org.springframework.security.acls.model.MutableAcl;
@@ -92,7 +84,7 @@ public class BasicLookupStrategyTests {
 
     @Before
     public void initializeBeans() {
-        EhCacheBasedAclCache cache = new EhCacheBasedAclCache(getCache());
+        EhCacheBasedAclCache cache = new EhCacheBasedAclCache(getCache(), new DefaultPermissionGrantingStrategy(new ConsoleAuditLogger()), new AclAuthorizationStrategyImpl(new SimpleGrantedAuthority("ROLE_USER")));
         AclAuthorizationStrategy authorizationStrategy = new AclAuthorizationStrategyImpl(new SimpleGrantedAuthority("ROLE_ADMINISTRATOR"));
         strategy = new BasicLookupStrategy(dataSource, cache, authorizationStrategy,
                 new DefaultPermissionGrantingStrategy(new ConsoleAuditLogger()));
@@ -299,6 +291,22 @@ public class BasicLookupStrategyTests {
         ObjectIdentity oid = new ObjectIdentityImpl(TARGET_CLASS, new Long(104));
 
         strategy.readAclsById(Arrays.asList(oid), Arrays.asList(BEN_SID));
+    }
+
+    @Test
+    public void testCreatePrincipalSid() {
+        Sid result = strategy.createSid(true, "sid");
+
+        Assert.assertEquals(PrincipalSid.class, result.getClass());
+        Assert.assertEquals("sid", ((PrincipalSid)result).getPrincipal());
+    }
+
+    @Test
+    public void testCreateGrantedAuthority() {
+        Sid result = strategy.createSid(false, "sid");
+
+        Assert.assertEquals(GrantedAuthoritySid.class, result.getClass());
+        Assert.assertEquals("sid", ((GrantedAuthoritySid)result).getGrantedAuthority());
     }
 
 }

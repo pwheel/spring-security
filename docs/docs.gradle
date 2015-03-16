@@ -2,16 +2,22 @@
 apply plugin: 'base'
 
 task docs {
-    dependsOn 'manual:asciidoctor', 'apidocs', 'guides:asciidoctor'
+    dependsOn 'manual:reference', 'apidocs', 'guides:asciidoctor'
 }
 
 project('manual') {
     apply plugin: 'base'
-    apply plugin: 'asciidoctor'
+    apply plugin: 'org.asciidoctor.gradle.asciidoctor'
+    apply plugin: 'docbook-reference'
 
     ext.expandPlaceholders = ""
 
+    asciidoctorj {
+        version = '1.5.2'
+    }
+
     asciidoctor {
+        backends = ['docbook5']
         options = [
           eruby: 'erubis',
           attributes: [
@@ -31,11 +37,21 @@ project('manual') {
         ]
     }
 
+    reference {
+        sourceDir = new File(asciidoctor.outputDir , 'docbook5')
+        pdfFilename = "spring-security-reference.pdf"
+        epubFilename = "spring-security-reference.epub"
+        expandPlaceholders = ""
+    }
+
+    afterEvaluate {
+        tasks.findAll { it.name.startsWith("reference") }.each{ it.dependsOn.add("asciidoctor") }
+    }
+
 
     ext.spec = copySpec {
-        into ('reference/htmlsingle') {
-            from(asciidoctor.outputDir)
-            exclude 'build', 'Guardfile'
+        from (reference) {
+            into 'reference'
         }
     }
 }

@@ -47,9 +47,34 @@ class CsrfConfigTests extends AbstractHttpConfigTests {
     MockHttpServletResponse response = new MockHttpServletResponse()
     MockFilterChain chain = new MockFilterChain()
 
-    def 'no http csrf filter by default'() {
+    @Unroll
+    def 'csrf is enabled by default'() {
+        setup:
+        httpAutoConfig {
+        }
+        createAppContext()
+        when:
+        request.method = httpMethod
+        springSecurityFilterChain.doFilter(request,response,chain)
+        then:
+        response.status == httpStatus
+        where:
+        httpMethod | httpStatus
+        'POST'     | HttpServletResponse.SC_FORBIDDEN
+        'PUT'      | HttpServletResponse.SC_FORBIDDEN
+        'PATCH'    | HttpServletResponse.SC_FORBIDDEN
+        'DELETE'   | HttpServletResponse.SC_FORBIDDEN
+        'INVALID'  | HttpServletResponse.SC_FORBIDDEN
+        'GET'      | HttpServletResponse.SC_OK
+        'HEAD'     | HttpServletResponse.SC_OK
+        'TRACE'    | HttpServletResponse.SC_OK
+        'OPTIONS'  | HttpServletResponse.SC_OK
+    }
+
+    def 'csrf disabled'() {
         when:
             httpAutoConfig {
+                csrf(disabled:true)
             }
             createAppContext()
         then:
@@ -119,6 +144,7 @@ class CsrfConfigTests extends AbstractHttpConfigTests {
             CsrfTokenRepository repo = appContext.getBean("repo",CsrfTokenRepository)
             CsrfToken token = new DefaultCsrfToken("X-CSRF-TOKEN","_csrf", "abc")
             when(repo.loadToken(any(HttpServletRequest))).thenReturn(token)
+            when(repo.generateToken(any(HttpServletRequest))).thenReturn(token)
             request.setParameter(token.parameterName,token.token)
             request.servletPath = "/some-url"
             request.requestURI = "/some-url"
@@ -127,14 +153,14 @@ class CsrfConfigTests extends AbstractHttpConfigTests {
             springSecurityFilterChain.doFilter(request,response,chain)
         then: "sent to the login page"
             response.status == HttpServletResponse.SC_MOVED_TEMPORARILY
-            response.redirectedUrl == "http://localhost/spring_security_login"
+            response.redirectedUrl == "http://localhost/login"
         when: "authenticate successfully"
             response = new MockHttpServletResponse()
             request = new MockHttpServletRequest(session: request.session)
-            request.requestURI = "/j_spring_security_check"
+            request.servletPath = "/login"
             request.setParameter(token.parameterName,token.token)
-            request.setParameter("j_username","user")
-            request.setParameter("j_password","password")
+            request.setParameter("username","user")
+            request.setParameter("password","password")
             request.method = "POST"
             springSecurityFilterChain.doFilter(request,response,chain)
         then: "sent to default success because we don't want csrf attempts made prior to authentication to pass"
@@ -153,6 +179,7 @@ class CsrfConfigTests extends AbstractHttpConfigTests {
             CsrfTokenRepository repo = appContext.getBean("repo",CsrfTokenRepository)
             CsrfToken token = new DefaultCsrfToken("X-CSRF-TOKEN","_csrf", "abc")
             when(repo.loadToken(any(HttpServletRequest))).thenReturn(token)
+        when(repo.generateToken(any(HttpServletRequest))).thenReturn(token)
             request.setParameter(token.parameterName,token.token)
             request.servletPath = "/some-url"
             request.requestURI = "/some-url"
@@ -161,14 +188,14 @@ class CsrfConfigTests extends AbstractHttpConfigTests {
             springSecurityFilterChain.doFilter(request,response,chain)
         then: "sent to the login page"
             response.status == HttpServletResponse.SC_MOVED_TEMPORARILY
-            response.redirectedUrl == "http://localhost/spring_security_login"
+            response.redirectedUrl == "http://localhost/login"
         when: "authenticate successfully"
             response = new MockHttpServletResponse()
             request = new MockHttpServletRequest(session: request.session)
-            request.requestURI = "/j_spring_security_check"
+            request.servletPath = "/login"
             request.setParameter(token.parameterName,token.token)
-            request.setParameter("j_username","user")
-            request.setParameter("j_password","password")
+            request.setParameter("username","user")
+            request.setParameter("password","password")
             request.method = "POST"
             springSecurityFilterChain.doFilter(request,response,chain)
         then: "sent to original URL since it was a GET"
@@ -252,11 +279,12 @@ class CsrfConfigTests extends AbstractHttpConfigTests {
             CsrfTokenRepository repo = appContext.getBean("repo",CsrfTokenRepository)
             CsrfToken token = new DefaultCsrfToken("X-CSRF-TOKEN","_csrf", "abc")
             when(repo.loadToken(any(HttpServletRequest))).thenReturn(token)
+            when(repo.generateToken(any(HttpServletRequest))).thenReturn(token)
             request.setParameter(token.parameterName,token.token)
             request.method = "POST"
-            request.setParameter("j_username","user")
-            request.setParameter("j_password","password")
-            request.requestURI = "/j_spring_security_check"
+            request.setParameter("username","user")
+            request.setParameter("password","password")
+            request.servletPath = "/login"
         when:
             springSecurityFilterChain.doFilter(request,response,chain)
         then:
@@ -275,7 +303,7 @@ class CsrfConfigTests extends AbstractHttpConfigTests {
             when(repo.loadToken(any(HttpServletRequest))).thenReturn(token)
             request.setParameter(token.parameterName,token.token)
             request.method = "POST"
-            request.servletPath = "/j_spring_security_logout"
+            request.servletPath = "/logout"
         when:
             springSecurityFilterChain.doFilter(request,response,chain)
         then:
@@ -290,7 +318,7 @@ class CsrfConfigTests extends AbstractHttpConfigTests {
                 createAppContext()
                 login()
                 request.method = "GET"
-                request.requestURI = "/j_spring_security_logout"
+                request.requestURI = "/logout"
             when:
                 springSecurityFilterChain.doFilter(request,response,chain)
             then:

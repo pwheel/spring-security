@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -102,8 +102,8 @@ public final class AntPathRequestMatcher implements RequestMatcher {
                 pattern = pattern.toLowerCase();
             }
 
-            // If the pattern ends with {@code /**} and has no other wildcards, then optimize to a sub-path match
-            if (pattern.endsWith(MATCH_ALL) && pattern.indexOf('?') == -1 &&
+            // If the pattern ends with {@code /**} and has no other wildcards or path variables, then optimize to a sub-path match
+            if (pattern.endsWith(MATCH_ALL) && (pattern.indexOf('?') == -1 && pattern.indexOf('{') == -1 && pattern.indexOf('}') == -1) &&
                     pattern.indexOf("*") == pattern.length() - 2) {
                 matcher = new SubpathMatcher(pattern.substring(0, pattern.length() - 3));
             } else {
@@ -122,7 +122,7 @@ public final class AntPathRequestMatcher implements RequestMatcher {
      *    {@code servletPath} + {@code pathInfo} of the request.
      */
     public boolean matches(HttpServletRequest request) {
-        if (httpMethod != null && request.getMethod() != null && httpMethod != HttpMethod.valueOf(request.getMethod())) {
+        if (httpMethod != null && StringUtils.hasText(request.getMethod()) && httpMethod != valueOf(request.getMethod())) {
             if (logger.isDebugEnabled()) {
                 logger.debug("Request '" + request.getMethod() + " " + getRequestPath(request) + "'"
                         + " doesn't match '" + httpMethod  + " " + pattern);
@@ -199,6 +199,21 @@ public final class AntPathRequestMatcher implements RequestMatcher {
         sb.append("]");
 
         return sb.toString();
+    }
+
+    /**
+     * Provides a save way of obtaining the HttpMethod from a String. If the method is invalid, returns null.
+     *
+     * @param method the HTTP method to use.
+     *
+     * @return the HttpMethod or null if method is invalid.
+     */
+    private static HttpMethod valueOf(String method) {
+        try {
+            return HttpMethod.valueOf(method);
+        } catch(IllegalArgumentException e) {}
+
+        return null;
     }
 
     private static interface Matcher {

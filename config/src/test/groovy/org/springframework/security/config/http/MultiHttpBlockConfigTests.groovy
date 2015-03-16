@@ -74,9 +74,11 @@ class MultiHttpBlockConfigTests extends AbstractHttpConfigTests {
         setup:
             xml.http('authentication-manager-ref' : 'authManager', 'pattern' : '/first/**') {
                 'form-login'('login-processing-url': '/first/login')
+                csrf(disabled:true)
             }
             xml.http('authentication-manager-ref' : 'authManager2') {
                 'form-login'()
+                csrf(disabled:true)
             }
             mockBean(UserDetailsService,'uds')
             mockBean(UserDetailsService,'uds2')
@@ -105,8 +107,8 @@ class MultiHttpBlockConfigTests extends AbstractHttpConfigTests {
             MockHttpServletRequest request2 = new MockHttpServletRequest()
             MockHttpServletResponse response2 = new MockHttpServletResponse()
             MockFilterChain chain2 = new MockFilterChain()
-            request2.servletPath = "/j_spring_security_check"
-            request2.requestURI = "/j_spring_security_check"
+            request2.servletPath = "/login"
+            request2.requestURI = "/login"
             request2.method = 'POST'
             springSecurityFilterChain.doFilter(request2,response2,chain2)
         then:

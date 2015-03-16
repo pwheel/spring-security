@@ -39,6 +39,7 @@ import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.util.Assert;
 import org.springframework.web.filter.GenericFilterBean;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 
 /**
@@ -85,7 +86,7 @@ import org.springframework.web.filter.GenericFilterBean;
  *
  * @author Ben Alex
  */
-public class BasicAuthenticationFilter extends GenericFilterBean {
+public class BasicAuthenticationFilter extends OncePerRequestFilter {
 
     //~ Instance fields ================================================================================================
 
@@ -97,18 +98,13 @@ public class BasicAuthenticationFilter extends GenericFilterBean {
     private String credentialsCharset = "UTF-8";
 
     /**
-     * @deprecated Use constructor injection
-     */
-    public BasicAuthenticationFilter() {
-    }
-
-    /**
      * Creates an instance which will authenticate against the supplied {@code AuthenticationManager}
      * and which will ignore failed authentication attempts, allowing the request to proceed down the filter chain.
      *
      * @param authenticationManager the bean to submit authentication requests to
      */
     public BasicAuthenticationFilter(AuthenticationManager authenticationManager) {
+        Assert.notNull(authenticationManager, "authenticationManager cannot be null");
         this.authenticationManager = authenticationManager;
         ignoreFailure = true;
     }
@@ -123,6 +119,8 @@ public class BasicAuthenticationFilter extends GenericFilterBean {
      */
     public BasicAuthenticationFilter(AuthenticationManager authenticationManager,
                                      AuthenticationEntryPoint authenticationEntryPoint) {
+        Assert.notNull(authenticationManager, "authenticationManager cannot be null");
+        Assert.notNull(authenticationEntryPoint, "authenticationEntryPoint cannot be null");
         this.authenticationManager = authenticationManager;
         this.authenticationEntryPoint = authenticationEntryPoint;
     }
@@ -138,11 +136,9 @@ public class BasicAuthenticationFilter extends GenericFilterBean {
         }
     }
 
-    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         final boolean debug = logger.isDebugEnabled();
-        final HttpServletRequest request = (HttpServletRequest) req;
-        final HttpServletResponse response = (HttpServletResponse) res;
 
         String header = request.getHeader("Authorization");
 
@@ -200,6 +196,8 @@ public class BasicAuthenticationFilter extends GenericFilterBean {
 
         chain.doFilter(request, response);
     }
+
+
 
     /**
      * Decodes the header into a username and password.
@@ -268,37 +266,12 @@ public class BasicAuthenticationFilter extends GenericFilterBean {
         return authenticationEntryPoint;
     }
 
-    /**
-     * @deprecated Use constructor injection
-     */
-    @Deprecated
-    public void setAuthenticationEntryPoint(AuthenticationEntryPoint authenticationEntryPoint) {
-        this.authenticationEntryPoint = authenticationEntryPoint;
-    }
-
     protected AuthenticationManager getAuthenticationManager() {
         return authenticationManager;
     }
 
-    /**
-     * @deprecated Use constructor injection
-     */
-    @Deprecated
-    public void setAuthenticationManager(AuthenticationManager authenticationManager) {
-        this.authenticationManager = authenticationManager;
-    }
-
     protected boolean isIgnoreFailure() {
         return ignoreFailure;
-    }
-
-    /**
-     *
-     * @deprecated Use the constructor which takes a single AuthenticationManager parameter
-     */
-    @Deprecated
-    public void setIgnoreFailure(boolean ignoreFailure) {
-        this.ignoreFailure = ignoreFailure;
     }
 
     public void setAuthenticationDetailsSource(AuthenticationDetailsSource<HttpServletRequest,?> authenticationDetailsSource) {

@@ -133,10 +133,12 @@ class HttpConfigurationBuilder {
     private CsrfBeanDefinitionParser csrfParser;
 
     private BeanDefinition invalidSession;
+    private boolean addAllAuth;
 
-    public HttpConfigurationBuilder(Element element, ParserContext pc,
+    public HttpConfigurationBuilder(Element element, boolean addAllAuth, ParserContext pc,
             BeanReference portMapper, BeanReference portResolver, BeanReference authenticationManager) {
         this.httpElt = element;
+        this.addAllAuth = addAllAuth;
         this.pc = pc;
         this.portMapper = portMapper;
         this.portResolver = portResolver;
@@ -583,7 +585,7 @@ class HttpConfigurationBuilder {
 
     private void createFilterSecurityInterceptor(BeanReference authManager) {
         boolean useExpressions = FilterInvocationSecurityMetadataSourceParser.isUseExpressions(httpElt);
-        RootBeanDefinition securityMds = FilterInvocationSecurityMetadataSourceParser.createSecurityMetadataSource(interceptUrls, httpElt, pc);
+        RootBeanDefinition securityMds = FilterInvocationSecurityMetadataSourceParser.createSecurityMetadataSource(interceptUrls, addAllAuth, httpElt, pc);
 
         RootBeanDefinition accessDecisionMgr;
         ManagedList<BeanDefinition> voters =  new ManagedList<BeanDefinition>(2);
@@ -638,22 +640,22 @@ class HttpConfigurationBuilder {
 
     private void createAddHeadersFilter() {
         Element elmt = DomUtils.getChildElementByTagName(httpElt, Elements.HEADERS);
-        if (elmt != null) {
-            this.addHeadersFilter = new HeadersBeanDefinitionParser().parse(elmt, pc);
-        }
+        this.addHeadersFilter = new HeadersBeanDefinitionParser().parse(elmt, pc);
 
     }
 
-    private CsrfBeanDefinitionParser createCsrfFilter() {
+    private void createCsrfFilter() {
         Element elmt = DomUtils.getChildElementByTagName(httpElt, Elements.CSRF);
-        if (elmt != null) {
-            csrfParser = new CsrfBeanDefinitionParser();
-            csrfFilter = csrfParser.parse(elmt, pc);
-            this.csrfAuthStrategy = csrfParser.getCsrfAuthenticationStrategy();
-            this.csrfLogoutHandler = csrfParser.getCsrfLogoutHandler();
-            return csrfParser;
+        csrfParser = new CsrfBeanDefinitionParser();
+        csrfFilter = csrfParser.parse(elmt, pc);
+
+        if(csrfFilter == null) {
+            csrfParser = null;
+            return;
         }
-        return null;
+
+        this.csrfAuthStrategy = csrfParser.getCsrfAuthenticationStrategy();
+        this.csrfLogoutHandler = csrfParser.getCsrfLogoutHandler();
     }
 
     BeanMetadataElement getCsrfLogoutHandler() {

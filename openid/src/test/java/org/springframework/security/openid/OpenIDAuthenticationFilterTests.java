@@ -24,7 +24,7 @@ public class OpenIDAuthenticationFilterTests {
     OpenIDAuthenticationFilter filter;
     private static final String REDIRECT_URL = "http://www.example.com/redirect";
     private static final String CLAIMED_IDENTITY_URL = "http://www.example.com/identity";
-    private static final String REQUEST_PATH = "/j_spring_openid_security_check";
+    private static final String REQUEST_PATH = "/login/openid";
     private static final String FILTER_PROCESS_URL = "http://localhost:8080" + REQUEST_PATH;
     private static final String DEFAULT_TARGET_URL = FILTER_PROCESS_URL;
 
@@ -45,7 +45,9 @@ public class OpenIDAuthenticationFilterTests {
 
     @Test
     public void testFilterOperation() throws Exception {
-        MockHttpServletRequest req = new MockHttpServletRequest("GET", REQUEST_PATH);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setServletPath(REQUEST_PATH);
+        req.setRequestURI(REQUEST_PATH);
         req.setServerPort(8080);
         MockHttpServletResponse response = new MockHttpServletResponse();
 

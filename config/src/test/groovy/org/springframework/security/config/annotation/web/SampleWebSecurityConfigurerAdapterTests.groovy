@@ -63,7 +63,7 @@ public class SampleWebSecurityConfigurerAdapterTests extends BaseSpringSpec {
 
     /**
      * <code>
-     *   <http use-expressions="true">
+     *   <http>
      *     <intercept-url pattern="/resources/**" access="permitAll"/>
      *     <intercept-url pattern="/**" access="authenticated"/>
      *     <logout
@@ -87,7 +87,6 @@ public class SampleWebSecurityConfigurerAdapterTests extends BaseSpringSpec {
      * </code>
      * @author Rob Winch
      */
-    @Configuration
     @EnableWebSecurity
     public static class HelloWorldWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdapter {
         @Override
@@ -126,7 +125,7 @@ public class SampleWebSecurityConfigurerAdapterTests extends BaseSpringSpec {
     /**
      * <code>
      *   <http security="none" pattern="/resources/**"/>
-     *   <http use-expressions="true">
+     *   <http>
      *     <intercept-url pattern="/logout" access="permitAll"/>
      *     <intercept-url pattern="/login" access="permitAll"/>
      *     <intercept-url pattern="/signup" access="permitAll"/>
@@ -154,7 +153,6 @@ public class SampleWebSecurityConfigurerAdapterTests extends BaseSpringSpec {
      * </code>
      * @author Rob Winch
      */
-    @Configuration
     @EnableWebSecurity
     public static class SampleWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdapter {
 
@@ -239,12 +237,12 @@ public class SampleWebSecurityConfigurerAdapterTests extends BaseSpringSpec {
     /**
      * <code>
      *   <http security="none" pattern="/resources/**"/>
-     *   <http use-expressions="true" pattern="/api/**">
+     *   <http pattern="/api/**">
      *     <intercept-url pattern="/api/admin/**" access="hasRole('ROLE_ADMIN')"/>
      *     <intercept-url pattern="/api/**" access="hasRole('ROLE_USER')"/>
      *     <http-basic />
      *   </http>
-     *   <http use-expressions="true">
+     *   <http>
      *     <intercept-url pattern="/logout" access="permitAll"/>
      *     <intercept-url pattern="/login" access="permitAll"/>
      *     <intercept-url pattern="/signup" access="permitAll"/>
@@ -272,7 +270,6 @@ public class SampleWebSecurityConfigurerAdapterTests extends BaseSpringSpec {
      * </code>
      * @author Rob Winch
      */
-    @Configuration
     @EnableWebSecurity
     public static class SampleMultiHttpSecurityConfig {
         @Autowired

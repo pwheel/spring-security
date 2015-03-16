@@ -106,17 +106,15 @@ public class ConsensusBasedTests {
     }
 
     private ConsensusBased makeDecisionManager() {
-        ConsensusBased decisionManager = new ConsensusBased();
         RoleVoter roleVoter = new RoleVoter();
         DenyVoter denyForSureVoter = new DenyVoter();
         DenyAgainVoter denyAgainForSureVoter = new DenyAgainVoter();
-        List<AccessDecisionVoter> voters = new Vector<AccessDecisionVoter>();
+        List<AccessDecisionVoter<? extends Object>> voters = new Vector<AccessDecisionVoter<? extends Object>>();
         voters.add(roleVoter);
         voters.add(denyForSureVoter);
         voters.add(denyAgainForSureVoter);
-        decisionManager.setDecisionVoters(voters);
 
-        return decisionManager;
+        return new ConsensusBased(voters);
     }
 
     private TestingAuthenticationToken makeTestToken() {

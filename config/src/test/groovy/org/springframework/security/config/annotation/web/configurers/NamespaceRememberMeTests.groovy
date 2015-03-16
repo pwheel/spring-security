@@ -253,6 +253,24 @@ public class NamespaceRememberMeTests extends BaseSpringSpec {
     }
 
     @Configuration
+    static class RememberMeParameterConfig extends BaseWebConfig {
+        protected void configure(HttpSecurity http) throws Exception {
+            http
+                .formLogin()
+                    .and()
+                .rememberMe()
+                    .rememberMeParameter("rememberMe")
+        }
+    }
+
+    def "http/remember-me@remember-me-parameter"() {
+        when: "use custom rememberMeParameter"
+            loadConfig(RememberMeParameterConfig)
+        then: "custom rememberMeParameter will be used"
+            findFilter(RememberMeAuthenticationFilter).rememberMeServices.parameter == "rememberMe"
+    }
+
+    @Configuration
     static class UseSecureCookieConfig extends BaseWebConfig {
         protected void configure(HttpSecurity http) throws Exception {
             http
@@ -291,7 +309,6 @@ public class NamespaceRememberMeTests extends BaseSpringSpec {
            1 * DefaultsUserDetailsServiceWithDaoConfig.USERDETAILS_SERVICE.loadUserByUsername("user")
     }
 
-    @Configuration
     @EnableWebSecurity
     static class DefaultsUserDetailsServiceWithDaoConfig extends WebSecurityConfigurerAdapter {
         static UserDetailsService USERDETAILS_SERVICE

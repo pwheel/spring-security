@@ -15,13 +15,15 @@
  */
 package org.springframework.security.messaging.util.matcher;
 
+import static org.fest.assertions.Assertions.assertThat;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageType;
 import org.springframework.messaging.support.MessageBuilder;
-
-import static org.fest.assertions.Assertions.assertThat;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.util.PathMatcher;
 
 
 public class SimpDestinationMessageMatcherTests {
@@ -29,15 +31,22 @@ public class SimpDestinationMessageMatcherTests {
 
     SimpDestinationMessageMatcher matcher;
 
+    PathMatcher pathMatcher;
+
     @Before
     public void setup() {
         messageBuilder = MessageBuilder.withPayload("M");
         matcher = new SimpDestinationMessageMatcher("/**");
+        pathMatcher = new AntPathMatcher();
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void constructorPatternNull() {
         new SimpDestinationMessageMatcher(null);
+    }
+
+    public void constructorOnlyPathNoError() {
+        new SimpDestinationMessageMatcher("/path");
     }
 
     @Test
@@ -72,7 +81,7 @@ public class SimpDestinationMessageMatcherTests {
 
     @Test
     public void matchesFalseMessageTypeNotDisconnectType() throws Exception {
-        matcher = new SimpDestinationMessageMatcher("/match", SimpMessageType.MESSAGE);
+        matcher = SimpDestinationMessageMatcher.createMessageMatcher("/match", pathMatcher);
 
         messageBuilder.setHeader(SimpMessageHeaderAccessor.MESSAGE_TYPE_HEADER, SimpMessageType.DISCONNECT);
 
@@ -81,7 +90,7 @@ public class SimpDestinationMessageMatcherTests {
 
     @Test
     public void matchesTrueMessageType() throws Exception {
-        matcher = new SimpDestinationMessageMatcher("/match", SimpMessageType.MESSAGE);
+        matcher = SimpDestinationMessageMatcher.createMessageMatcher("/match", pathMatcher);
 
         messageBuilder.setHeader(SimpMessageHeaderAccessor.DESTINATION_HEADER,"/match");
         messageBuilder.setHeader(SimpMessageHeaderAccessor.MESSAGE_TYPE_HEADER, SimpMessageType.MESSAGE);
@@ -90,8 +99,18 @@ public class SimpDestinationMessageMatcherTests {
     }
 
     @Test
+    public void matchesTrueSubscribeType() throws Exception {
+        matcher = SimpDestinationMessageMatcher.createSubscribeMatcher("/match", pathMatcher);
+
+        messageBuilder.setHeader(SimpMessageHeaderAccessor.DESTINATION_HEADER,"/match");
+        messageBuilder.setHeader(SimpMessageHeaderAccessor.MESSAGE_TYPE_HEADER, SimpMessageType.SUBSCRIBE);
+
+        assertThat(matcher.matches(messageBuilder.build())).isTrue();
+    }
+
+    @Test
     public void matchesNullMessageType() throws Exception {
-        matcher = new SimpDestinationMessageMatcher("/match", null);
+        matcher = new SimpDestinationMessageMatcher("/match");
 
         messageBuilder.setHeader(SimpMessageHeaderAccessor.DESTINATION_HEADER,"/match");
         messageBuilder.setHeader(SimpMessageHeaderAccessor.MESSAGE_TYPE_HEADER, SimpMessageType.MESSAGE);
@@ -99,5 +118,14 @@ public class SimpDestinationMessageMatcherTests {
         assertThat(matcher.matches(messageBuilder.build())).isTrue();
     }
 
+    @Test
+    public void typeConstructorParameterIsTransmitted() throws Exception {
+        matcher = SimpDestinationMessageMatcher.createMessageMatcher("/match", pathMatcher);
+
+        MessageMatcher<Object> expectedTypeMatcher = new SimpMessageTypeMatcher(SimpMessageType.MESSAGE);
+
+        assertThat(matcher.getMessageTypeMatcher()).isEqualTo(expectedTypeMatcher);
+
+    }
 
 }

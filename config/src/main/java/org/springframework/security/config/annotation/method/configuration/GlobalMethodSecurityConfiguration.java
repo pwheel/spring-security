@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.*;
 import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -85,8 +86,9 @@ public class GlobalMethodSecurityConfiguration implements ImportAware {
     private AuthenticationManagerBuilder auth;
     private boolean disableAuthenticationRegistry;
     private AnnotationAttributes enableMethodSecurity;
+    private ApplicationContext context;
     private MethodSecurityExpressionHandler expressionHandler;
-    private AuthenticationConfiguration authenticationConfiguration;
+    private Jsr250MethodSecurityMetadataSource jsr250MethodSecurityMetadataSource;
 
     /**
      * Creates the default MethodInterceptor which is a MethodSecurityInterceptor using the following methods to
@@ -171,9 +173,8 @@ public class GlobalMethodSecurityConfiguration implements ImportAware {
      *
      * @return
      */
-    @SuppressWarnings("rawtypes")
     protected AccessDecisionManager accessDecisionManager() {
-        List<AccessDecisionVoter> decisionVoters = new ArrayList<AccessDecisionVoter>();
+        List<AccessDecisionVoter<? extends Object>> decisionVoters = new ArrayList<AccessDecisionVoter<? extends Object>>();
         ExpressionBasedPreInvocationAdvice expressionAdvice = new ExpressionBasedPreInvocationAdvice();
         expressionAdvice.setExpressionHandler(getExpressionHandler());
         if(prePostEnabled()) {
@@ -281,14 +282,13 @@ public class GlobalMethodSecurityConfiguration implements ImportAware {
             sources.add(customMethodSecurityMetadataSource);
         }
         if (prePostEnabled()) {
-            sources.add(new PrePostAnnotationSecurityMetadataSource(
-                    attributeFactory));
+            sources.add(new PrePostAnnotationSecurityMetadataSource(attributeFactory));
         }
         if (securedEnabled()) {
             sources.add(new SecuredAnnotationSecurityMetadataSource());
         }
         if (jsr250Enabled()) {
-            sources.add(new Jsr250MethodSecurityMetadataSource());
+            sources.add(jsr250MethodSecurityMetadataSource);
         }
         return new DelegatingMethodSecurityMetadataSource(sources);
     }
@@ -344,6 +344,12 @@ public class GlobalMethodSecurityConfiguration implements ImportAware {
     }
 
     @Autowired(required = false)
+    public void setJsr250MethodSecurityMetadataSource(
+            Jsr250MethodSecurityMetadataSource jsr250MethodSecurityMetadataSource) {
+        this.jsr250MethodSecurityMetadataSource = jsr250MethodSecurityMetadataSource;
+    }
+
+    @Autowired(required = false)
     public void setPermissionEvaluator(List<PermissionEvaluator> permissionEvaluators) {
         if(permissionEvaluators.size() != 1) {
             logger.debug("Not autwiring PermissionEvaluator since size != 1. Got " + permissionEvaluators);
@@ -352,13 +358,21 @@ public class GlobalMethodSecurityConfiguration implements ImportAware {
     }
 
     @Autowired(required = false)
-    public void setAuthenticationConfiguration(AuthenticationConfiguration authenticationConfiguration) {
-        this.authenticationConfiguration = authenticationConfiguration;
+    public void setMethodSecurityExpressionHandler(List<MethodSecurityExpressionHandler> handlers) {
+        if(handlers.size() != 1) {
+            logger.debug("Not autwiring PermissionEvaluator since size != 1. Got " + handlers);
+            return;
+        }
+        this.expressionHandler = handlers.get(0);
+    }
+
+    @Autowired
+    public void setApplicationContext(ApplicationContext context) {
+        this.context = context;
     }
 
     private AuthenticationConfiguration getAuthenticationConfiguration() {
-        Assert.notNull(authenticationConfiguration, "authenticationConfiguration cannot be null");
-        return authenticationConfiguration;
+        return context.getBean(AuthenticationConfiguration.class);
     }
 
     private boolean prePostEnabled() {

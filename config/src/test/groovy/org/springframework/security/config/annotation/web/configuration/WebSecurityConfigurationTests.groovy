@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.security.config.annotation.web.configuration;
+package org.springframework.security.config.annotation.web.configuration
+
+import java.lang.reflect.Modifier
 
 import static org.junit.Assert.*
 
@@ -36,7 +38,6 @@ import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.access.DefaultWebInvocationPrivilegeEvaluator
 import org.springframework.security.web.access.WebInvocationPrivilegeEvaluator
 import org.springframework.security.web.access.expression.DefaultWebSecurityExpressionHandler
-import org.springframework.security.web.access.expression.WebSecurityExpressionHandler
 import org.springframework.security.web.util.matcher.AnyRequestMatcher
 import org.springframework.test.util.ReflectionTestUtils
 
@@ -63,7 +64,6 @@ class WebSecurityConfigurationTests extends BaseSpringSpec {
     }
 
 
-    @Configuration
     @EnableWebSecurity
     static class SortedWebSecurityConfigurerAdaptersConfig {
         public AuthenticationManager authenticationManager() throws Exception {
@@ -139,7 +139,6 @@ class WebSecurityConfigurationTests extends BaseSpringSpec {
     }
 
 
-    @Configuration
     @EnableWebSecurity
     static class DuplicateOrderConfig {
         public AuthenticationManager authenticationManager() throws Exception {
@@ -185,7 +184,6 @@ class WebSecurityConfigurationTests extends BaseSpringSpec {
     }
 
     @EnableWebSecurity
-    @Configuration
     static class PrivilegeEvaluatorConfigurerAdapterConfig extends WebSecurityConfigurerAdapter {
         static WebInvocationPrivilegeEvaluator PE
 
@@ -198,21 +196,19 @@ class WebSecurityConfigurationTests extends BaseSpringSpec {
 
     def "Override webSecurityExpressionHandler"() {
         setup:
-            WebSecurityExpressionHandler expressionHandler = Mock()
+            SecurityExpressionHandler expressionHandler = Mock()
             ExpressionParser parser = Mock()
             WebSecurityExpressionHandlerConfig.EH = expressionHandler
         when:
             loadConfig(WebSecurityExpressionHandlerConfig)
         then:
-            context.getBean(WebSecurityExpressionHandler) == expressionHandler
+            context.getBean(SecurityExpressionHandler) == expressionHandler
             1 * expressionHandler.getExpressionParser() >> parser
     }
 
     @EnableWebSecurity
-    @Configuration
     static class WebSecurityExpressionHandlerConfig extends WebSecurityConfigurerAdapter {
-        @SuppressWarnings("deprecation")
-        static WebSecurityExpressionHandler EH
+        static SecurityExpressionHandler EH
 
         @Override
         public void configure(WebSecurity web) throws Exception {
@@ -232,12 +228,11 @@ class WebSecurityConfigurationTests extends BaseSpringSpec {
         when:
             loadConfig(WebSecurityExpressionHandlerDefaultsConfig)
         then:
-            WebSecurityExpressionHandler wseh = context.getBean(WebSecurityExpressionHandler)
+            SecurityExpressionHandler wseh = context.getBean(SecurityExpressionHandler)
             wseh instanceof DefaultWebSecurityExpressionHandler
     }
 
     @EnableWebSecurity
-    @Configuration
     static class WebSecurityExpressionHandlerDefaultsConfig extends WebSecurityConfigurerAdapter {
 
         @Override
@@ -258,7 +253,6 @@ class WebSecurityConfigurationTests extends BaseSpringSpec {
     }
 
     @EnableWebSecurity
-    @Configuration
     static class WebInvocationPrivilegeEvaluatorDefaultsConfig extends WebSecurityConfigurerAdapter {
 
         @Override
@@ -285,7 +279,6 @@ class WebSecurityConfigurationTests extends BaseSpringSpec {
     }
 
     @EnableWebSecurity
-    @Configuration
     static class DefaultExpressionHandlerSetsBeanResolverConfig extends WebSecurityConfigurerAdapter {
 
         @Override
@@ -331,7 +324,6 @@ class WebSecurityConfigurationTests extends BaseSpringSpec {
     }
 
     @EnableWebSecurity
-    @Configuration
     static class ParentConfig extends WebSecurityConfigurerAdapter {
         @Autowired
         public void configureGlobal(AuthenticationManagerBuilder auth) {
@@ -340,6 +332,10 @@ class WebSecurityConfigurationTests extends BaseSpringSpec {
     }
 
     @EnableWebSecurity
-    @Configuration
     static class ChildConfig extends WebSecurityConfigurerAdapter { }
+
+    def "SEC-2773: delegatingApplicationListener is static method"() {
+        expect: 'delegatingApplicationListener to prevent premature instantiation of WebSecurityConfiguration'
+        Modifier.isStatic(WebSecurityConfiguration.metaClass.methods.find { it.name == 'delegatingApplicationListener'}.modifiers)
+    }
 }

@@ -39,33 +39,27 @@ public class UnanimousBasedTests extends TestCase {
     //~ Methods ========================================================================================================
 
     private UnanimousBased makeDecisionManager() {
-        UnanimousBased decisionManager = new UnanimousBased();
         RoleVoter roleVoter = new RoleVoter();
         DenyVoter denyForSureVoter = new DenyVoter();
         DenyAgainVoter denyAgainForSureVoter = new DenyAgainVoter();
-        List<AccessDecisionVoter> voters = new Vector<AccessDecisionVoter>();
+        List<AccessDecisionVoter<? extends Object>> voters = new Vector<AccessDecisionVoter<? extends Object>>();
         voters.add(roleVoter);
         voters.add(denyForSureVoter);
         voters.add(denyAgainForSureVoter);
-        decisionManager.setDecisionVoters(voters);
-
-        return decisionManager;
+        return new UnanimousBased(voters);
     }
 
     private UnanimousBased makeDecisionManagerWithFooBarPrefix() {
-        UnanimousBased decisionManager = new UnanimousBased();
         RoleVoter roleVoter = new RoleVoter();
         roleVoter.setRolePrefix("FOOBAR_");
 
         DenyVoter denyForSureVoter = new DenyVoter();
         DenyAgainVoter denyAgainForSureVoter = new DenyAgainVoter();
-        List<AccessDecisionVoter> voters = new Vector<AccessDecisionVoter>();
+        List<AccessDecisionVoter<? extends Object>> voters = new Vector<AccessDecisionVoter<? extends Object>>();
         voters.add(roleVoter);
         voters.add(denyForSureVoter);
         voters.add(denyAgainForSureVoter);
-        decisionManager.setDecisionVoters(voters);
-
-        return decisionManager;
+        return new UnanimousBased(voters);
     }
 
     private TestingAuthenticationToken makeTestToken() {

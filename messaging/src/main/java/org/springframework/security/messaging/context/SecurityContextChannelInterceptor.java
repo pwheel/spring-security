@@ -15,13 +15,17 @@
  */
 package org.springframework.security.messaging.context;
 
+import java.util.Stack;
+
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptorAdapter;
 import org.springframework.messaging.support.ExecutorChannelInterceptor;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.Assert;
@@ -36,7 +40,12 @@ import org.springframework.util.Assert;
  * @author Rob Winch
  */
 public final class SecurityContextChannelInterceptor extends ChannelInterceptorAdapter implements ExecutorChannelInterceptor {
+    private final SecurityContext EMPTY_CONTEXT = SecurityContextHolder.createEmptyContext();
+    private static final ThreadLocal<Stack<SecurityContext>> ORIGINAL_CONTEXT = new ThreadLocal<Stack<SecurityContext>>();
+
     private final String authenticationHeaderName;
+
+    private Authentication anonymous = new AnonymousAuthenticationToken("key", "anonymous", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
 
     /**
      * Creates a new instance using the header of the name {@link SimpMessageHeaderAccessor#USER_HEADER}.
@@ -54,6 +63,21 @@ public final class SecurityContextChannelInterceptor extends ChannelInterceptorA
         Assert.notNull(authenticationHeaderName, "authenticationHeaderName cannot be null");
         this.authenticationHeaderName = authenticationHeaderName;
     }
+
+    /**
+     * Allows setting the Authentication used for anonymous authentication. Default is:
+     *
+     * <pre>
+     * new AnonymousAuthenticationToken("key", "anonymous", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
+     * </pre>
+     *
+     * @param authentication the Authentication used for anonymous authentication. Cannot be null.
+     */
+    public void setAnonymousAuthentication(Authentication authentication) {
+        Assert.notNull(authentication, "authentication cannot be null");
+        this.anonymous = authentication;
+    }
+
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         setup(message);
@@ -75,17 +99,48 @@ public final class SecurityContextChannelInterceptor extends ChannelInterceptorA
     }
 
     private void setup(Message<?> message) {
-        Object user = message.getHeaders().get(authenticationHeaderName);
-        if(!(user instanceof Authentication)) {
-            return;
+        SecurityContext currentContext = SecurityContextHolder.getContext();
+
+        Stack<SecurityContext> contextStack = ORIGINAL_CONTEXT.get();
+        if(contextStack == null) {
+            contextStack = new Stack<SecurityContext>();
+            ORIGINAL_CONTEXT.set(contextStack);
         }
-        Authentication authentication = (Authentication) user;
+        contextStack.push(currentContext);
+
+        Object user = message.getHeaders().get(authenticationHeaderName);
+
+        Authentication authentication;
+        if((user instanceof Authentication)) {
+            authentication = (Authentication) user;
+        } else {
+            authentication = this.anonymous;
+        }
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);
     }
 
     private void cleanup() {
-        SecurityContextHolder.clearContext();
+        Stack<SecurityContext> contextStack = ORIGINAL_CONTEXT.get();
+
+        if(contextStack == null || contextStack.isEmpty()) {
+            SecurityContextHolder.clearContext();
+            ORIGINAL_CONTEXT.remove();
+            return;
+        }
+
+        SecurityContext originalContext = contextStack.pop();
+
+        try {
+            if(EMPTY_CONTEXT.equals(originalContext)) {
+                SecurityContextHolder.clearContext();
+                ORIGINAL_CONTEXT.remove();
+            } else {
+                SecurityContextHolder.setContext(originalContext);
+            }
+        } catch(Throwable t) {
+            SecurityContextHolder.clearContext();
+        }
     }
 }

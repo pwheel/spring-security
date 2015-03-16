@@ -19,12 +19,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.annotation.web.servlet.configuration.EnableWebMvcSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
@@ -35,22 +35,18 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
-import javax.servlet.Filter;
-
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration
+@ContextConfiguration(classes=SecurityMockMvcRequestPostProcessorsAuthenticationStatelessTests.Config.class)
 @WebAppConfiguration
 public class SecurityMockMvcRequestPostProcessorsAuthenticationStatelessTests {
 
     @Autowired
     private WebApplicationContext context;
-
-    @Autowired
-    private Filter springSecurityFilterChain;
 
     private MockMvc mvc;
 
@@ -58,10 +54,11 @@ public class SecurityMockMvcRequestPostProcessorsAuthenticationStatelessTests {
     public void setup() {
         mvc = MockMvcBuilders
                 .webAppContextSetup(context)
-                .addFilters(springSecurityFilterChain)
+                .apply(springSecurity())
                 .build();
     }
 
+    // SEC-2593
     @Test
     public void userRequestPostProcessorWorksWithStateless() throws Exception {
        mvc
@@ -69,8 +66,16 @@ public class SecurityMockMvcRequestPostProcessorsAuthenticationStatelessTests {
           .andExpect(status().is2xxSuccessful());
     }
 
-    @Configuration
-    @EnableWebMvcSecurity
+    // SEC-2593
+    @WithMockUser
+    @Test
+    public void withMockUserWorksWithStateless() throws Exception {
+       mvc
+          .perform(get("/"))
+          .andExpect(status().is2xxSuccessful());
+    }
+
+    @EnableWebSecurity
     @EnableWebMvc
     static class Config extends WebSecurityConfigurerAdapter {
 

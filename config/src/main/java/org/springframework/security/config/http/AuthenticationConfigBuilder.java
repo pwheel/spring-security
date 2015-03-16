@@ -84,7 +84,6 @@ final class AuthenticationConfigBuilder {
 
     private static final String ATT_AUTO_CONFIG = "auto-config";
 
-    private static final String ATT_ACCESS_DENIED_PAGE = "access-denied-page";
     private static final String ATT_ACCESS_DENIED_ERROR_PAGE = "error-page";
     private static final String ATT_ENTRY_POINT_REF = "entry-point-ref";
 
@@ -131,12 +130,12 @@ final class AuthenticationConfigBuilder {
     private String loginProcessingUrl;
     private String openidLoginProcessingUrl;
 
-    public AuthenticationConfigBuilder(Element element, ParserContext pc, SessionCreationPolicy sessionPolicy,
+    public AuthenticationConfigBuilder(Element element, boolean forceAutoConfig, ParserContext pc, SessionCreationPolicy sessionPolicy,
             BeanReference requestCache, BeanReference authenticationManager, BeanReference sessionStrategy, BeanReference portMapper, BeanReference portResolver, BeanMetadataElement csrfLogoutHandler) {
         this.httpElt = element;
         this.pc = pc;
         this.requestCache = requestCache;
-        autoConfig = "true".equals(element.getAttribute(ATT_AUTO_CONFIG));
+        autoConfig = forceAutoConfig | "true".equals(element.getAttribute(ATT_AUTO_CONFIG));
         this.allowSessionCreation = sessionPolicy != SessionCreationPolicy.NEVER
                 && sessionPolicy != SessionCreationPolicy.STATELESS;
         this.portMapper = portMapper;
@@ -194,7 +193,7 @@ final class AuthenticationConfigBuilder {
         RootBeanDefinition formFilter = null;
 
         if (formLoginElt != null || autoConfig) {
-            FormLoginBeanDefinitionParser parser = new FormLoginBeanDefinitionParser("/j_spring_security_check",
+            FormLoginBeanDefinitionParser parser = new FormLoginBeanDefinitionParser("/login", "POST",
                     AUTHENTICATION_PROCESSING_FILTER_CLASS, requestCache, sessionStrategy, allowSessionCreation, portMapper, portResolver);
 
             parser.parse(formLoginElt, pc);
@@ -219,7 +218,7 @@ final class AuthenticationConfigBuilder {
         RootBeanDefinition openIDFilter = null;
 
         if (openIDLoginElt != null) {
-            FormLoginBeanDefinitionParser parser = new FormLoginBeanDefinitionParser("/j_spring_openid_security_check",
+            FormLoginBeanDefinitionParser parser = new FormLoginBeanDefinitionParser("/login/openid", null,
                     OPEN_ID_AUTHENTICATION_PROCESSING_FILTER_CLASS, requestCache, sessionStrategy, allowSessionCreation, portMapper, portResolver);
 
             parser.parse(openIDLoginElt, pc);
@@ -493,7 +492,11 @@ final class AuthenticationConfigBuilder {
     void createLogoutFilter() {
         Element logoutElt = DomUtils.getChildElementByTagName(httpElt, Elements.LOGOUT);
         if (logoutElt != null || autoConfig) {
-            LogoutBeanDefinitionParser logoutParser = new LogoutBeanDefinitionParser(rememberMeServicesId, csrfLogoutHandler);
+            String formLoginPage = getLoginFormUrl(formEntryPoint);
+            if(formLoginPage == null) {
+                formLoginPage = DefaultLoginPageGeneratingFilter.DEFAULT_LOGIN_PAGE_URL;
+            }
+            LogoutBeanDefinitionParser logoutParser = new LogoutBeanDefinitionParser(formLoginPage,rememberMeServicesId, csrfLogoutHandler);
             logoutFilter = logoutParser.parse(logoutElt, pc);
             logoutHandlers = logoutParser.getLogoutHandlers();
         }
@@ -587,19 +590,8 @@ final class AuthenticationConfigBuilder {
     }
 
     private BeanMetadataElement createAccessDeniedHandler(Element element, ParserContext pc) {
-        String accessDeniedPage = element.getAttribute(ATT_ACCESS_DENIED_PAGE);
-        WebConfigUtils.validateHttpRedirect(accessDeniedPage, pc, pc.extractSource(element));
         Element accessDeniedElt = DomUtils.getChildElementByTagName(element, Elements.ACCESS_DENIED_HANDLER);
         BeanDefinitionBuilder accessDeniedHandler = BeanDefinitionBuilder.rootBeanDefinition(AccessDeniedHandlerImpl.class);
-
-        if (StringUtils.hasText(accessDeniedPage)) {
-            if (accessDeniedElt != null) {
-                pc.getReaderContext().error("The attribute " + ATT_ACCESS_DENIED_PAGE +
-                        " cannot be used with <" + Elements.ACCESS_DENIED_HANDLER + ">", pc.extractSource(accessDeniedElt));
-            }
-
-            accessDeniedHandler.addPropertyValue("errorPage", accessDeniedPage);
-        }
 
         if (accessDeniedElt != null) {
             String errorPage = accessDeniedElt.getAttribute("error-page");

@@ -44,16 +44,13 @@ public abstract class AbstractAccessDecisionManager implements AccessDecisionMan
     //~ Instance fields ================================================================================================
     protected final Log logger = LogFactory.getLog(getClass());
 
-    private List<AccessDecisionVoter> decisionVoters;
+    private List<AccessDecisionVoter<? extends Object>> decisionVoters;
 
     protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
 
     private boolean allowIfAllAbstainDecisions = false;
 
-    protected AbstractAccessDecisionManager() {
-    }
-
-    protected AbstractAccessDecisionManager(List<AccessDecisionVoter> decisionVoters) {
+    protected AbstractAccessDecisionManager(List<AccessDecisionVoter<? extends Object>> decisionVoters) {
         Assert.notEmpty(decisionVoters, "A list of AccessDecisionVoters is required");
         this.decisionVoters = decisionVoters;
     }
@@ -72,7 +69,7 @@ public abstract class AbstractAccessDecisionManager implements AccessDecisionMan
         }
     }
 
-    public List<AccessDecisionVoter> getDecisionVoters() {
+    public List<AccessDecisionVoter<? extends Object>> getDecisionVoters() {
         return this.decisionVoters;
     }
 
@@ -82,24 +79,6 @@ public abstract class AbstractAccessDecisionManager implements AccessDecisionMan
 
     public void setAllowIfAllAbstainDecisions(boolean allowIfAllAbstainDecisions) {
         this.allowIfAllAbstainDecisions = allowIfAllAbstainDecisions;
-    }
-
-    /**
-     * @deprecated Use constructor
-     */
-    @Deprecated
-    public void setDecisionVoters(List<AccessDecisionVoter> newList) {
-        Assert.notEmpty(newList);
-
-        Iterator<AccessDecisionVoter> iter = newList.iterator();
-
-        while (iter.hasNext()) {
-            Object currentObject = iter.next();
-            Assert.isInstanceOf(AccessDecisionVoter.class, currentObject, "AccessDecisionVoter " +
-                    currentObject.getClass().getName() + " must implement AccessDecisionVoter");
-        }
-
-        this.decisionVoters = newList;
     }
 
     public void setMessageSource(MessageSource messageSource) {

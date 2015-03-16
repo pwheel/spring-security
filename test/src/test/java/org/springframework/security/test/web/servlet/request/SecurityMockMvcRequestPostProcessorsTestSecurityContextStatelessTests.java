@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.annotation.web.servlet.configuration.EnableWebMvcSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ContextConfiguration;
@@ -44,7 +44,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration
+@ContextConfiguration(classes = SecurityMockMvcRequestPostProcessorsTestSecurityContextStatelessTests.Config.class)
 @WebAppConfiguration
 public class SecurityMockMvcRequestPostProcessorsTestSecurityContextStatelessTests {
 
@@ -73,8 +73,7 @@ public class SecurityMockMvcRequestPostProcessorsTestSecurityContextStatelessTes
           .andExpect(status().is2xxSuccessful());
     }
 
-    @Configuration
-    @EnableWebMvcSecurity
+    @EnableWebSecurity
     @EnableWebMvc
     static class Config extends WebSecurityConfigurerAdapter {
 

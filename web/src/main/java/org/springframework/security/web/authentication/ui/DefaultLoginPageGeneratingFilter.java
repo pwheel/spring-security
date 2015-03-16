@@ -28,8 +28,8 @@ import org.springframework.web.filter.GenericFilterBean;
  * @since 2.0
  */
 public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
-    public static final String DEFAULT_LOGIN_PAGE_URL = "/spring_security_login";
-    public static final String ERROR_PARAMETER_NAME = "login_error";
+    public static final String DEFAULT_LOGIN_PAGE_URL = "/login";
+    public static final String ERROR_PARAMETER_NAME = "error";
     private String loginPageUrl;
     private String logoutSuccessUrl;
     private String failureUrl;
@@ -63,7 +63,6 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
         this.failureUrl = DEFAULT_LOGIN_PAGE_URL + "?" + ERROR_PARAMETER_NAME;
         if (authFilter != null) {
             formLoginEnabled = true;
-            authenticationUrl = authFilter.getFilterProcessesUrl();
             usernameParameter = authFilter.getUsernameParameter();
             passwordParameter = authFilter.getPasswordParameter();
 
@@ -74,7 +73,6 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
 
         if (openIDFilter != null) {
             openIdEnabled = true;
-            openIDauthenticationUrl = openIDFilter.getFilterProcessesUrl();
             openIDusernameParameter = "openid_identifier";
 
             if (openIDFilter.getRememberMeServices() instanceof AbstractRememberMeServices) {
@@ -262,9 +260,9 @@ public class DefaultLoginPageGeneratingFilter extends GenericFilterBean {
         }
 
         if ("".equals(request.getContextPath())) {
-            return uri.endsWith(url);
+            return uri.equals(url);
         }
 
-        return uri.endsWith(request.getContextPath() + url);
+        return uri.equals(request.getContextPath() + url);
     }
 }

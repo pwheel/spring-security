@@ -49,11 +49,12 @@ public abstract class Elements {
     public static final String JEE = "jee";
     public static final String FILTER_SECURITY_METADATA_SOURCE = "filter-security-metadata-source";
     public static final String METHOD_SECURITY_METADATA_SOURCE = "method-security-metadata-source";
-    @Deprecated
-    public static final String FILTER_INVOCATION_DEFINITION_SOURCE = "filter-invocation-definition-source";
     public static final String LDAP_PASSWORD_COMPARE = "password-compare";
     public static final String DEBUG = "debug";
     public static final String HTTP_FIREWALL = "http-firewall";
     public static final String HEADERS = "headers";
     public static final String CSRF = "csrf";
+
+    public static final String WEBSOCKET_MESSAGE_BROKER = "websocket-message-broker";
+    public static final String INTERCEPT_MESSAGE = "intercept-message";
 }

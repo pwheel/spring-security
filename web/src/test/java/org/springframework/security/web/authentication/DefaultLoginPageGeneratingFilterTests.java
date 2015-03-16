@@ -1,5 +1,6 @@
 package org.springframework.security.web.authentication;
 
+import static org.fest.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import java.util.Locale;
@@ -30,15 +31,83 @@ public class DefaultLoginPageGeneratingFilterTests {
     @Test
     public void generatingPageWithAuthenticationProcessingFilterOnlyIsSuccessFul() throws Exception {
         DefaultLoginPageGeneratingFilter filter = new DefaultLoginPageGeneratingFilter(new UsernamePasswordAuthenticationFilter());
-        filter.doFilter(new MockHttpServletRequest("GET", "/spring_security_login"), new MockHttpServletResponse(), chain);
-        filter.doFilter(new MockHttpServletRequest("GET", "/spring_security_login;pathparam=unused"), new MockHttpServletResponse(), chain);
+        filter.doFilter(new MockHttpServletRequest("GET", "/login"), new MockHttpServletResponse(), chain);
+        filter.doFilter(new MockHttpServletRequest("GET", "/login;pathparam=unused"), new MockHttpServletResponse(), chain);
     }
 
+    @Test
+    public void generatesForGetLogin() throws Exception {
+        DefaultLoginPageGeneratingFilter filter = new DefaultLoginPageGeneratingFilter(new UsernamePasswordAuthenticationFilter());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(new MockHttpServletRequest("GET", "/login"), response, chain);
+
+        assertThat(response.getContentAsString()).isNotEmpty();
+    }
+
+    @Test
+    public void generatesForPostLogin() throws Exception {
+        DefaultLoginPageGeneratingFilter filter = new DefaultLoginPageGeneratingFilter(new UsernamePasswordAuthenticationFilter());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/login");
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getContentAsString()).isEmpty();
+    }
+
+    @Test
+    public void generatesForNotEmptyContextLogin() throws Exception {
+        DefaultLoginPageGeneratingFilter filter = new DefaultLoginPageGeneratingFilter(new UsernamePasswordAuthenticationFilter());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/context/login");
+        request.setContextPath("/context");
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getContentAsString()).isNotEmpty();
+    }
+
+    @Test
+    public void generatesForGetApiLogin() throws Exception {
+        DefaultLoginPageGeneratingFilter filter = new DefaultLoginPageGeneratingFilter(new UsernamePasswordAuthenticationFilter());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(new MockHttpServletRequest("GET", "/api/login"), response, chain);
+
+        assertThat(response.getContentAsString()).isEmpty();
+    }
+
+    @Test
+    public void generatesForWithQueryMatch() throws Exception {
+        DefaultLoginPageGeneratingFilter filter = new DefaultLoginPageGeneratingFilter(new UsernamePasswordAuthenticationFilter());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/login");
+        request.setQueryString("error");
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getContentAsString()).isNotEmpty();
+    }
+
+    @Test
+    public void generatesForWithQueryNoMatch() throws Exception {
+        DefaultLoginPageGeneratingFilter filter = new DefaultLoginPageGeneratingFilter(new UsernamePasswordAuthenticationFilter());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/login");
+        request.setQueryString("not");
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getContentAsString()).isEmpty();
+    }
 
     @Test
     public void generatingPageWithOpenIdFilterOnlyIsSuccessFul() throws Exception {
         DefaultLoginPageGeneratingFilter filter = new DefaultLoginPageGeneratingFilter(new MockProcessingFilter());
-        filter.doFilter(new MockHttpServletRequest("GET", "/spring_security_login"), new MockHttpServletResponse(), chain);
+        filter.doFilter(new MockHttpServletRequest("GET", "/login"), new MockHttpServletResponse(), chain);
     }
 
     // Fake OpenID filter (since it's not in this module
@@ -62,12 +131,11 @@ public class DefaultLoginPageGeneratingFilterTests {
     @Test
     public void handlesNonIso8859CharsInErrorMessage() throws Exception {
         DefaultLoginPageGeneratingFilter filter = new DefaultLoginPageGeneratingFilter(new UsernamePasswordAuthenticationFilter());
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/spring_security_login");
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/login");
         request.addParameter("login_error", "true");
         MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
         String message = messages.getMessage(
                 "AbstractUserDetailsAuthenticationProvider.badCredentials", "Bad credentials", Locale.KOREA);
-        System.out.println("Message: " + message);
         request.getSession().setAttribute(WebAttributes.AUTHENTICATION_EXCEPTION, new BadCredentialsException(message));
 
         filter.doFilter(request, new MockHttpServletResponse(), chain);

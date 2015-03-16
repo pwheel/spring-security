@@ -23,21 +23,21 @@ sourceSets {
     integrationTest.groovy.srcDir file('src/integration-test/groovy')
 }
 
-eclipse.classpath.plusConfigurations += configurations.integrationTestRuntime
+eclipse.classpath.plusConfigurations += [configurations.integrationTestRuntime]
 
 dependencies {
     providedCompile "javax.servlet:javax.servlet-api:$servletApiVersion"
 
     compile project(':spring-security-core'),
             project(':spring-security-cas'),
-            "org.jasig.cas.client:cas-client-core:3.3.3"
+            "org.jasig.cas.client:cas-client-core:$casClientVersion"
 
     runtime project(':spring-security-web'),
             project(':spring-security-config'),
             "org.springframework:spring-context-support:$springVersion",
             "org.slf4j:jcl-over-slf4j:$slf4jVersion",
             "ch.qos.logback:logback-classic:$logbackVersion",
-            "net.sf.ehcache:ehcache-core:$ehcacheVersion"
+            "net.sf.ehcache:ehcache:$ehcacheVersion"
 
     integrationTestCompile project(':spring-security-cas'),
                    "org.seleniumhq.selenium:selenium-htmlunit-driver:$seleniumVersion",

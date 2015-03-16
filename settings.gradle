@@ -18,6 +18,7 @@ def String[] modules = [
 def String[] samples = [
     'tutorial-xml',
     'contacts-xml',
+    'chat-jc',
     'openid-xml',
     'aspectj-xml',
     'aspectj-jc',
@@ -33,6 +34,7 @@ def String[] samples = [
     'concurrency-jc',
     'form-jc',
     'helloworld-jc',
+    'helloworld-xml',
     'hellomvc-jc',
     'hellojs-jc',
     'insecure',

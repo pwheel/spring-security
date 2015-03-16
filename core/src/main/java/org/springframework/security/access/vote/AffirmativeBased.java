@@ -29,14 +29,7 @@ import org.springframework.security.core.Authentication;
  */
 public class AffirmativeBased extends AbstractAccessDecisionManager {
 
-    /**
-     * @deprecated Use constructor which takes voter list
-     */
-    @Deprecated
-    public AffirmativeBased() {
-    }
-
-    public AffirmativeBased(List<AccessDecisionVoter> decisionVoters) {
+    public AffirmativeBased(List<AccessDecisionVoter<? extends Object>> decisionVoters) {
         super(decisionVoters);
     }
 

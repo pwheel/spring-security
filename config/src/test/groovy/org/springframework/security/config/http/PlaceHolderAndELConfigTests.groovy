@@ -46,7 +46,7 @@ class PlaceHolderAndELConfigTests extends AbstractHttpConfigTests {
         System.setProperty("auth.failure", "/authFailure");
 
         xml.http(pattern: '${login.page}', security: 'none')
-        xml.http {
+        xml.http('use-expressions':false) {
             interceptUrl('${secure.Url}', '${secure.role}')
             'form-login'('login-page':'${login.page}', 'default-target-url': '${default.target}',
                 'authentication-failure-url':'${auth.failure}');
@@ -66,7 +66,7 @@ class PlaceHolderAndELConfigTests extends AbstractHttpConfigTests {
         System.setProperty("default.target", "/defaultTarget");
         System.setProperty("auth.failure", "/authFailure");
 
-        xml.http {
+        xml.http('use-expressions':false) {
             interceptUrl("#{systemProperties['secure.url']}", "#{systemProperties['secure.role']}")
             'form-login'('login-page':"#{systemProperties['login.page']}", 'default-target-url': "#{systemProperties['default.target']}",
                 'authentication-failure-url':"#{systemProperties['auth.failure']}");
@@ -135,7 +135,9 @@ class PlaceHolderAndELConfigTests extends AbstractHttpConfigTests {
 
     def accessDeniedPageWorksWithPlaceholders() {
         System.setProperty("accessDenied", "/go-away");
-        xml.http('auto-config': 'true', 'access-denied-page': '${accessDenied}')
+        xml.http('auto-config': 'true') {
+            'access-denied-handler'('error-page' : '${accessDenied}') {}
+        }
         createAppContext();
 
         expect:

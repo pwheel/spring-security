@@ -40,8 +40,8 @@ import org.springframework.util.StringUtils;
 public abstract class AbstractRememberMeServices implements RememberMeServices, InitializingBean, LogoutHandler {
     //~ Static fields/initializers =====================================================================================
 
-    public static final String SPRING_SECURITY_REMEMBER_ME_COOKIE_KEY = "SPRING_SECURITY_REMEMBER_ME_COOKIE";
-    public static final String DEFAULT_PARAMETER = "_spring_security_remember_me";
+    public static final String SPRING_SECURITY_REMEMBER_ME_COOKIE_KEY = "remember-me";
+    public static final String DEFAULT_PARAMETER = "remember-me";
     public static final int TWO_WEEKS_S = 1209600;
 
     private static final String DELIMITER = ":";
@@ -63,14 +63,6 @@ public abstract class AbstractRememberMeServices implements RememberMeServices, 
     private Boolean useSecureCookie = null;
     private Method setHttpOnlyMethod;
     private GrantedAuthoritiesMapper authoritiesMapper = new NullAuthoritiesMapper();
-
-    /**
-     * @deprecated Use constructor injection
-     */
-    @Deprecated
-    protected AbstractRememberMeServices() {
-        this.setHttpOnlyMethod = ReflectionUtils.findMethod(Cookie.class,"setHttpOnly", boolean.class);
-    }
 
     protected AbstractRememberMeServices(String key, UserDetailsService userDetailsService) {
         Assert.hasLength(key, "key cannot be empty or null");
@@ -349,6 +341,10 @@ public abstract class AbstractRememberMeServices implements RememberMeServices, 
         cookie.setMaxAge(maxAge);
         cookie.setPath(getCookiePath(request));
 
+        if(maxAge < 1) {
+            cookie.setVersion(1);
+        }
+
         if (useSecureCookie == null) {
             cookie.setSecure(request.isSecure());
         } else {
@@ -410,25 +406,6 @@ public abstract class AbstractRememberMeServices implements RememberMeServices, 
 
     protected UserDetailsService getUserDetailsService() {
         return userDetailsService;
-    }
-
-    /**
-     *
-     * @deprecated Use constructor injection
-     */
-    @Deprecated
-    public void setUserDetailsService(UserDetailsService userDetailsService) {
-        Assert.notNull(userDetailsService, "UserDetailsService cannot be null");
-        this.userDetailsService = userDetailsService;
-    }
-
-    /**
-     *
-     * @deprecated Use constructor injection
-     */
-    @Deprecated
-    public void setKey(String key) {
-        this.key = key;
     }
 
     public String getKey() {

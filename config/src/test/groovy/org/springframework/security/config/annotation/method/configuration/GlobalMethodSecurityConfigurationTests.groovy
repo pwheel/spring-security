@@ -15,6 +15,13 @@
  */
 package org.springframework.security.config.annotation.method.configuration
 
+import org.springframework.beans.BeansException
+import org.springframework.beans.factory.config.BeanPostProcessor
+import org.springframework.security.config.annotation.authentication.configurers.GlobalAuthenticationConfigurerAdapter
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
+
+import javax.sql.DataSource
+
 import static org.fest.assertions.Assertions.assertThat
 import static org.junit.Assert.fail
 
@@ -65,7 +72,6 @@ public class GlobalMethodSecurityConfigurationTests extends BaseSpringSpec {
             InMemoryAuthWithGlobalMethodSecurityConfig.EVENT.authentication == auth
     }
 
-    @Configuration
     @EnableGlobalMethodSecurity(prePostEnabled = true)
     public static class InMemoryAuthWithGlobalMethodSecurityConfig extends GlobalMethodSecurityConfiguration implements ApplicationListener<AuthenticationSuccessEvent> {
         static AuthenticationSuccessEvent EVENT
@@ -96,7 +102,6 @@ public class GlobalMethodSecurityConfigurationTests extends BaseSpringSpec {
             preAdviceVoter.preAdvice.expressionHandler.trustResolver == CustomTrustResolverConfig.TR
     }
 
-    @Configuration
     @EnableGlobalMethodSecurity(prePostEnabled = true)
     static class CustomTrustResolverConfig extends GlobalMethodSecurityConfiguration {
         static AuthenticationTrustResolver TR
@@ -130,7 +135,6 @@ public class GlobalMethodSecurityConfigurationTests extends BaseSpringSpec {
             noExceptionThrown()
     }
 
-    @Configuration
     @EnableGlobalMethodSecurity(prePostEnabled = true, proxyTargetClass = true)
     static class ExpressionHandlerHasBeanResolverSetConfig extends GlobalMethodSecurityConfiguration {
 
@@ -182,7 +186,6 @@ public class GlobalMethodSecurityConfigurationTests extends BaseSpringSpec {
             noExceptionThrown()
     }
 
-    @Configuration
     @EnableGlobalMethodSecurity(prePostEnabled = true)
     static class MethodSecurityServiceConfig extends GlobalMethodSecurityConfiguration {
 
@@ -217,7 +220,6 @@ public class GlobalMethodSecurityConfigurationTests extends BaseSpringSpec {
             thrown(AccessDeniedException)
     }
 
-    @Configuration
     @EnableGlobalMethodSecurity(prePostEnabled = true)
     public static class AutowirePermissionEvaluatorConfig extends GlobalMethodSecurityConfiguration {
         static PermissionEvaluator PE
@@ -246,7 +248,6 @@ public class GlobalMethodSecurityConfigurationTests extends BaseSpringSpec {
             noExceptionThrown()
     }
 
-    @Configuration
     @EnableGlobalMethodSecurity(prePostEnabled = true)
     public static class MultiPermissionEvaluatorConfig extends GlobalMethodSecurityConfiguration {
         static PermissionEvaluator PE
@@ -287,7 +288,6 @@ public class GlobalMethodSecurityConfigurationTests extends BaseSpringSpec {
 
     static class ChildConfig extends ParentConfig {}
 
-    @Configuration
     @EnableGlobalMethodSecurity(prePostEnabled = true)
     static class ParentConfig {
 
@@ -331,12 +331,70 @@ public class GlobalMethodSecurityConfigurationTests extends BaseSpringSpec {
         }
     }
 
-    @Configuration
     @EnableGlobalMethodSecurity(prePostEnabled = true)
     static class Sec2479ChildConfig {
         @Bean
         public MethodSecurityService service() {
             new MethodSecurityServiceImpl()
+        }
+    }
+
+    def "SEC-2815: @EnableGlobalMethodSecurity does not trigger eager initialization of Beans in GlobalAuthenticationConfigurer"() {
+        setup:
+        Sec2815Config.dataSource = Mock(DataSource)
+        when: 'load a Configuration that uses a Bean (DataSource) in a GlobalAuthenticationConfigurerAdapter'
+        loadConfig(Sec2815Config)
+        then: 'The Bean (DataSource) is still properly post processed with all BeanPostProcessor'
+        context.getBean(MockBeanPostProcessor).beforeInit['dataSource']
+        context.getBean(MockBeanPostProcessor).afterInit['dataSource']
+    }
+
+    @EnableGlobalMethodSecurity(prePostEnabled = true)
+    static class Sec2815Config {
+        static DataSource dataSource;
+
+        @Bean
+        public MethodSecurityService service() {
+            new MethodSecurityServiceImpl()
+        }
+
+        @Bean
+        public MockBeanPostProcessor mockBeanPostProcessor() {
+            new MockBeanPostProcessor()
+        }
+
+        @Bean
+        public DataSource dataSource() {
+            dataSource
+        }
+
+        @Configuration
+        static class AuthConfig extends GlobalAuthenticationConfigurerAdapter {
+            @Autowired
+            DataSource dataSource
+
+            @Override
+            void init(AuthenticationManagerBuilder auth) throws Exception {
+                auth.inMemoryAuthentication()
+            }
+        }
+    }
+
+
+    static class MockBeanPostProcessor implements BeanPostProcessor {
+        Map<String,Object> beforeInit = new HashMap<String,Object>()
+        Map<String,Object> afterInit = new HashMap<String,Object>()
+
+        @Override
+        Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+            beforeInit[beanName] = bean
+            bean
+        }
+
+        @Override
+        Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+            afterInit[beanName] = bean
+            bean
         }
     }
 }

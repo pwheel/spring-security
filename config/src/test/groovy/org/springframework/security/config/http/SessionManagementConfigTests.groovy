@@ -111,6 +111,7 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
                 'session-management'() {
                     'concurrency-control'('max-sessions':1,'error-if-maximum-exceeded':'true')
                 }
+                csrf(disabled:true)
             }
             createAppContext()
             SessionRegistry registry = appContext.getBean(SessionRegistry)
@@ -155,6 +156,7 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
             'session-management'() {
                 'concurrency-control'('session-registry-alias':'sr', 'expired-url': '/expired')
             }
+            csrf(disabled:true)
         }
         createAppContext();
         List filters = getFilters("/someurl");
@@ -182,8 +184,9 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
             }
             'logout'('invalidate-session': false, 'delete-cookies': 'testCookie')
             'remember-me'()
+            csrf(disabled:true)
         }
-        createAppContext();
+        createAppContext()
 
         List filters = getFilters("/someurl")
         ConcurrentSessionFilter concurrentSessionFilter = filters.get(1)
@@ -206,6 +209,7 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
                 'concurrency-control'()
             }
             'remember-me'()
+            csrf(disabled:true)
         })
         bean('entryPoint', 'org.springframework.security.web.authentication.Http403ForbiddenEntryPoint')
         createAppContext()
@@ -274,16 +278,17 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
         setup:
             httpAutoConfig {
                 'session-management'('session-authentication-strategy-ref':'ss')
+                csrf(disabled:true)
             }
             mockBean(SessionAuthenticationStrategy,'ss')
             createAppContext()
 
             MockHttpServletRequest request = new MockHttpServletRequest();
             request.getSession();
-            request.setRequestURI("/j_spring_security_check");
+            request.servletPath = "/login"
             request.setMethod("POST");
-            request.setParameter("j_username", "user");
-            request.setParameter("j_password", "password");
+            request.setParameter("username", "user");
+            request.setParameter("password", "password");
 
             SessionAuthenticationStrategy sessionAuthStrategy = appContext.getBean('ss',SessionAuthenticationStrategy)
             FilterChainProxy springSecurityFilterChain = appContext.getBean(FilterChainProxy)
@@ -298,6 +303,7 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
             'session-management'() {
                 'concurrency-control'('session-registry-ref':'sr')
             }
+            csrf(disabled:true)
         }
         bean('sr', SessionRegistryImpl.class.name)
         createAppContext();
@@ -354,6 +360,7 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
     def disablingSessionProtectionRemovesSessionManagementFilterIfNoInvalidSessionUrlSet() {
         httpAutoConfig {
             'session-management'('session-fixation-protection': 'none')
+            csrf(disabled:true)
         }
         createAppContext()
 
@@ -361,12 +368,61 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
         !(getFilters("/someurl").find { it instanceof SessionManagementFilter})
     }
 
+    def 'session-fixation-protection=none'() {
+        setup:
+        MockHttpServletRequest request = new MockHttpServletRequest(method:'POST')
+        request.session.id = '123'
+        request.setParameter('username', 'user')
+        request.setParameter('password', 'password')
+        request.servletPath = '/login'
+
+        MockHttpServletResponse response = new MockHttpServletResponse()
+        MockFilterChain chain = new MockFilterChain()
+        httpAutoConfig {
+            'session-management'('session-fixation-protection': 'none')
+            csrf(disabled:true)
+        }
+        createAppContext()
+        request.session.id = '123'
+
+        when:
+        springSecurityFilterChain.doFilter(request,response, chain)
+
+        then:
+        request.session.id == '123'
+    }
+
+    def 'session-fixation-protection=migrateSession'() {
+        setup:
+        MockHttpServletRequest request = new MockHttpServletRequest(method:'POST')
+        request.session.id = '123'
+        request.setParameter('username', 'user')
+        request.setParameter('password', 'password')
+        request.servletPath = '/login'
+
+        MockHttpServletResponse response = new MockHttpServletResponse()
+        MockFilterChain chain = new MockFilterChain()
+        httpAutoConfig {
+            'session-management'('session-fixation-protection': 'migrateSession')
+            csrf(disabled:true)
+        }
+        createAppContext()
+        request.session.id = '123'
+
+        when:
+        springSecurityFilterChain.doFilter(request,response, chain)
+
+        then:
+        request.session.id != '123'
+    }
+
     def disablingSessionProtectionRetainsSessionManagementFilterInvalidSessionUrlSet() {
         httpAutoConfig {
             'session-management'('session-fixation-protection': 'none', 'invalid-session-url': '/timeoutUrl')
+            csrf(disabled:true)
         }
         createAppContext()
-        def filter = getFilters("/someurl")[9]
+        def filter = getFilters("/someurl")[10]
 
         expect:
         filter instanceof SessionManagementFilter
