@@ -35,7 +35,7 @@ allprojects {
        mavenCentral()
        maven { url "http://repo.springsource.org/plugins-release" }
        maven { url "http://repo.terracotta.org/maven2/" }
-       maven { url "https://raw.github.com/synergian/wagon-git/releases"}
+       maven { url "https://raw.github.com/pwheel/maven-repo/releases"}
     }
 
     eclipse.project.name = "${project.name}-3.2.x"
@@ -98,7 +98,7 @@ configure(javaProjects) {
     apply from: "$rootDir/gradle/maven-deployment.gradle"
 
     dependencies {
-        deployerJars "ar.com.synergian:wagon-git:0.2.3"
+        deployerJars "com.github.pwheel:wagon-git:0.2.6"
     }
 
     uploadArchives {
@@ -108,9 +108,9 @@ configure(javaProjects) {
                 configureAuth = {
                     authentication(userName: bitBucketUsername, password: bitBucketPassword)
                 }
-                repository(url: 'git:releases://git@bitbucket.org:racquettrack/maven-repo.git') {
+                repository(url: 'git:releases://git@github.com:pwheel/maven-repo.git') {
                 }
-                snapshotRepository(url: 'git:snapshots://git@bitbucket.org:racquettrack/maven-repo.git') {
+                snapshotRepository(url: 'git:snapshots://git@github.com:pwheel/maven-repo.git') {
                 }
             }
         }
