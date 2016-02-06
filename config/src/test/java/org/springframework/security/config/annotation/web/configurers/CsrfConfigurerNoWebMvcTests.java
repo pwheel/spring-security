@@ -16,67 +16,87 @@
 package org.springframework.security.config.annotation.web.configurers;
 
 import static org.fest.assertions.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import org.junit.After;
 import org.junit.Test;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.annotation.web.servlet.configuration.EnableWebMvcSecurity;
+import org.springframework.security.web.servlet.support.csrf.CsrfRequestDataValueProcessor;
+import org.springframework.web.servlet.support.RequestDataValueProcessor;
 
 /**
  * @author Rob Winch
  *
  */
 public class CsrfConfigurerNoWebMvcTests {
-    ConfigurableApplicationContext context;
+	ConfigurableApplicationContext context;
 
-    @After
-    public void teardown() {
-        if(context != null) {
-            context.close();
-        }
-    }
+	@After
+	public void teardown() {
+		if (context != null) {
+			context.close();
+		}
+	}
 
-    @Test
-    public void missingDispatcherServletPreventsCsrfRequestDataValueProcessor() {
-        loadContext(EnableWebConfig.class);
+	@Test
+	public void missingDispatcherServletPreventsCsrfRequestDataValueProcessor() {
+		loadContext(EnableWebConfig.class);
 
-        assertThat(context.containsBeanDefinition("requestDataValueProcessor")).isFalse();
-    }
+		assertThat(context.containsBeanDefinition("requestDataValueProcessor")).isTrue();
+	}
 
-    @Test
-    public void findDispatcherServletPreventsCsrfRequestDataValueProcessor() {
-        loadContext(EnableWebMvcConfig.class);
+	@Test
+	public void findDispatcherServletPreventsCsrfRequestDataValueProcessor() {
+		loadContext(EnableWebMvcConfig.class);
 
-        assertThat(context.containsBeanDefinition("requestDataValueProcessor")).isTrue();
-    }
+		assertThat(context.containsBeanDefinition("requestDataValueProcessor")).isTrue();
+	}
 
-    @EnableWebSecurity
-    @Configuration
-    static class EnableWebConfig extends WebSecurityConfigurerAdapter {
+	@Test
+	public void overrideCsrfRequestDataValueProcessor() {
+		loadContext(EnableWebOverrideRequestDataConfig.class);
 
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-        }
-    }
+		assertThat(context.getBean(RequestDataValueProcessor.class).getClass())
+				.isNotEqualTo(CsrfRequestDataValueProcessor.class);
+	}
 
-    @EnableWebMvcSecurity
-    @Configuration
-    static class EnableWebMvcConfig extends WebSecurityConfigurerAdapter {
+	@EnableWebSecurity
+	static class EnableWebConfig extends WebSecurityConfigurerAdapter {
 
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-        }
-    }
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+		}
+	}
 
-    private void loadContext(Class<?> configs) {
-        AnnotationConfigApplicationContext annotationConfigApplicationContext = new AnnotationConfigApplicationContext();
-        annotationConfigApplicationContext.register(configs);
-        annotationConfigApplicationContext.refresh();
-        this.context = annotationConfigApplicationContext;
-    }
+	@EnableWebSecurity
+	static class EnableWebOverrideRequestDataConfig {
+		@Bean
+		@Primary
+		public RequestDataValueProcessor requestDataValueProcessor() {
+			return mock(RequestDataValueProcessor.class);
+		}
+	}
+
+	@EnableWebSecurity
+	static class EnableWebMvcConfig extends WebSecurityConfigurerAdapter {
+
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+		}
+	}
+
+	private void loadContext(Class<?> configs) {
+		AnnotationConfigApplicationContext annotationConfigApplicationContext = new AnnotationConfigApplicationContext();
+		annotationConfigApplicationContext.register(configs);
+		annotationConfigApplicationContext.refresh();
+		this.context = annotationConfigApplicationContext;
+	}
 }

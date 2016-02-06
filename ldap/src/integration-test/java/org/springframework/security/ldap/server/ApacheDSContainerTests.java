@@ -17,6 +17,11 @@ package org.springframework.security.ldap.server;
 
 import static junit.framework.Assert.fail;
 
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.Test;
 
 /**
@@ -28,42 +33,82 @@ import org.junit.Test;
  */
 public class ApacheDSContainerTests {
 
-    // SEC-2162
-    @Test
-    public void failsToStartThrowsException() throws Exception {
-        ApacheDSContainer server1 = new ApacheDSContainer("dc=springframework,dc=org", "classpath:test-server.ldif");
-        ApacheDSContainer server2 = new ApacheDSContainer("dc=springframework,dc=org", "classpath:test-server.ldif");
-        try {
-            server1.afterPropertiesSet();
-            try {
-                server2.afterPropertiesSet();
-                fail("Expected Exception");
-            } catch(RuntimeException success) {}
-        } finally {
-            try {
-                server1.destroy();
-            }catch(Throwable t) {}
-            try {
-                server2.destroy();
-            }catch(Throwable t) {}
-        }
-    }
+	// SEC-2162
+	@Test
+	public void failsToStartThrowsException() throws Exception {
+		ApacheDSContainer server1 = new ApacheDSContainer("dc=springframework,dc=org",
+				"classpath:test-server.ldif");
+		ApacheDSContainer server2 = new ApacheDSContainer("dc=springframework,dc=org",
+				"classpath:missing.ldif");
+		List<Integer> ports = getDefaultPorts(1);
+		server1.setPort(ports.get(0));
+		server2.setPort(ports.get(0));
+		try {
+			server1.afterPropertiesSet();
+			try {
+				server2.afterPropertiesSet();
+				fail("Expected Exception");
+			}
+			catch (RuntimeException success) {
+			}
+		}
+		finally {
+			try {
+				server1.destroy();
+			}
+			catch (Throwable t) {
+			}
+			try {
+				server2.destroy();
+			}
+			catch (Throwable t) {
+			}
+		}
+	}
 
-    // SEC-2161
-    @Test
-    public void multipleInstancesSimultanciously() throws Exception {
-        ApacheDSContainer server1 = new ApacheDSContainer("dc=springframework,dc=org", "classpath:test-server.ldif");
-        ApacheDSContainer server2 = new ApacheDSContainer("dc=springframework,dc=org", "classpath:test-server.ldif");
-        try {
-            server1.afterPropertiesSet();
-            server2.afterPropertiesSet();
-        } finally {
-            try {
-                server1.destroy();
-            }catch(Throwable t) {}
-            try {
-                server2.destroy();
-            }catch(Throwable t) {}
-        }
-    }
+	// SEC-2161
+	@Test
+	public void multipleInstancesSimultanciously() throws Exception {
+		ApacheDSContainer server1 = new ApacheDSContainer("dc=springframework,dc=org",
+				"classpath:test-server.ldif");
+		ApacheDSContainer server2 = new ApacheDSContainer("dc=springframework,dc=org",
+				"classpath:test-server.ldif");
+		List<Integer> ports = getDefaultPorts(2);
+		server1.setPort(ports.get(0));
+		server2.setPort(ports.get(1));
+		try {
+			server1.afterPropertiesSet();
+			server2.afterPropertiesSet();
+		}
+		finally {
+			try {
+				server1.destroy();
+			}
+			catch (Throwable t) {
+			}
+			try {
+				server2.destroy();
+			}
+			catch (Throwable t) {
+			}
+		}
+	}
+
+	private List<Integer> getDefaultPorts(int count) throws IOException {
+		List<ServerSocket> connections = new ArrayList<ServerSocket>();
+		List<Integer> availablePorts = new ArrayList<Integer>(count);
+		try {
+			for (int i = 0; i < count; i++) {
+				ServerSocket socket = new ServerSocket(0);
+				connections.add(socket);
+				availablePorts.add(socket.getLocalPort());
+			}
+			return availablePorts;
+		}
+		finally {
+			for (ServerSocket conn : connections) {
+				conn.close();
+			}
+		}
+	}
 }

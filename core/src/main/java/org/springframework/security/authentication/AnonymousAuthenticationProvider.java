@@ -15,7 +15,6 @@
 
 package org.springframework.security.authentication;
 
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.MessageSource;
 import org.springframework.context.MessageSourceAware;
 import org.springframework.context.support.MessageSourceAccessor;
@@ -24,73 +23,58 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.SpringSecurityMessageSource;
 import org.springframework.util.Assert;
 
-
 /**
- * An {@link AuthenticationProvider} implementation that validates {@link AnonymousAuthenticationToken}s.
+ * An {@link AuthenticationProvider} implementation that validates
+ * {@link AnonymousAuthenticationToken}s.
  * <p>
- * To be successfully validated, the {@link AnonymousAuthenticationToken#getKeyHash()} must match this class'
- * {@link #getKey()}.
+ * To be successfully validated, the {@link AnonymousAuthenticationToken#getKeyHash()}
+ * must match this class' {@link #getKey()}.
  *
  * @author Ben Alex
  */
-public class AnonymousAuthenticationProvider implements AuthenticationProvider, InitializingBean, MessageSourceAware {
+public class AnonymousAuthenticationProvider implements AuthenticationProvider,
+		MessageSourceAware {
 
-    //~ Instance fields ================================================================================================
+	// ~ Instance fields
+	// ================================================================================================
 
-    protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
-    private String key;
+	protected MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
+	private String key;
 
-    /**
-     *
-     * @deprecated Use constructor injection
-     */
-    @Deprecated
-    public AnonymousAuthenticationProvider() {
-    }
+	public AnonymousAuthenticationProvider(String key) {
+		Assert.hasLength(key, "A Key is required");
+		this.key = key;
+	}
 
-    public AnonymousAuthenticationProvider(String key) {
-        this.key = key;
-    }
+	// ~ Methods
+	// ========================================================================================================
 
-    //~ Methods ========================================================================================================
+	public Authentication authenticate(Authentication authentication)
+			throws AuthenticationException {
+		if (!supports(authentication.getClass())) {
+			return null;
+		}
 
-    public void afterPropertiesSet() throws Exception {
-        Assert.hasLength(key, "A Key is required");
-    }
+		if (this.key.hashCode() != ((AnonymousAuthenticationToken) authentication)
+				.getKeyHash()) {
+			throw new BadCredentialsException(
+					messages.getMessage("AnonymousAuthenticationProvider.incorrectKey",
+							"The presented AnonymousAuthenticationToken does not contain the expected key"));
+		}
 
-    public Authentication authenticate(Authentication authentication)
-        throws AuthenticationException {
-        if (!supports(authentication.getClass())) {
-            return null;
-        }
+		return authentication;
+	}
 
-        if (this.key.hashCode() != ((AnonymousAuthenticationToken) authentication).getKeyHash()) {
-            throw new BadCredentialsException(messages.getMessage("AnonymousAuthenticationProvider.incorrectKey",
-                    "The presented AnonymousAuthenticationToken does not contain the expected key"));
-        }
+	public String getKey() {
+		return key;
+	}
 
-        return authentication;
-    }
+	public void setMessageSource(MessageSource messageSource) {
+		Assert.notNull(messageSource, "messageSource cannot be null");
+		this.messages = new MessageSourceAccessor(messageSource);
+	}
 
-    public String getKey() {
-        return key;
-    }
-
-    /**
-     *
-     * @deprecated Use constructor injection
-     */
-    @Deprecated
-    public void setKey(String key) {
-        this.key = key;
-    }
-
-    public void setMessageSource(MessageSource messageSource) {
-        Assert.notNull(messageSource, "messageSource cannot be null");
-        this.messages = new MessageSourceAccessor(messageSource);
-    }
-
-    public boolean supports(Class<?> authentication) {
-        return (AnonymousAuthenticationToken.class.isAssignableFrom(authentication));
-    }
+	public boolean supports(Class<?> authentication) {
+		return (AnonymousAuthenticationToken.class.isAssignableFrom(authentication));
+	}
 }

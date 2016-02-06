@@ -29,7 +29,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Vector;
 
-
 /**
  * Tests {@link AbstractAccessDecisionManager}.
  *
@@ -38,129 +37,119 @@ import java.util.Vector;
 @SuppressWarnings("unchecked")
 public class AbstractAccessDecisionManagerTests extends TestCase {
 
-    //~ Methods ========================================================================================================
+	// ~ Methods
+	// ========================================================================================================
 
-    public void testAllowIfAccessDecisionManagerDefaults() {
-        MockDecisionManagerImpl mock = new MockDecisionManagerImpl();
-        assertTrue(!mock.isAllowIfAllAbstainDecisions()); // default
-        mock.setAllowIfAllAbstainDecisions(true);
-        assertTrue(mock.isAllowIfAllAbstainDecisions()); // changed
-    }
+	public void testAllowIfAccessDecisionManagerDefaults() {
+		List list = new Vector();
+		DenyAgainVoter denyVoter = new DenyAgainVoter();
+		list.add(denyVoter);
+		MockDecisionManagerImpl mock = new MockDecisionManagerImpl(list);
+		assertTrue(!mock.isAllowIfAllAbstainDecisions()); // default
+		mock.setAllowIfAllAbstainDecisions(true);
+		assertTrue(mock.isAllowIfAllAbstainDecisions()); // changed
+	}
 
-    public void testDelegatesSupportsClassRequests() throws Exception {
-        MockDecisionManagerImpl mock = new MockDecisionManagerImpl();
-        List list = new Vector();
-        list.add(new DenyVoter());
-        list.add(new MockStringOnlyVoter());
-        mock.setDecisionVoters(list);
+	public void testDelegatesSupportsClassRequests() throws Exception {
+		List list = new Vector();
+		list.add(new DenyVoter());
+		list.add(new MockStringOnlyVoter());
 
-        assertTrue(mock.supports(String.class));
-        assertTrue(!mock.supports(Integer.class));
-    }
+		MockDecisionManagerImpl mock = new MockDecisionManagerImpl(list);
 
-    public void testDelegatesSupportsRequests() throws Exception {
-        MockDecisionManagerImpl mock = new MockDecisionManagerImpl();
-        List list = new Vector();
-        DenyVoter voter = new DenyVoter();
-        DenyAgainVoter denyVoter = new DenyAgainVoter();
-        list.add(voter);
-        list.add(denyVoter);
-        mock.setDecisionVoters(list);
+		assertTrue(mock.supports(String.class));
+		assertTrue(!mock.supports(Integer.class));
+	}
 
-        ConfigAttribute attr = new SecurityConfig("DENY_AGAIN_FOR_SURE");
-        assertTrue(mock.supports(attr));
+	public void testDelegatesSupportsRequests() throws Exception {
+		List list = new Vector();
+		DenyVoter voter = new DenyVoter();
+		DenyAgainVoter denyVoter = new DenyAgainVoter();
+		list.add(voter);
+		list.add(denyVoter);
 
-        ConfigAttribute badAttr = new SecurityConfig("WE_DONT_SUPPORT_THIS");
-        assertTrue(!mock.supports(badAttr));
-    }
+		MockDecisionManagerImpl mock = new MockDecisionManagerImpl(list);
 
-    public void testProperlyStoresListOfVoters() throws Exception {
-        MockDecisionManagerImpl mock = new MockDecisionManagerImpl();
-        List list = new Vector();
-        DenyVoter voter = new DenyVoter();
-        DenyAgainVoter denyVoter = new DenyAgainVoter();
-        list.add(voter);
-        list.add(denyVoter);
-        mock.setDecisionVoters(list);
-        assertEquals(list.size(), mock.getDecisionVoters().size());
-    }
+		ConfigAttribute attr = new SecurityConfig("DENY_AGAIN_FOR_SURE");
+		assertTrue(mock.supports(attr));
 
-    public void testRejectsEmptyList() throws Exception {
-        MockDecisionManagerImpl mock = new MockDecisionManagerImpl();
-        List list = new Vector();
+		ConfigAttribute badAttr = new SecurityConfig("WE_DONT_SUPPORT_THIS");
+		assertTrue(!mock.supports(badAttr));
+	}
 
-        try {
-            mock.setDecisionVoters(list);
-            fail("Should have thrown IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-            assertTrue(true);
-        }
-    }
+	public void testProperlyStoresListOfVoters() throws Exception {
+		List list = new Vector();
+		DenyVoter voter = new DenyVoter();
+		DenyAgainVoter denyVoter = new DenyAgainVoter();
+		list.add(voter);
+		list.add(denyVoter);
+		MockDecisionManagerImpl mock = new MockDecisionManagerImpl(list);
+		assertEquals(list.size(), mock.getDecisionVoters().size());
+	}
 
-    public void testRejectsListContainingInvalidObjectTypes() {
-        MockDecisionManagerImpl mock = new MockDecisionManagerImpl();
-        List list = new Vector();
-        DenyVoter voter = new DenyVoter();
-        DenyAgainVoter denyVoter = new DenyAgainVoter();
-        String notAVoter = "NOT_A_VOTER";
-        list.add(voter);
-        list.add(notAVoter);
-        list.add(denyVoter);
+	public void testRejectsEmptyList() throws Exception {
+		List list = new Vector();
 
-        try {
-            mock.setDecisionVoters(list);
-            fail("Should have thrown IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-            assertTrue(true);
-        }
-    }
+		try {
+			new MockDecisionManagerImpl(list);
+			fail("Should have thrown IllegalArgumentException");
+		}
+		catch (IllegalArgumentException expected) {
+			assertTrue(true);
+		}
+	}
 
-    public void testRejectsNullVotersList() throws Exception {
-        MockDecisionManagerImpl mock = new MockDecisionManagerImpl();
+	public void testRejectsNullVotersList() throws Exception {
+		try {
+			new MockDecisionManagerImpl(null);
+			fail("Should have thrown IllegalArgumentException");
+		}
+		catch (IllegalArgumentException expected) {
+			assertTrue(true);
+		}
+	}
 
-        try {
-            mock.setDecisionVoters(null);
-            fail("Should have thrown IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-            assertTrue(true);
-        }
-    }
+	public void testRoleVoterAlwaysReturnsTrueToSupports() {
+		RoleVoter rv = new RoleVoter();
+		assertTrue(rv.supports(String.class));
+	}
 
-    public void testRoleVoterAlwaysReturnsTrueToSupports() {
-        RoleVoter rv = new RoleVoter();
-        assertTrue(rv.supports(String.class));
-    }
+	public void testWillNotStartIfDecisionVotersNotSet() throws Exception {
+		try {
+			new MockDecisionManagerImpl(null);
+			fail("Should have thrown IllegalArgumentException");
+		}
+		catch (IllegalArgumentException expected) {
+			assertTrue(true);
+		}
+	}
 
-    public void testWillNotStartIfDecisionVotersNotSet()
-        throws Exception {
-        MockDecisionManagerImpl mock = new MockDecisionManagerImpl();
+	// ~ Inner Classes
+	// ==================================================================================================
 
-        try {
-            mock.afterPropertiesSet();
-            fail("Should have thrown IllegalArgumentException");
-        } catch (IllegalArgumentException expected) {
-            assertTrue(true);
-        }
-    }
+	private class MockDecisionManagerImpl extends AbstractAccessDecisionManager {
+		protected MockDecisionManagerImpl(
+				List<AccessDecisionVoter<? extends Object>> decisionVoters) {
+			super(decisionVoters);
+		}
 
-    //~ Inner Classes ==================================================================================================
+		public void decide(Authentication authentication, Object object,
+				Collection<ConfigAttribute> configAttributes) {
+		}
+	}
 
-    private class MockDecisionManagerImpl extends AbstractAccessDecisionManager {
-        public void decide(Authentication authentication, Object object, Collection<ConfigAttribute> configAttributes) {
-        }
-    }
+	private class MockStringOnlyVoter implements AccessDecisionVoter<Object> {
+		public boolean supports(Class<?> clazz) {
+			return String.class.isAssignableFrom(clazz);
+		}
 
-    private class MockStringOnlyVoter implements AccessDecisionVoter<Object> {
-        public boolean supports(Class<?> clazz) {
-            return String.class.isAssignableFrom(clazz);
-        }
+		public boolean supports(ConfigAttribute attribute) {
+			throw new UnsupportedOperationException("mock method not implemented");
+		}
 
-        public boolean supports(ConfigAttribute attribute) {
-            throw new UnsupportedOperationException("mock method not implemented");
-        }
-
-        public int vote(Authentication authentication, Object object, Collection<ConfigAttribute> attributes) {
-            throw new UnsupportedOperationException("mock method not implemented");
-        }
-    }
+		public int vote(Authentication authentication, Object object,
+				Collection<ConfigAttribute> attributes) {
+			throw new UnsupportedOperationException("mock method not implemented");
+		}
+	}
 }

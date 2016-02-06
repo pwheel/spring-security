@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.security.web.util.UrlUtils;
 import org.springframework.util.Assert;
@@ -37,137 +38,107 @@ import org.springframework.web.filter.GenericFilterBean;
 /**
  * Logs a principal out.
  * <p>
- * Polls a series of {@link LogoutHandler}s. The handlers should be specified in the order they are required.
- * Generally you will want to call logout handlers <code>TokenBasedRememberMeServices</code> and
- * <code>SecurityContextLogoutHandler</code> (in that order).
+ * Polls a series of {@link LogoutHandler}s. The handlers should be specified in the order
+ * they are required. Generally you will want to call logout handlers
+ * <code>TokenBasedRememberMeServices</code> and <code>SecurityContextLogoutHandler</code>
+ * (in that order).
  * <p>
- * After logout, a redirect will be performed to the URL determined by either the configured
- * <tt>LogoutSuccessHandler</tt> or the <tt>logoutSuccessUrl</tt>, depending on which constructor was used.
+ * After logout, a redirect will be performed to the URL determined by either the
+ * configured <tt>LogoutSuccessHandler</tt> or the <tt>logoutSuccessUrl</tt>, depending on
+ * which constructor was used.
  *
  * @author Ben Alex
  */
 public class LogoutFilter extends GenericFilterBean {
 
-    //~ Instance fields ================================================================================================
+	// ~ Instance fields
+	// ================================================================================================
 
-    private String filterProcessesUrl;
-    private RequestMatcher logoutRequestMatcher;
+	private RequestMatcher logoutRequestMatcher;
 
-    private final List<LogoutHandler> handlers;
-    private final LogoutSuccessHandler logoutSuccessHandler;
+	private final List<LogoutHandler> handlers;
+	private final LogoutSuccessHandler logoutSuccessHandler;
 
-    //~ Constructors ===================================================================================================
+	// ~ Constructors
+	// ===================================================================================================
 
-    /**
-     * Constructor which takes a <tt>LogoutSuccessHandler</tt> instance to determine the target destination
-     * after logging out. The list of <tt>LogoutHandler</tt>s are intended to perform the actual logout functionality
-     * (such as clearing the security context, invalidating the session, etc.).
-     */
-    public LogoutFilter(LogoutSuccessHandler logoutSuccessHandler, LogoutHandler... handlers) {
-        Assert.notEmpty(handlers, "LogoutHandlers are required");
-        this.handlers = Arrays.asList(handlers);
-        Assert.notNull(logoutSuccessHandler, "logoutSuccessHandler cannot be null");
-        this.logoutSuccessHandler = logoutSuccessHandler;
-        setFilterProcessesUrl("/j_spring_security_logout");
-    }
+	/**
+	 * Constructor which takes a <tt>LogoutSuccessHandler</tt> instance to determine the
+	 * target destination after logging out. The list of <tt>LogoutHandler</tt>s are
+	 * intended to perform the actual logout functionality (such as clearing the security
+	 * context, invalidating the session, etc.).
+	 */
+	public LogoutFilter(LogoutSuccessHandler logoutSuccessHandler,
+			LogoutHandler... handlers) {
+		Assert.notEmpty(handlers, "LogoutHandlers are required");
+		this.handlers = Arrays.asList(handlers);
+		Assert.notNull(logoutSuccessHandler, "logoutSuccessHandler cannot be null");
+		this.logoutSuccessHandler = logoutSuccessHandler;
+		setFilterProcessesUrl("/logout");
+	}
 
-    public LogoutFilter(String logoutSuccessUrl, LogoutHandler... handlers) {
-        Assert.notEmpty(handlers, "LogoutHandlers are required");
-        this.handlers = Arrays.asList(handlers);
-        Assert.isTrue(!StringUtils.hasLength(logoutSuccessUrl) ||
-                UrlUtils.isValidRedirectUrl(logoutSuccessUrl), logoutSuccessUrl + " isn't a valid redirect URL");
-        SimpleUrlLogoutSuccessHandler urlLogoutSuccessHandler = new SimpleUrlLogoutSuccessHandler();
-        if (StringUtils.hasText(logoutSuccessUrl)) {
-            urlLogoutSuccessHandler.setDefaultTargetUrl(logoutSuccessUrl);
-        }
-        logoutSuccessHandler = urlLogoutSuccessHandler;
-        setFilterProcessesUrl("/j_spring_security_logout");
-    }
+	public LogoutFilter(String logoutSuccessUrl, LogoutHandler... handlers) {
+		Assert.notEmpty(handlers, "LogoutHandlers are required");
+		this.handlers = Arrays.asList(handlers);
+		Assert.isTrue(
+				!StringUtils.hasLength(logoutSuccessUrl)
+						|| UrlUtils.isValidRedirectUrl(logoutSuccessUrl),
+				logoutSuccessUrl + " isn't a valid redirect URL");
+		SimpleUrlLogoutSuccessHandler urlLogoutSuccessHandler = new SimpleUrlLogoutSuccessHandler();
+		if (StringUtils.hasText(logoutSuccessUrl)) {
+			urlLogoutSuccessHandler.setDefaultTargetUrl(logoutSuccessUrl);
+		}
+		logoutSuccessHandler = urlLogoutSuccessHandler;
+		setFilterProcessesUrl("/logout");
+	}
 
-    //~ Methods ========================================================================================================
+	// ~ Methods
+	// ========================================================================================================
 
-    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
-            throws IOException, ServletException {
-        HttpServletRequest request = (HttpServletRequest) req;
-        HttpServletResponse response = (HttpServletResponse) res;
+	public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
+			throws IOException, ServletException {
+		HttpServletRequest request = (HttpServletRequest) req;
+		HttpServletResponse response = (HttpServletResponse) res;
 
-        if (requiresLogout(request, response)) {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		if (requiresLogout(request, response)) {
+			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
-            if (logger.isDebugEnabled()) {
-                logger.debug("Logging out user '" + auth + "' and transferring to logout destination");
-            }
+			if (logger.isDebugEnabled()) {
+				logger.debug("Logging out user '" + auth
+						+ "' and transferring to logout destination");
+			}
 
-            for (LogoutHandler handler : handlers) {
-                handler.logout(request, response, auth);
-            }
+			for (LogoutHandler handler : handlers) {
+				handler.logout(request, response, auth);
+			}
 
-            logoutSuccessHandler.onLogoutSuccess(request, response, auth);
+			logoutSuccessHandler.onLogoutSuccess(request, response, auth);
 
-            return;
-        }
+			return;
+		}
 
-        chain.doFilter(request, response);
-    }
+		chain.doFilter(request, response);
+	}
 
-    /**
-     * Allow subclasses to modify when a logout should take place.
-     *
-     * @param request the request
-     * @param response the response
-     *
-     * @return <code>true</code> if logout should occur, <code>false</code> otherwise
-     */
-    protected boolean requiresLogout(HttpServletRequest request, HttpServletResponse response) {
-        return logoutRequestMatcher.matches(request);
-    }
+	/**
+	 * Allow subclasses to modify when a logout should take place.
+	 *
+	 * @param request the request
+	 * @param response the response
+	 *
+	 * @return <code>true</code> if logout should occur, <code>false</code> otherwise
+	 */
+	protected boolean requiresLogout(HttpServletRequest request,
+			HttpServletResponse response) {
+		return logoutRequestMatcher.matches(request);
+	}
 
-    public void setLogoutRequestMatcher(RequestMatcher logoutRequestMatcher) {
-        Assert.notNull(logoutRequestMatcher, "logoutRequestMatcher cannot be null");
-        this.logoutRequestMatcher = logoutRequestMatcher;
-    }
+	public void setLogoutRequestMatcher(RequestMatcher logoutRequestMatcher) {
+		Assert.notNull(logoutRequestMatcher, "logoutRequestMatcher cannot be null");
+		this.logoutRequestMatcher = logoutRequestMatcher;
+	}
 
-    @Deprecated
-    public void setFilterProcessesUrl(String filterProcessesUrl) {
-        this.logoutRequestMatcher = new FilterProcessUrlRequestMatcher(filterProcessesUrl);
-        this.filterProcessesUrl = filterProcessesUrl;
-    }
-
-    @Deprecated
-    protected String getFilterProcessesUrl() {
-        return filterProcessesUrl;
-    }
-
-    private static final class FilterProcessUrlRequestMatcher implements RequestMatcher {
-        private final String filterProcessesUrl;
-
-        private FilterProcessUrlRequestMatcher(String filterProcessesUrl) {
-            Assert.hasLength(filterProcessesUrl, "filterProcessesUrl must be specified");
-            Assert.isTrue(UrlUtils.isValidRedirectUrl(filterProcessesUrl), filterProcessesUrl + " isn't a valid redirect URL");
-            this.filterProcessesUrl = filterProcessesUrl;
-        }
-
-        public boolean matches(HttpServletRequest request) {
-            String uri = request.getRequestURI();
-            int pathParamIndex = uri.indexOf(';');
-
-            if (pathParamIndex > 0) {
-                // strip everything from the first semi-colon
-                uri = uri.substring(0, pathParamIndex);
-            }
-
-            int queryParamIndex = uri.indexOf('?');
-
-            if (queryParamIndex > 0) {
-                // strip everything from the first question mark
-                uri = uri.substring(0, queryParamIndex);
-            }
-
-            if ("".equals(request.getContextPath())) {
-                return uri.endsWith(filterProcessesUrl);
-            }
-
-            return uri.endsWith(request.getContextPath() + filterProcessesUrl);
-        }
-    }
+	public void setFilterProcessesUrl(String filterProcessesUrl) {
+		this.logoutRequestMatcher = new AntPathRequestMatcher(filterProcessesUrl);
+	}
 }

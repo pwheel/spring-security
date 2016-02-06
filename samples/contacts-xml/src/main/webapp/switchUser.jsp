@@ -25,15 +25,14 @@
     <c:if test="${not empty param.login_error}">
     <p>
       <font color="red">
-        Your 'su' attempt was not successful, try again.<br/><br/>
-        Reason: <%= ((AuthenticationException) session.getAttribute(AbstractAuthenticationProcessingFilter.SPRING_SECURITY_LAST_EXCEPTION_KEY)).getMessage() %>
+        Your 'su' attempt was not successful, try again.<br/>
       </font>
           </p>
     </c:if>
 
-    <form action="<c:url value='j_spring_security_switch_user'/>" method="POST">
+    <form action="<c:url value='login/impersonate'/>" method="POST">
       <table>
-        <tr><td>User:</td><td><input type='text' name='j_username'></td></tr>
+        <tr><td>User:</td><td><input type='text' name='username'></td></tr>
         <tr><td colspan='2'><input name="switch" type="submit" value="Switch to User"></td></tr>
       </table>
       <input type="hidden" name="<c:out value="${_csrf.parameterName}"/>" value="<c:out value="${_csrf.token}"/>"/>

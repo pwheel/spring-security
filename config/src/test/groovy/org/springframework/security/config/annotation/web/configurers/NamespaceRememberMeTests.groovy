@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.BaseWebConfig;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
+import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 import javax.servlet.http.Cookie
 
@@ -55,297 +56,336 @@ import org.springframework.test.util.ReflectionTestUtils;
  */
 public class NamespaceRememberMeTests extends BaseSpringSpec {
 
-    def "http/remember-me"() {
-        setup:
-            loadConfig(RememberMeConfig)
-        when: "login with remember me"
-            super.setup()
-            request.servletPath = "/login"
-            request.method = "POST"
-            request.parameters.username = ["user"] as String[]
-            request.parameters.password = ["password"] as String[]
-            request.parameters.'remember-me' = ["true"] as String[]
-            springSecurityFilterChain.doFilter(request,response,chain)
-            Cookie rememberMeCookie = getRememberMeCookie()
-        then: "response contains remember me cookie"
-            rememberMeCookie != null
-        when: "session expires"
-            super.setup()
-            request.setCookies(rememberMeCookie)
-            request.requestURI = "/abc"
-            springSecurityFilterChain.doFilter(request,response,chain)
-            MockHttpSession session = request.getSession()
-        then: "initialized to RememberMeAuthenticationToken"
-            SecurityContext context = new HttpSessionSecurityContextRepository().loadContext(new HttpRequestResponseHolder(request, response))
-            context.getAuthentication() instanceof RememberMeAuthenticationToken
-        when: "logout"
-            super.setup()
-            request.setSession(session)
-            super.setupCsrf()
-            request.setCookies(rememberMeCookie)
-            request.servletPath = "/logout"
-            request.method = "POST"
-            springSecurityFilterChain.doFilter(request,response,chain)
-            rememberMeCookie = getRememberMeCookie()
-        then: "logout cookie expired"
-            response.getRedirectedUrl() == "/login?logout"
-            rememberMeCookie.maxAge == 0
-        when: "use remember me after logout"
-            super.setup()
-            request.setCookies(rememberMeCookie)
-            request.requestURI = "/abc"
-            springSecurityFilterChain.doFilter(request,response,chain)
-        then: "sent to default login page"
-            response.getRedirectedUrl() == "http://localhost/login"
-    }
+	def "http/remember-me"() {
+		setup:
+			loadConfig(RememberMeConfig)
+		when: "login with remember me"
+			super.setup()
+			request.servletPath = "/login"
+			request.method = "POST"
+			request.parameters.username = ["user"] as String[]
+			request.parameters.password = ["password"] as String[]
+			request.parameters.'remember-me' = ["true"] as String[]
+			springSecurityFilterChain.doFilter(request,response,chain)
+			Cookie rememberMeCookie = getRememberMeCookie()
+		then: "response contains remember me cookie"
+			rememberMeCookie != null
+		when: "session expires"
+			super.setup()
+			request.setCookies(rememberMeCookie)
+			request.requestURI = "/abc"
+			springSecurityFilterChain.doFilter(request,response,chain)
+			MockHttpSession session = request.getSession()
+		then: "initialized to RememberMeAuthenticationToken"
+			SecurityContext context = new HttpSessionSecurityContextRepository().loadContext(new HttpRequestResponseHolder(request, response))
+			context.getAuthentication() instanceof RememberMeAuthenticationToken
+		when: "logout"
+			super.setup()
+			request.setSession(session)
+			super.setupCsrf()
+			request.setCookies(rememberMeCookie)
+			request.servletPath = "/logout"
+			request.method = "POST"
+			springSecurityFilterChain.doFilter(request,response,chain)
+			rememberMeCookie = getRememberMeCookie()
+		then: "logout cookie expired"
+			response.getRedirectedUrl() == "/login?logout"
+			rememberMeCookie.maxAge == 0
+		when: "use remember me after logout"
+			super.setup()
+			request.setCookies(rememberMeCookie)
+			request.requestURI = "/abc"
+			springSecurityFilterChain.doFilter(request,response,chain)
+		then: "sent to default login page"
+			response.getRedirectedUrl() == "http://localhost/login"
+	}
 
-    @Configuration
-    static class RememberMeConfig extends BaseWebConfig {
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .authorizeRequests()
-                    .anyRequest().hasRole("USER")
-                    .and()
-                .formLogin()
-                    .and()
-                .rememberMe()
-        }
-    }
+	@Configuration
+	static class RememberMeConfig extends BaseWebConfig {
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.authorizeRequests()
+					.anyRequest().hasRole("USER")
+					.and()
+				.formLogin()
+					.and()
+				.rememberMe()
+		}
+	}
 
-    def "http/remember-me@services-ref"() {
-        setup:
-            RememberMeServicesRefConfig.REMEMBER_ME_SERVICES = Mock(RememberMeServices)
-        when: "use custom remember-me services"
-            loadConfig(RememberMeServicesRefConfig)
-        then: "custom remember-me services used"
-            findFilter(RememberMeAuthenticationFilter).rememberMeServices == RememberMeServicesRefConfig.REMEMBER_ME_SERVICES
-            findFilter(UsernamePasswordAuthenticationFilter).rememberMeServices == RememberMeServicesRefConfig.REMEMBER_ME_SERVICES
-    }
+	// See SEC-3170
+	static interface RememberMeServicesLogoutHandler extends RememberMeServices, LogoutHandler{}
 
-    @Configuration
-    static class RememberMeServicesRefConfig extends BaseWebConfig {
-        static RememberMeServices REMEMBER_ME_SERVICES
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .formLogin()
-                    .and()
-                .rememberMe()
-                    .rememberMeServices(REMEMBER_ME_SERVICES)
-        }
-    }
+	def "http/remember-me@services-ref"() {
+		setup:
+			RememberMeServicesRefConfig.REMEMBER_ME_SERVICES = Mock(RememberMeServicesLogoutHandler)
+		when: "use custom remember-me services"
+			loadConfig(RememberMeServicesRefConfig)
+		then: "custom remember-me services used"
+			findFilter(RememberMeAuthenticationFilter).rememberMeServices == RememberMeServicesRefConfig.REMEMBER_ME_SERVICES
+			findFilter(UsernamePasswordAuthenticationFilter).rememberMeServices == RememberMeServicesRefConfig.REMEMBER_ME_SERVICES
+	}
 
-    def "http/remember-me@authentication-success-handler-ref"() {
-        setup:
-            AuthSuccessConfig.SUCCESS_HANDLER = Mock(AuthenticationSuccessHandler)
-        when: "use custom success handler"
-            loadConfig(AuthSuccessConfig)
-        then: "custom remember-me success handler is used"
-            findFilter(RememberMeAuthenticationFilter).successHandler == AuthSuccessConfig.SUCCESS_HANDLER
-    }
+	@Configuration
+	static class RememberMeServicesRefConfig extends BaseWebConfig {
+		static RememberMeServices REMEMBER_ME_SERVICES
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.formLogin()
+					.and()
+				.rememberMe()
+					.rememberMeServices(REMEMBER_ME_SERVICES)
+		}
+	}
 
-    @Configuration
-    static class AuthSuccessConfig extends BaseWebConfig {
-        static AuthenticationSuccessHandler SUCCESS_HANDLER
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .formLogin()
-                    .and()
-                .rememberMe()
-                    .authenticationSuccessHandler(SUCCESS_HANDLER)
-        }
-    }
+	def "http/remember-me@authentication-success-handler-ref"() {
+		setup:
+			AuthSuccessConfig.SUCCESS_HANDLER = Mock(AuthenticationSuccessHandler)
+		when: "use custom success handler"
+			loadConfig(AuthSuccessConfig)
+		then: "custom remember-me success handler is used"
+			findFilter(RememberMeAuthenticationFilter).successHandler == AuthSuccessConfig.SUCCESS_HANDLER
+	}
 
-    // http/remember-me@data-source-ref is not supported directly. Instead use http/remember-me@token-repository-ref example
+	@Configuration
+	static class AuthSuccessConfig extends BaseWebConfig {
+		static AuthenticationSuccessHandler SUCCESS_HANDLER
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.formLogin()
+					.and()
+				.rememberMe()
+					.authenticationSuccessHandler(SUCCESS_HANDLER)
+		}
+	}
 
-    def "http/remember-me@key"() {
-        when: "use custom key"
-            loadConfig(KeyConfig)
-            AuthenticationManager authManager = context.getBean(AuthenticationManager)
-        then: "custom key services used"
-            findFilter(RememberMeAuthenticationFilter).rememberMeServices.key == "KeyConfig"
-            authManager.authenticate(new RememberMeAuthenticationToken("KeyConfig", "user", AuthorityUtils.createAuthorityList("ROLE_USER")))
-    }
+	// http/remember-me@data-source-ref is not supported directly. Instead use http/remember-me@token-repository-ref example
 
-    @Configuration
-    static class KeyConfig extends BaseWebConfig {
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .formLogin()
-                    .and()
-                .rememberMe()
-                    .key("KeyConfig")
-        }
+	def "http/remember-me@key"() {
+		when: "use custom key"
+			loadConfig(KeyConfig)
+			AuthenticationManager authManager = context.getBean(AuthenticationManager)
+		then: "custom key services used"
+			findFilter(RememberMeAuthenticationFilter).rememberMeServices.key == "KeyConfig"
+			authManager.authenticate(new RememberMeAuthenticationToken("KeyConfig", "user", AuthorityUtils.createAuthorityList("ROLE_USER")))
+	}
 
-        @Bean
-        @Override
-        public AuthenticationManager authenticationManagerBean()
-                throws Exception {
-            return super.authenticationManagerBean();
-        }
-    }
+	@Configuration
+	static class KeyConfig extends BaseWebConfig {
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.formLogin()
+					.and()
+				.rememberMe()
+					.key("KeyConfig")
+		}
 
-    // http/remember-me@services-alias is not supported use standard aliasing instead (i.e. @Bean("alias"))
+		@Bean
+		@Override
+		public AuthenticationManager authenticationManagerBean()
+				throws Exception {
+			return super.authenticationManagerBean();
+		}
+	}
 
-    def "http/remember-me@token-repository-ref"() {
-        setup:
-            TokenRepositoryRefConfig.TOKEN_REPOSITORY = Mock(PersistentTokenRepository)
-        when: "use custom token services"
-            loadConfig(TokenRepositoryRefConfig)
-        then: "custom token services used with PersistentTokenBasedRememberMeServices"
-            PersistentTokenBasedRememberMeServices rememberMeServices = findFilter(RememberMeAuthenticationFilter).rememberMeServices
-            findFilter(RememberMeAuthenticationFilter).rememberMeServices.tokenRepository == TokenRepositoryRefConfig.TOKEN_REPOSITORY
-    }
+	// http/remember-me@services-alias is not supported use standard aliasing instead (i.e. @Bean("alias"))
 
-    @Configuration
-    static class TokenRepositoryRefConfig extends BaseWebConfig {
-        static PersistentTokenRepository TOKEN_REPOSITORY
-        protected void configure(HttpSecurity http) throws Exception {
-            // JdbcTokenRepositoryImpl tokenRepository = new JdbcTokenRepositoryImpl()
-            // tokenRepository.setDataSource(dataSource);
-            http
-                .formLogin()
-                    .and()
-                .rememberMe()
-                    .tokenRepository(TOKEN_REPOSITORY)
-        }
-    }
+	def "http/remember-me@token-repository-ref"() {
+		setup:
+			TokenRepositoryRefConfig.TOKEN_REPOSITORY = Mock(PersistentTokenRepository)
+		when: "use custom token services"
+			loadConfig(TokenRepositoryRefConfig)
+		then: "custom token services used with PersistentTokenBasedRememberMeServices"
+			PersistentTokenBasedRememberMeServices rememberMeServices = findFilter(RememberMeAuthenticationFilter).rememberMeServices
+			findFilter(RememberMeAuthenticationFilter).rememberMeServices.tokenRepository == TokenRepositoryRefConfig.TOKEN_REPOSITORY
+	}
 
-    def "http/remember-me@token-validity-seconds"() {
-        when: "use token validity"
-            loadConfig(TokenValiditySecondsConfig)
-        then: "custom token validity used"
-            findFilter(RememberMeAuthenticationFilter).rememberMeServices.tokenValiditySeconds == 1
-    }
+	@Configuration
+	static class TokenRepositoryRefConfig extends BaseWebConfig {
+		static PersistentTokenRepository TOKEN_REPOSITORY
+		protected void configure(HttpSecurity http) throws Exception {
+			// JdbcTokenRepositoryImpl tokenRepository = new JdbcTokenRepositoryImpl()
+			// tokenRepository.setDataSource(dataSource);
+			http
+				.formLogin()
+					.and()
+				.rememberMe()
+					.tokenRepository(TOKEN_REPOSITORY)
+		}
+	}
 
-    @Configuration
-    static class TokenValiditySecondsConfig extends BaseWebConfig {
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .formLogin()
-                    .and()
-                .rememberMe()
-                    .tokenValiditySeconds(1)
-        }
-    }
+	def "http/remember-me@token-validity-seconds"() {
+		when: "use token validity"
+			loadConfig(TokenValiditySecondsConfig)
+		then: "custom token validity used"
+			findFilter(RememberMeAuthenticationFilter).rememberMeServices.tokenValiditySeconds == 1
+	}
 
-    def "http/remember-me@token-validity-seconds default"() {
-        when: "use token validity"
-            loadConfig(DefaultTokenValiditySecondsConfig)
-        then: "custom token validity used"
-            findFilter(RememberMeAuthenticationFilter).rememberMeServices.tokenValiditySeconds == AbstractRememberMeServices.TWO_WEEKS_S
-    }
+	@Configuration
+	static class TokenValiditySecondsConfig extends BaseWebConfig {
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.formLogin()
+					.and()
+				.rememberMe()
+					.tokenValiditySeconds(1)
+		}
+	}
 
-    @Configuration
-    static class DefaultTokenValiditySecondsConfig extends BaseWebConfig {
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .formLogin()
-                    .and()
-                .rememberMe()
-        }
-    }
+	def "http/remember-me@token-validity-seconds default"() {
+		when: "use token validity"
+			loadConfig(DefaultTokenValiditySecondsConfig)
+		then: "custom token validity used"
+			findFilter(RememberMeAuthenticationFilter).rememberMeServices.tokenValiditySeconds == AbstractRememberMeServices.TWO_WEEKS_S
+	}
 
-    def "http/remember-me@use-secure-cookie"() {
-        when: "use secure cookies = true"
-            loadConfig(UseSecureCookieConfig)
-        then: "secure cookies will be used"
-            ReflectionTestUtils.getField(findFilter(RememberMeAuthenticationFilter).rememberMeServices, "useSecureCookie") == true
-    }
+	@Configuration
+	static class DefaultTokenValiditySecondsConfig extends BaseWebConfig {
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.formLogin()
+					.and()
+				.rememberMe()
+		}
+	}
 
-    @Configuration
-    static class UseSecureCookieConfig extends BaseWebConfig {
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .formLogin()
-                    .and()
-                .rememberMe()
-                    .useSecureCookie(true)
-        }
-    }
+	def "http/remember-me@use-secure-cookie"() {
+		when: "use secure cookies = true"
+			loadConfig(UseSecureCookieConfig)
+		then: "secure cookies will be used"
+			ReflectionTestUtils.getField(findFilter(RememberMeAuthenticationFilter).rememberMeServices, "useSecureCookie") == true
+	}
 
-    def "http/remember-me@use-secure-cookie defaults"() {
-        when: "use secure cookies not specified"
-            loadConfig(DefaultUseSecureCookieConfig)
-        then: "secure cookies will be null (use secure if the request is secure)"
-            ReflectionTestUtils.getField(findFilter(RememberMeAuthenticationFilter).rememberMeServices, "useSecureCookie") == null
-    }
+	@Configuration
+	static class UseSecureCookieConfig extends BaseWebConfig {
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.formLogin()
+					.and()
+				.rememberMe()
+					.useSecureCookie(true)
+		}
+	}
 
-    @Configuration
-    static class DefaultUseSecureCookieConfig extends BaseWebConfig {
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .formLogin()
-                    .and()
-                .rememberMe()
-        }
-    }
+	def "http/remember-me@remember-me-parameter"() {
+		when: "use custom rememberMeParameter"
+			loadConfig(RememberMeParameterConfig)
+		then: "custom rememberMeParameter will be used"
+			findFilter(RememberMeAuthenticationFilter).rememberMeServices.parameter == "rememberMe"
+	}
 
-    def "http/remember-me defaults UserDetailsService with custom UserDetailsService"() {
-        setup:
-            DefaultsUserDetailsServiceWithDaoConfig.USERDETAILS_SERVICE = Mock(UserDetailsService)
-            loadConfig(DefaultsUserDetailsServiceWithDaoConfig)
-        when:
-            request.setCookies(createRememberMeCookie())
-            springSecurityFilterChain.doFilter(request, response, chain)
-        then: "RememberMeServices defaults to the custom UserDetailsService"
-           1 * DefaultsUserDetailsServiceWithDaoConfig.USERDETAILS_SERVICE.loadUserByUsername("user")
-    }
+	@Configuration
+	static class RememberMeParameterConfig extends BaseWebConfig {
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.formLogin()
+					.and()
+				.rememberMe()
+					.rememberMeParameter("rememberMe")
+		}
+	}
 
-    @Configuration
-    @EnableWebSecurity
-    static class DefaultsUserDetailsServiceWithDaoConfig extends WebSecurityConfigurerAdapter {
-        static UserDetailsService USERDETAILS_SERVICE
+	// SEC-2880
+	def "http/remember-me@remember-me-cookie"() {
+		when: "use custom rememberMeCookieName"
+		loadConfig(RememberMeCookieNameConfig)
+		then: "custom rememberMeCookieName will be used"
+		findFilter(RememberMeAuthenticationFilter).rememberMeServices.cookieName == "rememberMe"
+	}
 
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .formLogin()
-                    .and()
-                .rememberMe()
-        }
+	@Configuration
+	static class RememberMeCookieNameConfig extends BaseWebConfig {
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.formLogin()
+					.and()
+				.rememberMe()
+					.rememberMeCookieName("rememberMe")
+		}
+	}
 
-        protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-            auth
-                    .userDetailsService(USERDETAILS_SERVICE);
-        }
-    }
+	def "http/remember-me@use-secure-cookie defaults"() {
+		when: "use secure cookies not specified"
+			loadConfig(DefaultUseSecureCookieConfig)
+		then: "secure cookies will be null (use secure if the request is secure)"
+			ReflectionTestUtils.getField(findFilter(RememberMeAuthenticationFilter).rememberMeServices, "useSecureCookie") == null
+	}
 
-    def "http/remember-me@user-service-ref"() {
-        setup:
-            UserServiceRefConfig.USERDETAILS_SERVICE = Mock(UserDetailsService)
-        when: "use custom UserDetailsService"
-            loadConfig(UserServiceRefConfig)
-        then: "custom UserDetailsService is used"
-            ReflectionTestUtils.getField(findFilter(RememberMeAuthenticationFilter).rememberMeServices, "userDetailsService") == UserServiceRefConfig.USERDETAILS_SERVICE
-    }
+	@Configuration
+	static class DefaultUseSecureCookieConfig extends BaseWebConfig {
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.formLogin()
+					.and()
+				.rememberMe()
+		}
+	}
 
-    @Configuration
-    static class UserServiceRefConfig extends BaseWebConfig {
-        static UserDetailsService USERDETAILS_SERVICE
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .formLogin()
-                    .and()
-                .rememberMe()
-                    .userDetailsService(USERDETAILS_SERVICE)
-        }
-    }
+	def "http/remember-me defaults UserDetailsService with custom UserDetailsService"() {
+		setup:
+			DefaultsUserDetailsServiceWithDaoConfig.USERDETAILS_SERVICE = Mock(UserDetailsService)
+			loadConfig(DefaultsUserDetailsServiceWithDaoConfig)
+		when:
+			request.setCookies(createRememberMeCookie())
+			springSecurityFilterChain.doFilter(request, response, chain)
+		then: "RememberMeServices defaults to the custom UserDetailsService"
+		   1 * DefaultsUserDetailsServiceWithDaoConfig.USERDETAILS_SERVICE.loadUserByUsername("user")
+	}
 
-    Cookie createRememberMeCookie() {
-        MockHttpServletRequest request = new MockHttpServletRequest()
-        MockHttpServletResponse response = new MockHttpServletResponse()
-        super.setupCsrf("CSRF_TOKEN", request, response)
+	@EnableWebSecurity
+	static class DefaultsUserDetailsServiceWithDaoConfig extends WebSecurityConfigurerAdapter {
+		static UserDetailsService USERDETAILS_SERVICE
 
-        MockFilterChain chain = new MockFilterChain()
-        request.servletPath = "/login"
-        request.method = "POST"
-        request.parameters.username = ["user"] as String[]
-        request.parameters.password = ["password"] as String[]
-        request.parameters.'remember-me' = ["true"] as String[]
-        springSecurityFilterChain.doFilter(request, response, chain)
-        response.getCookie("remember-me")
-    }
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.formLogin()
+					.and()
+				.rememberMe()
+		}
 
-    Cookie getRememberMeCookie(String cookieName="remember-me") {
-        response.getCookie(cookieName)
-    }
+		protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+			auth
+					.userDetailsService(USERDETAILS_SERVICE);
+		}
+	}
+
+	def "http/remember-me@user-service-ref"() {
+		setup:
+			UserServiceRefConfig.USERDETAILS_SERVICE = Mock(UserDetailsService)
+		when: "use custom UserDetailsService"
+			loadConfig(UserServiceRefConfig)
+		then: "custom UserDetailsService is used"
+			ReflectionTestUtils.getField(findFilter(RememberMeAuthenticationFilter).rememberMeServices, "userDetailsService") == UserServiceRefConfig.USERDETAILS_SERVICE
+	}
+
+	@Configuration
+	static class UserServiceRefConfig extends BaseWebConfig {
+		static UserDetailsService USERDETAILS_SERVICE
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.formLogin()
+					.and()
+				.rememberMe()
+					.userDetailsService(USERDETAILS_SERVICE)
+		}
+	}
+
+	Cookie createRememberMeCookie() {
+		MockHttpServletRequest request = new MockHttpServletRequest()
+		MockHttpServletResponse response = new MockHttpServletResponse()
+		super.setupCsrf("CSRF_TOKEN", request, response)
+
+		MockFilterChain chain = new MockFilterChain()
+		request.servletPath = "/login"
+		request.method = "POST"
+		request.parameters.username = ["user"] as String[]
+		request.parameters.password = ["password"] as String[]
+		request.parameters.'remember-me' = ["true"] as String[]
+		springSecurityFilterChain.doFilter(request, response, chain)
+		response.getCookie("remember-me")
+	}
+
+	Cookie getRememberMeCookie(String cookieName="remember-me") {
+		response.getCookie(cookieName)
+	}
 }
