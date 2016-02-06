@@ -851,9 +851,20 @@
                 </xs:documentation>
       </xs:annotation>
       <xs:complexType>
-         <xs:sequence>
-            <xs:element minOccurs="0" maxOccurs="unbounded" ref="security:intercept-message"/>
-         </xs:sequence>
+         <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element ref="security:intercept-message"/>
+            <xs:element name="expression-handler">
+               <xs:annotation>
+                  <xs:documentation>Defines the SecurityExpressionHandler instance which will be used if expression-based
+                access-control is enabled. A default implementation (with no ACL support) will be used if
+                not supplied.
+                </xs:documentation>
+               </xs:annotation>
+               <xs:complexType>
+                  <xs:attributeGroup ref="security:ref"/>
+               </xs:complexType>
+            </xs:element>
+         </xs:choice>
          <xs:attributeGroup ref="security:websocket-message-broker.attrlist"/>
       </xs:complexType>
    </xs:element>
@@ -872,9 +883,9 @@
       </xs:attribute>
       <xs:attribute name="same-origin-disabled" type="xs:boolean">
          <xs:annotation>
-            <xs:documentation>Disables the requrement for CSRF token to be present in the Stomp headers (default false).
-                Changing the default is useful if it is necessary to allow other origins to make SockJS
-                connections.
+            <xs:documentation>Disables the requirement for CSRF token to be present in the Stomp headers (default
+                false). Changing the default is useful if it is necessary to allow other origins to make
+                SockJS connections.
                 </xs:documentation>
          </xs:annotation>
       </xs:attribute>
@@ -1233,7 +1244,8 @@
       </xs:attribute>
       <xs:attribute name="disable-url-rewriting" type="xs:boolean">
          <xs:annotation>
-            <xs:documentation>Prevents the jsessionid parameter from being added to rendered URLs.
+            <xs:documentation>Prevents the jsessionid parameter from being added to rendered URLs. Defaults to "true"
+                (rewriting is disabled).
                 </xs:documentation>
          </xs:annotation>
       </xs:attribute>
@@ -1343,7 +1355,7 @@
       <xs:attribute name="logout-success-url" type="xs:token">
          <xs:annotation>
             <xs:documentation>Specifies the URL to display once the user has logged out. If not specified, defaults to
-                /.
+                &lt;form-login-login-page&gt;/?logout (i.e. /login?logout).
                 </xs:documentation>
          </xs:annotation>
       </xs:attribute>
@@ -1828,11 +1840,11 @@
          </xs:annotation>
       </xs:attribute>
       <xs:attribute name="remember-me-cookie" type="xs:token">
-          <xs:annotation>
-              <xs:documentation>The name of cookie which store the token for remember-me authentication. Defaults to
-                  'remember-me'.
-              </xs:documentation>
-          </xs:annotation>
+         <xs:annotation>
+            <xs:documentation>The name of cookie which store the token for remember-me authentication. Defaults to
+                'remember-me'.
+                </xs:documentation>
+         </xs:annotation>
       </xs:attribute>
   </xs:attributeGroup>
   <xs:attributeGroup name="token-repository-ref">

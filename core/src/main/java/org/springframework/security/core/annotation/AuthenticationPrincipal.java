@@ -24,26 +24,26 @@ import java.lang.annotation.Target;
 import org.springframework.security.core.Authentication;
 
 /**
- * Annotation that is used to resolve
- * {@link Authentication#getPrincipal()} to a method argument.
+ * Annotation that is used to resolve {@link Authentication#getPrincipal()} to a method
+ * argument.
  *
  * @author Rob Winch
  * @since 4.0
  *
- * @see org.springframework.security.messaging.context.AuthenticationPrincipalArgumentResolver
+ *  See: <a href="{@docRoot}/org/springframework/security/messaging/context/AuthenticationPrincipalArgumentResolver.html">
+ *  AuthenticationPrincipalArgumentResolver
+ *  </a>
  */
 @Target({ ElementType.PARAMETER, ElementType.ANNOTATION_TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface AuthenticationPrincipal {
 
-    /**
-     * True if a {@link ClassCastException} should be thrown
-     * when the current {@link Authentication#getPrincipal()} is the incorrect
-     * type. Default is false.
-     *
-     * @return
-     */
-    boolean errorOnInvalidType() default false;
+	/**
+	 * True if a {@link ClassCastException} should be thrown when the current
+	 * {@link Authentication#getPrincipal()} is the incorrect type. Default is false.
+	 *
+	 * @return
+	 */
+	boolean errorOnInvalidType() default false;
 }
-

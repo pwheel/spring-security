@@ -15,6 +15,7 @@
  */
 package org.springframework.security.config.annotation.web.configurers
 
+import org.springframework.beans.factory.BeanCreationException
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.AnyObjectPostProcessor
 import org.springframework.security.config.annotation.BaseSpringSpec
@@ -22,6 +23,8 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
+import org.springframework.security.config.annotation.web.configurers.LogoutConfigurerTests.RememberMeNoLogoutHandler;
+import org.springframework.security.web.authentication.RememberMeServices
 import org.springframework.security.web.authentication.logout.LogoutFilter
 
 /**
@@ -30,85 +33,116 @@ import org.springframework.security.web.authentication.logout.LogoutFilter
  */
 class LogoutConfigurerTests extends BaseSpringSpec {
 
-    def "logout ObjectPostProcessor"() {
-        setup:
-            AnyObjectPostProcessor opp = Mock()
-            HttpSecurity http = new HttpSecurity(opp, authenticationBldr, [:])
-        when:
-            http
-                .logout()
-                    .and()
-                .build()
+	def "logout ObjectPostProcessor"() {
+		setup:
+			AnyObjectPostProcessor opp = Mock()
+			HttpSecurity http = new HttpSecurity(opp, authenticationBldr, [:])
+		when:
+			http
+				.logout()
+					.and()
+				.build()
 
-        then: "LogoutFilter is registered with LifecycleManager"
-            1 * opp.postProcess(_ as LogoutFilter) >> {LogoutFilter o -> o}
-    }
+		then: "LogoutFilter is registered with LifecycleManager"
+			1 * opp.postProcess(_ as LogoutFilter) >> {LogoutFilter o -> o}
+	}
 
-    def "invoke logout twice does not override"() {
-        when:
-            loadConfig(InvokeTwiceDoesNotOverride)
-            request.method = "POST"
-            request.servletPath = "/custom/logout"
-            findFilter(LogoutFilter).doFilter(request,response,chain)
-        then:
-            response.redirectedUrl == "/login?logout"
-    }
+	def "invoke logout twice does not override"() {
+		when:
+			loadConfig(InvokeTwiceDoesNotOverride)
+			request.method = "POST"
+			request.servletPath = "/custom/logout"
+			findFilter(LogoutFilter).doFilter(request,response,chain)
+		then:
+			response.redirectedUrl == "/login?logout"
+	}
 
-    @EnableWebSecurity
-    static class InvokeTwiceDoesNotOverride extends WebSecurityConfigurerAdapter {
+	@EnableWebSecurity
+	static class InvokeTwiceDoesNotOverride extends WebSecurityConfigurerAdapter {
 
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .logout()
-                    .logoutUrl("/custom/logout")
-                    .and()
-                .logout()
-        }
-    }
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.logout()
+					.logoutUrl("/custom/logout")
+					.and()
+				.logout()
+		}
+	}
 
-    def "SEC-2311: Logout allows other methods if CSRF is disabled"() {
-        when:
-            loadConfig(CsrfDisabledConfig)
-            request.method = "GET"
-            request.servletPath = "/logout"
-            findFilter(LogoutFilter).doFilter(request,response,chain)
-        then:
-            response.redirectedUrl == "/login?logout"
-    }
+	def "SEC-2311: Logout allows other methods if CSRF is disabled"() {
+		when:
+			loadConfig(CsrfDisabledConfig)
+			request.method = "GET"
+			request.servletPath = "/logout"
+			findFilter(LogoutFilter).doFilter(request,response,chain)
+		then:
+			response.redirectedUrl == "/login?logout"
+	}
 
-    @EnableWebSecurity
-    static class CsrfDisabledConfig extends WebSecurityConfigurerAdapter {
+	@EnableWebSecurity
+	static class CsrfDisabledConfig extends WebSecurityConfigurerAdapter {
 
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .csrf().disable()
-                .logout()
-        }
-    }
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.csrf().disable()
+				.logout()
+		}
+	}
 
 
-    def "SEC-2311: Logout allows other methods if CSRF is disabled with custom logout URL"() {
-        when:
-            loadConfig(CsrfDisabledCustomLogoutUrlConfig)
-            request.method = "GET"
-            request.servletPath = "/custom/logout"
-            findFilter(LogoutFilter).doFilter(request,response,chain)
-        then:
-            response.redirectedUrl == "/login?logout"
-    }
+	def "SEC-2311: Logout allows other methods if CSRF is disabled with custom logout URL"() {
+		when:
+			loadConfig(CsrfDisabledCustomLogoutUrlConfig)
+			request.method = "GET"
+			request.servletPath = "/custom/logout"
+			findFilter(LogoutFilter).doFilter(request,response,chain)
+		then:
+			response.redirectedUrl == "/login?logout"
+	}
 
-    @EnableWebSecurity
-    static class CsrfDisabledCustomLogoutUrlConfig extends WebSecurityConfigurerAdapter {
+	@EnableWebSecurity
+	static class CsrfDisabledCustomLogoutUrlConfig extends WebSecurityConfigurerAdapter {
 
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .logout()
-                    .logoutUrl("/custom/logout")
-                    .and()
-                .csrf().disable()
-        }
-    }
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.logout()
+					.logoutUrl("/custom/logout")
+					.and()
+				.csrf().disable()
+		}
+	}
+
+	def "SEC-3170: LogoutConfigurer RememberMeService not LogoutHandler"() {
+		setup:
+			RememberMeNoLogoutHandler.REMEMBER_ME = Mock(RememberMeServices)
+			loadConfig(RememberMeNoLogoutHandler)
+			request.method = "POST"
+			request.servletPath = "/logout"
+		when:
+			findFilter(LogoutFilter).doFilter(request,response,chain)
+		then:
+			response.redirectedUrl == "/login?logout"
+	}
+
+	def "SEC-3170: LogoutConfigurer prevents null LogoutHandler"() {
+		when:
+			new LogoutConfigurer().addLogoutHandler(null)
+		then:
+			thrown(IllegalArgumentException)
+	}
+
+	@EnableWebSecurity
+	static class RememberMeNoLogoutHandler extends WebSecurityConfigurerAdapter {
+		static RememberMeServices REMEMBER_ME
+
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+					.rememberMe()
+					.rememberMeServices(REMEMBER_ME)
+		}
+	}
 }

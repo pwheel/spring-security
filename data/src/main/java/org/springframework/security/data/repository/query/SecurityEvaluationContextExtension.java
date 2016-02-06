@@ -27,90 +27,97 @@ import java.util.Map;
 
 /**
  * <p>
- * By defining this object as a Bean, Spring Security is exposed as SpEL expressions for creating Spring Data
- * queries.
- * </p>
+ * By defining this object as a Bean, Spring Security is exposed as SpEL expressions for
+ * creating Spring Data queries.
  *
- * <p>With Java based configuration, we can define the bean using the following:</p>
+ * <p>
+ * With Java based configuration, we can define the bean using the following:
  *
- * <p>For example, if you return a UserDetails that extends the following User object:</p>
+ * <p>
+ * For example, if you return a UserDetails that extends the following User object:
  *
  * <pre>
- * @Entity
+ * &#064;Entity
  * public class User {
- *     @GeneratedValue(strategy = GenerationType.AUTO)
- *     @Id
+ *     &#064;GeneratedValue(strategy = GenerationType.AUTO)
+ *     &#064;Id
  *     private Long id;
- *
+ * 
  *     ...
- * </pre>
- *
- * <p>And you have a Message object that looks like the following:</p>
- *
- * <pre>
- * @Entity
- * public class Message {
- *     @Id
- *     @GeneratedValue(strategy = GenerationType.AUTO)
- *     private Long id;
- *
- *     @OneToOne
- *     private User to;
- *
- *     ...
- * </pre>
- *
- * You can use the following {@code Query} annotation to search for only messages that are to the current user:
- *
- * <pre>
- * @Repository
- * public interface SecurityMessageRepository extends MessageRepository {
- *
- *     @Query("select m from Message m where m.to.id = ?#{ principal?.id }")
- *     List<Message> findAll();
  * }
  * </pre>
  *
- * This works because the principal in this instance is a User which has an id field on it.
+ * <p>
+ * And you have a Message object that looks like the following:
+ *
+ * <pre>
+ * &#064;Entity
+ * public class Message {
+ *     &#064;Id
+ *     &#064;GeneratedValue(strategy = GenerationType.AUTO)
+ *     private Long id;
+ * 
+ *     &#064;OneToOne
+ *     private User to;
+ * 
+ *     ...
+ * }
+ * </pre>
+ *
+ * You can use the following {@code Query} annotation to search for only messages that are
+ * to the current user:
+ *
+ * <pre>
+ * &#064;Repository
+ * public interface SecurityMessageRepository extends MessageRepository {
+ * 
+ * 	&#064;Query(&quot;select m from Message m where m.to.id = ?#{ principal?.id }&quot;)
+ * 	List&lt;Message&gt; findAll();
+ * }
+ * </pre>
+ *
+ * This works because the principal in this instance is a User which has an id field on
+ * it.
  *
  * @since 4.0
  * @author Rob Winch
  */
 public class SecurityEvaluationContextExtension extends EvaluationContextExtensionSupport {
-    private Authentication authentication;
+	private Authentication authentication;
 
-    /**
-     * Creates a new instance that uses the current {@link Authentication} found on the
-     * {@link org.springframework.security.core.context.SecurityContextHolder}.
-     */
-    public SecurityEvaluationContextExtension() {
-    }
+	/**
+	 * Creates a new instance that uses the current {@link Authentication} found on the
+	 * {@link org.springframework.security.core.context.SecurityContextHolder}.
+	 */
+	public SecurityEvaluationContextExtension() {
+	}
 
-    /**
-     * Creates a new instance that always uses the same {@link Authentication} object.
-     *
-     * @param authentication the {@link Authentication} to use
-     */
-    public SecurityEvaluationContextExtension(Authentication authentication) {
-        this.authentication = authentication;
-    }
+	/**
+	 * Creates a new instance that always uses the same {@link Authentication} object.
+	 *
+	 * @param authentication the {@link Authentication} to use
+	 */
+	public SecurityEvaluationContextExtension(Authentication authentication) {
+		this.authentication = authentication;
+	}
 
-    public String getExtensionId() {
-        return "security";
-    }
+	public String getExtensionId() {
+		return "security";
+	}
 
-    @Override
-    public Object getRootObject() {
-        Authentication authentication = getAuthentication();
-        return new SecurityExpressionRoot(authentication) {};
-    }
+	@Override
+	public Object getRootObject() {
+		Authentication authentication = getAuthentication();
+		return new SecurityExpressionRoot(authentication) {
+		};
+	}
 
-    private Authentication getAuthentication() {
-        if(authentication != null) {
-            return authentication;
-        }
+	private Authentication getAuthentication() {
+		if (authentication != null) {
+			return authentication;
+		}
 
-        SecurityContext context = SecurityContextHolder.getContext();
-        return context.getAuthentication();
-    }
+		SecurityContext context = SecurityContextHolder.getContext();
+		return context.getAuthentication();
+	}
 }

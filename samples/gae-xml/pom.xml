@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.springframework.security</groupId>
   <artifactId>spring-security-samples-gae-xml</artifactId>
-  <version>4.0.0.CI-SNAPSHOT</version>
+  <version>4.0.3.CI-SNAPSHOT</version>
   <packaging>war</packaging>
   <name>spring-security-samples-gae-xml</name>
   <description>spring-security-samples-gae-xml</description>
@@ -33,7 +33,7 @@
   </scm>
   <repositories>
     <repository>
-      <id>spring-snasphot</id>
+      <id>spring-snapshot</id>
       <url>https://repo.spring.io/snapshot</url>
     </repository>
   </repositories>
@@ -41,7 +41,7 @@
     <dependency>
       <groupId>com.google.appengine</groupId>
       <artifactId>appengine-api-1.0-sdk</artifactId>
-      <version>1.4.2</version>
+      <version>1.9.23</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -65,43 +65,38 @@
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-core</artifactId>
-      <version>4.0.0.CI-SNAPSHOT</version>
+      <version>4.0.3.CI-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-web</artifactId>
-      <version>4.0.0.CI-SNAPSHOT</version>
+      <version>4.0.3.CI-SNAPSHOT</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-beans</artifactId>
-      <version>4.1.5.RELEASE</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-context</artifactId>
-      <version>4.1.5.RELEASE</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-context-support</artifactId>
-      <version>4.1.5.RELEASE</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-web</artifactId>
-      <version>4.1.5.RELEASE</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-webmvc</artifactId>
-      <version>4.1.5.RELEASE</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -118,6 +113,18 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>javax.servlet.jsp.jstl</groupId>
+      <artifactId>javax.servlet.jsp.jstl-api</artifactId>
+      <version>1.2.1</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.taglibs</groupId>
+      <artifactId>taglibs-standard-jstlel</artifactId>
+      <version>1.2.1</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>jcl-over-slf4j</artifactId>
       <version>1.7.7</version>
@@ -132,13 +139,13 @@
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-config</artifactId>
-      <version>4.0.0.CI-SNAPSHOT</version>
+      <version>4.0.3.CI-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-taglibs</artifactId>
-      <version>4.0.0.CI-SNAPSHOT</version>
+      <version>4.0.3.CI-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
@@ -150,19 +157,19 @@
     <dependency>
       <groupId>com.google.appengine</groupId>
       <artifactId>appengine-api-labs</artifactId>
-      <version>1.4.2</version>
+      <version>1.9.23</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.appengine</groupId>
       <artifactId>appengine-api-stubs</artifactId>
-      <version>1.4.2</version>
+      <version>1.9.23</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.appengine</groupId>
       <artifactId>appengine-testing</artifactId>
-      <version>1.4.2</version>
+      <version>1.9.23</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -180,16 +187,26 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>1.9.5</version>
+      <version>1.10.19</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-test</artifactId>
-      <version>4.1.5.RELEASE</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-framework-bom</artifactId>
+        <version>4.1.6.RELEASE</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <properties>
     <m2eclipse.wtp.contextRoot>/spring-security-samples-gae-xml</m2eclipse.wtp.contextRoot>
   </properties>
