@@ -106,12 +106,11 @@ configure(javaProjects) {
 		repositories {
 			mavenDeployer {
 				configuration = configurations.deployerJars
-				configureAuth = {
+				repository(url: 'git:releases://git@github.com:pwheel/maven-repo.git') {
 					authentication(userName: bitBucketUsername, password: bitBucketPassword)
 				}
-				repository(url: 'git:releases://git@github.com:pwheel/maven-repo.git') {
-				}
 				snapshotRepository(url: 'git:snapshots://git@github.com:pwheel/maven-repo.git') {
+					authentication(userName: bitBucketUsername, password: bitBucketPassword)
 				}
 			}
 		}
