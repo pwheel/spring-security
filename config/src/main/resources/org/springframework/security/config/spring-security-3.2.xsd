@@ -1280,7 +1280,7 @@
       <xs:attribute name="logout-url" type="xs:token">
          <xs:annotation>
             <xs:documentation>Specifies the URL that will cause a logout. Spring Security will initialize a filter that
-                responds to this particular URL. Defaults to /j_spring_security_logout if unspecified.
+                responds to this particular URL. Defaults to /logout if unspecified.
                 </xs:documentation>
          </xs:annotation>
       </xs:attribute>
@@ -1326,20 +1326,19 @@
   <xs:attributeGroup name="form-login.attlist">
       <xs:attribute name="login-processing-url" type="xs:token">
          <xs:annotation>
-            <xs:documentation>The URL that the login form is posted to. If unspecified, it defaults to
-                /j_spring_security_check.
+            <xs:documentation>The URL that the login form is posted to. If unspecified, it defaults to /login.
                 </xs:documentation>
          </xs:annotation>
       </xs:attribute>
       <xs:attribute name="username-parameter" type="xs:token">
          <xs:annotation>
-            <xs:documentation>The name of the request parameter which contains the username. Defaults to 'j_username'.
+            <xs:documentation>The name of the request parameter which contains the username. Defaults to 'username'.
                 </xs:documentation>
          </xs:annotation>
       </xs:attribute>
       <xs:attribute name="password-parameter" type="xs:token">
          <xs:annotation>
-            <xs:documentation>The name of the request parameter which contains the password. Defaults to 'j_password'.
+            <xs:documentation>The name of the request parameter which contains the password. Defaults to 'password'.
                 </xs:documentation>
          </xs:annotation>
       </xs:attribute>

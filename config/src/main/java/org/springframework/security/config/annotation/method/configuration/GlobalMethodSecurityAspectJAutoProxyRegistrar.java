@@ -15,12 +15,10 @@
  */
 package org.springframework.security.config.annotation.method.configuration;
 
-import java.util.Map;
-
-import org.springframework.aop.config.AopConfigUtils;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
-import org.springframework.core.annotation.AnnotationAttributes;
 import org.springframework.core.type.AnnotationMetadata;
 
 /**
@@ -39,29 +37,27 @@ import org.springframework.core.type.AnnotationMetadata;
  * @since 3.2
  */
 class GlobalMethodSecurityAspectJAutoProxyRegistrar implements
-        ImportBeanDefinitionRegistrar {
+		ImportBeanDefinitionRegistrar {
 
-    /**
-     * Register, escalate, and configure the AspectJ auto proxy creator based on
-     * the value of the @{@link EnableGlobalMethodSecurity#proxyTargetClass()}
-     * attribute on the importing {@code @Configuration} class.
-     */
-    public void registerBeanDefinitions(
-            AnnotationMetadata importingClassMetadata,
-            BeanDefinitionRegistry registry) {
+	/**
+	 * Register, escalate, and configure the AspectJ auto proxy creator based on the value
+	 * of the @{@link EnableGlobalMethodSecurity#proxyTargetClass()} attribute on the
+	 * importing {@code @Configuration} class.
+	 */
+	public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata,
+			BeanDefinitionRegistry registry) {
 
-        AopConfigUtils
-                .registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry);
+		BeanDefinition interceptor = registry
+				.getBeanDefinition("methodSecurityInterceptor");
 
-        Map<String, Object> annotationAttributes = importingClassMetadata
-                .getAnnotationAttributes(EnableGlobalMethodSecurity.class
-                        .getName());
-        AnnotationAttributes enableAJAutoProxy = AnnotationAttributes
-                .fromMap(annotationAttributes);
+		BeanDefinitionBuilder aspect = BeanDefinitionBuilder
+				.rootBeanDefinition("org.springframework.security.access.intercept.aspectj.aspect.AnnotationSecurityAspect");
+		aspect.setFactoryMethod("aspectOf");
+		aspect.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+		aspect.addPropertyValue("securityInterceptor", interceptor);
 
-        if (enableAJAutoProxy.getBoolean("proxyTargetClass")) {
-            AopConfigUtils.forceAutoProxyCreatorToUseClassProxying(registry);
-        }
-    }
+		registry.registerBeanDefinition("annotationSecurityAspect$0",
+				aspect.getBeanDefinition());
+	}
 
 }

@@ -25,36 +25,40 @@ import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  */
-@Secured({"ROLE_USER"})
+@Secured({ "ROLE_USER" })
 @PermitAll
 public interface BusinessService extends Serializable {
-    //~ Methods ========================================================================================================
+	// ~ Methods
+	// ========================================================================================================
 
-    @Secured({"ROLE_ADMIN"})
-    @RolesAllowed({"ROLE_ADMIN"})
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public void someAdminMethod();
+	@Secured({ "ROLE_ADMIN" })
+	@RolesAllowed({ "ROLE_ADMIN" })
+	@PreAuthorize("hasRole('ROLE_ADMIN')")
+	public void someAdminMethod();
 
-    @Secured({"ROLE_USER", "ROLE_ADMIN"})
-    @RolesAllowed({"ROLE_USER", "ROLE_ADMIN"})
-    public void someUserAndAdminMethod();
+	@Secured({ "ROLE_USER", "ROLE_ADMIN" })
+	@RolesAllowed({ "ROLE_USER", "ROLE_ADMIN" })
+	public void someUserAndAdminMethod();
 
-    @Secured({"ROLE_USER"})
-    @RolesAllowed({"ROLE_USER"})
-    public void someUserMethod1();
+	@Secured({ "ROLE_USER" })
+	@RolesAllowed({ "ROLE_USER" })
+	public void someUserMethod1();
 
-    @Secured({"ROLE_USER"})
-    @RolesAllowed({"ROLE_USER"})
-    public void someUserMethod2();
+	@Secured({ "ROLE_USER" })
+	@RolesAllowed({ "ROLE_USER" })
+	public void someUserMethod2();
 
-    public int someOther(String s);
+	@RolesAllowed({ "USER" })
+	public void rolesAllowedUser();
 
-    public int someOther(int input);
+	public int someOther(String s);
 
-    public List<?> methodReturningAList(List<?> someList);
+	public int someOther(int input);
 
-    public Object[] methodReturningAnArray(Object[] someArray);
+	public List<?> methodReturningAList(List<?> someList);
 
-    public List<?> methodReturningAList(String userName, String extraParam);
+	public Object[] methodReturningAnArray(Object[] someArray);
+
+	public List<?> methodReturningAList(String userName, String extraParam);
 
 }

@@ -24,6 +24,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
 import org.springframework.security.web.context.SecurityContextPersistenceFilter
 import org.springframework.security.web.context.SecurityContextRepository
+import org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter
 
 /**
  *
@@ -31,41 +32,80 @@ import org.springframework.security.web.context.SecurityContextRepository
  */
 class SecurityContextConfigurerTests extends BaseSpringSpec {
 
-    def "securityContext ObjectPostProcessor"() {
-        setup:
-            AnyObjectPostProcessor opp = Mock()
-            HttpSecurity http = new HttpSecurity(opp, authenticationBldr, [:])
-        when:
-            http
-                .securityContext()
-                    .and()
-                .build()
+	def "securityContext ObjectPostProcessor"() {
+		setup:
+			AnyObjectPostProcessor opp = Mock()
+			HttpSecurity http = new HttpSecurity(opp, authenticationBldr, [:])
+		when:
+			http
+				.securityContext()
+					.and()
+				.build()
 
-        then: "SecurityContextPersistenceFilter is registered with LifecycleManager"
-            1 * opp.postProcess(_ as SecurityContextPersistenceFilter) >> {SecurityContextPersistenceFilter o -> o}
-    }
+		then: "SecurityContextPersistenceFilter is registered with LifecycleManager"
+			1 * opp.postProcess(_ as SecurityContextPersistenceFilter) >> {SecurityContextPersistenceFilter o -> o}
+	}
 
-    def "invoke securityContext twice does not override"() {
-        setup:
-            InvokeTwiceDoesNotOverrideConfig.SCR = Mock(SecurityContextRepository)
-        when:
-            loadConfig(InvokeTwiceDoesNotOverrideConfig)
-        then:
-            findFilter(SecurityContextPersistenceFilter).repo == InvokeTwiceDoesNotOverrideConfig.SCR
-    }
+	def "invoke securityContext twice does not override"() {
+		setup:
+			InvokeTwiceDoesNotOverrideConfig.SCR = Mock(SecurityContextRepository)
+		when:
+			loadConfig(InvokeTwiceDoesNotOverrideConfig)
+		then:
+			findFilter(SecurityContextPersistenceFilter).repo == InvokeTwiceDoesNotOverrideConfig.SCR
+	}
 
-    @Configuration
-    @EnableWebSecurity
-    static class InvokeTwiceDoesNotOverrideConfig extends WebSecurityConfigurerAdapter {
-        static SecurityContextRepository SCR
+	@EnableWebSecurity
+	static class InvokeTwiceDoesNotOverrideConfig extends WebSecurityConfigurerAdapter {
+		static SecurityContextRepository SCR
 
-        @Override
-        protected void configure(HttpSecurity http) throws Exception {
-            http
-                .securityContext()
-                    .securityContextRepository(SCR)
-                    .and()
-                .securityContext()
-        }
-    }
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+				.securityContext()
+					.securityContextRepository(SCR)
+					.and()
+				.securityContext()
+		}
+	}
+
+	def 'SEC-2932: SecurityContextConfigurer defaults SecurityContextRepository'() {
+		setup: 'Configuration without default SecurityContextRepository setup'
+		loadConfig(SecurityContextRepositoryDefaultsSecurityContextRepositoryConfig)
+		when: 'Spring Security invoked'
+		springSecurityFilterChain.doFilter(request,response,chain)
+		then: 'no exception thrown'
+		noExceptionThrown()
+	}
+
+	@Configuration
+	@EnableWebSecurity
+	static class SecurityContextRepositoryDefaultsSecurityContextRepositoryConfig extends WebSecurityConfigurerAdapter {
+		public SecurityContextRepositoryDefaultsSecurityContextRepositoryConfig() {
+			super(true);
+		}
+
+		@Override
+		protected void configure(HttpSecurity http) throws Exception {
+			// @formatter:off
+			http
+				.addFilter(new WebAsyncManagerIntegrationFilter())
+				.anonymous().and()
+				.securityContext().and()
+				.authorizeRequests()
+					.anyRequest().permitAll()
+					.and()
+				.httpBasic();
+			// @formatter:on
+		}
+
+		// @formatter:off
+		@Override
+		protected void configure(AuthenticationManagerBuilder auth) {
+			auth
+			.inMemoryAuthentication()
+			.withUser("user").password("password").roles("USER")
+		}
+		// @formatter:on
+	}
 }

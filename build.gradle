@@ -1,58 +1,57 @@
 import groovy.text.SimpleTemplateEngine
 
 buildscript {
-    repositories {
-        maven { url "http://repo.springsource.org/plugins-release" }
-    }
-    dependencies {
-        classpath("org.springframework.build.gradle:propdeps-plugin:0.0.5")
-        classpath("org.springframework.build.gradle:bundlor-plugin:0.1.2")
-        classpath("org.gradle.api.plugins:gradle-tomcat-plugin:0.9.8")
-        classpath('me.champeau.gradle:gradle-javadoc-hotfix-plugin:0.1')
-        classpath('org.asciidoctor:asciidoctor-gradle-plugin:0.7.0')
-        classpath('org.asciidoctor:asciidoctor-java-integration:0.1.4.preview.1')
-    }
+	repositories {
+		maven { url "https://repo.spring.io/plugins-release" }
+	}
+	dependencies {
+		classpath("org.springframework.build.gradle:propdeps-plugin:0.0.7")
+		classpath("io.spring.gradle:spring-io-plugin:0.0.4.RELEASE")
+		classpath("org.gradle.api.plugins:gradle-tomcat-plugin:1.2.5")
+		classpath('me.champeau.gradle:gradle-javadoc-hotfix-plugin:0.1')
+		classpath('org.asciidoctor:asciidoctor-gradle-plugin:1.5.1')
+		classpath("io.spring.gradle:docbook-reference-plugin:0.3.1")
+	}
 }
 
 apply plugin: 'sonar-runner'
 apply plugin: 'base'
-apply plugin: 'maven'
 
 description = 'Spring Security'
 
 allprojects {
-    apply plugin: 'idea'
-    apply plugin: 'eclipse'
+	apply plugin: 'idea'
+	apply plugin: 'eclipse'
 
-    ext.releaseBuild = version.endsWith('RELEASE')
-    ext.snapshotBuild = version.endsWith('SNAPSHOT')
-    ext.springVersion = '3.2.6.RELEASE'
-    ext.spring4Version = '4.0.0.RELEASE'
+	ext.releaseBuild = version.endsWith('RELEASE')
+	ext.snapshotBuild = version.endsWith('SNAPSHOT')
+	ext.springVersion = '4.2.1.RELEASE'
+	ext.springLdapVersion = '2.0.2.RELEASE'
 
-    group = 'org.springframework.security'
+	group = 'org.springframework.security'
 
-    repositories {
-       mavenCentral()
-       maven { url "http://repo.springsource.org/plugins-release" }
-       maven { url "http://repo.terracotta.org/maven2/" }
-       maven { url "https://raw.github.com/pwheel/maven-repo/releases"}
-    }
+	repositories {
+	mavenCentral()
+	maven { url "https://repo.spring.io/libs-snapshot" }
+	maven { url "https://repo.spring.io/plugins-release" }
+	maven { url "http://repo.terracotta.org/maven2/" }
+	}
 
-    eclipse.project.name = "${project.name}-3.2.x"
+	eclipse.project.name = "${project.name}-4.1.x"
 }
 
 sonarRunner {
-    sonarProperties {
-        property "sonar.java.coveragePlugin", "jacoco"
-        property "sonar.projectName", "Spring Security"
-        property "sonar.jacoco.reportPath", "${buildDir.name}/jacoco.exec"
-        property "sonar.links.homepage", 'https://www.springsource.org/spring-security'
-        property "sonar.links.ci", 'https://build.springsource.org/browse/SEC-B32X'
-        property "sonar.links.issue", 'https://jira.springsource.org/browse/SEC'
-        property "sonar.links.scm", 'https://github.com/SpringSource/spring-security'
-        property "sonar.links.scm_dev", 'https://github.com/SpringSource/spring-security.git'
-        property "sonar.java.coveragePlugin", "jacoco"
-    }
+	sonarProperties {
+		property "sonar.java.coveragePlugin", "jacoco"
+		property "sonar.projectName", "Spring Security"
+		property "sonar.jacoco.reportPath", "${buildDir.name}/jacoco.exec"
+		property "sonar.links.homepage", 'https://www.springsource.org/spring-security'
+		property "sonar.links.ci", 'https://build.springsource.org/browse/SEC-B32X'
+		property "sonar.links.issue", 'https://jira.springsource.org/browse/SEC'
+		property "sonar.links.scm", 'https://github.com/SpringSource/spring-security'
+		property "sonar.links.scm_dev", 'https://github.com/SpringSource/spring-security.git'
+		property "sonar.java.coveragePlugin", "jacoco"
+	}
 }
 
 // Set up different subproject lists for individual configuration
@@ -60,158 +59,123 @@ ext.javaProjects = subprojects.findAll { project -> project.name != 'docs' && pr
 ext.sampleProjects = subprojects.findAll { project -> project.name.startsWith('spring-security-samples') }
 ext.itestProjects = subprojects.findAll { project -> project.name.startsWith('itest') }
 ext.coreModuleProjects = javaProjects - sampleProjects - itestProjects
-ext.aspectjProjects = [project(':spring-security-aspects'), project(':spring-security-samples-aspectj-xml')]
-ext.bitBucketUsername = System.properties['bitBucketUsername']
-ext.bitBucketPassword = System.properties['bitBucketPassword']
+ext.aspectjProjects = [project(':spring-security-aspects'), project(':spring-security-samples-aspectj-xml'), project(':spring-security-samples-aspectj-jc')]
 
 configure(allprojects - javaProjects) {
-    task afterEclipseImport {
-        ext.srcFile = file('.classpath')
-        inputs.file srcFile
-        outputs.dir srcFile
+	task afterEclipseImport {
+		ext.srcFile = file('.classpath')
+		inputs.file srcFile
+		outputs.dir srcFile
 
-        onlyIf { !srcFile.exists() }
+		onlyIf { !srcFile.exists() }
 
-        doLast {
-            srcFile << """<?xml version="1.0" encoding="UTF-8"?>
+		doLast {
+			srcFile << """<?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-    <classpathentry kind="output" path="bin"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="output" path="bin"/>
 </classpath>
 """
-        }
-    }
+		}
+	}
 }
 
 configure(subprojects - coreModuleProjects - project(':spring-security-samples-messages-jc') - project(':spring-security-bom')) {
-    tasks.findByPath("artifactoryPublish")?.enabled = false
-    sonarRunner {
-        skipProject = true
-    }
+	tasks.findByPath("artifactoryPublish")?.enabled = false
+	sonarRunner {
+		skipProject = true
+	}
 }
 
 configure(javaProjects) {
-    ext.TOMCAT_GRADLE = "$rootDir/gradle/tomcat.gradle"
-    ext.WAR_SAMPLE_GRADLE = "$rootDir/gradle/war-sample.gradle"
-    apply from: "$rootDir/gradle/javaprojects.gradle"
-    apply from: "$rootDir/gradle/release-checks.gradle"
-    apply from: "$rootDir/gradle/maven-deployment.gradle"
-
-    dependencies {
-        deployerJars "com.github.pwheel:wagon-git:0.2.6"
-    }
-
-    uploadArchives {
-        repositories {
-            mavenDeployer {
-                configuration = configurations.deployerJars
-                configureAuth = {
-                    authentication(userName: bitBucketUsername, password: bitBucketPassword)
-                }
-                repository(url: 'git:releases://git@github.com:pwheel/maven-repo.git') {
-                }
-                snapshotRepository(url: 'git:snapshots://git@github.com:pwheel/maven-repo.git') {
-                }
-            }
-        }
-    }
+	ext.TOMCAT_GRADLE = "$rootDir/gradle/tomcat.gradle"
+	ext.WAR_SAMPLE_GRADLE = "$rootDir/gradle/war-sample.gradle"
+	apply from: "$rootDir/gradle/javaprojects.gradle"
+	apply from: "$rootDir/gradle/release-checks.gradle"
+	apply from: "$rootDir/gradle/maven-deployment.gradle"
 }
 
 configure(coreModuleProjects) {
-    apply plugin: 'bundlor'
-    apply plugin: 'emma'
+	apply plugin: 'emma'
+	apply plugin: 'spring-io'
 
-    bundlor.doFirst {
-        def templateText = file("template.mf").text
-        bundlor.manifestTemplate = new SimpleTemplateEngine().createTemplate(templateText).make(bundlorProperties).toString()
-    }
-    configurations {
-        jacoco //Configuration Group used by Sonar to provide Code Coverage using JaCoCo
-        spring4TestRuntime.extendsFrom testRuntime
-    }
-    configurations.spring4TestRuntime {
-        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'org.springframework') {
-                details.useVersion spring4Version
-            }
-            if (details.requested.name == 'ehcache') {
-                details.useVersion '2.6.5'
-            }
-            if (details.requested.name == 'ehcache-terracotta') {
-                details.useVersion '2.1.1'
-            }
-        }
-    }
+	ext.springIoVersion = project.hasProperty('platformVersion') ? platformVersion : '2.0.1.RELEASE'
 
-    dependencies {
-        jacoco "org.jacoco:org.jacoco.agent:0.6.2.201302030002:runtime"
-    }
-    test {
-        jvmArgs "-javaagent:${configurations.jacoco.asPath}=destfile=${buildDir}/jacoco.exec,includes=${project.group}.*"
-    }
-    integrationTest {
-        jvmArgs "-javaagent:${configurations.jacoco.asPath}=destfile=${buildDir}/jacoco.exec,includes=${project.group}.*"
-	    jvmArgs += [ "-XX:MaxPermSize=256m" ]
-    }
-    task spring4Test(type: Test) {
-        jvmArgs = ['-ea', '-Xmx500m', '-XX:MaxPermSize=256M']
-        exclude "**/EhCacheBasedAclCacheTests.class", "**/Issue55Tests.class"
-        classpath = sourceSets.test.output + sourceSets.main.output + configurations.spring4TestRuntime
-        testResultsDir = file("$buildDir/spring4-test-results/")
-        testReportDir = file("$buildDir/reports/spring4-tests/")
-    }
-    check.dependsOn spring4Test
+	configurations {
+		jacoco //Configuration Group used by Sonar to provide Code Coverage using JaCoCo
+	}
+
+	dependencyManagement {
+		springIoTestRuntime {
+			imports {
+				mavenBom "io.spring.platform:platform-bom:${springIoVersion}"
+			}
+		}
+	}
+	dependencies {
+		jacoco "org.jacoco:org.jacoco.agent:0.7.5.201505241946:runtime"
+	}
+	test {
+		jvmArgs "-javaagent:${configurations.jacoco.asPath}=destfile=${buildDir}/jacoco.exec,includes=${project.group}.*"
+	}
+	integrationTest {
+		jvmArgs "-javaagent:${configurations.jacoco.asPath}=destfile=${buildDir}/jacoco.exec,includes=${project.group}.*"
+	}
 }
 
 configure (aspectjProjects) {
-    apply plugin: 'java'
-    apply plugin: 'aspectj'
+	apply plugin: 'java'
+	apply plugin: 'aspectj'
 }
 
 task coreBuild {
-    dependsOn coreModuleProjects*.tasks*.matching { task -> task.name == 'build' }
+	dependsOn coreModuleProjects*.tasks*.matching { task -> task.name == 'build' }
+}
+
+task coreInstall {
+	dependsOn coreModuleProjects*.tasks*.matching { task -> task.name == 'install' }
 }
 
 // Task for creating the distro zip
 
 task dist(type: Zip) {
-    dependsOn subprojects*.tasks*.matching { task -> task.name == 'assemble' || task.name.endsWith('Zip') || task.name.endsWith('generatePom') }
-    classifier = 'dist'
+	dependsOn { subprojects*.tasks*.matching { task -> task.name.endsWith('generatePom') } }
+	classifier = 'dist'
 
-    evaluationDependsOn(':docs')
-    evaluationDependsOn(':docs:manual')
+	evaluationDependsOn(':docs')
+	evaluationDependsOn(':docs:manual')
 
-    def zipRootDir = "${project.name}-$version"
-    into(zipRootDir) {
-        from(rootDir) {
-            include '*.txt'
-        }
-        into('docs') {
-            with(project(':docs').apiSpec)
-            with(project(':docs:manual').spec)
-            with(project(':docs:guides').spec)
-        }
-        into('dist') {
-            from coreModuleProjects.collect {project -> project.libsDir }
-        }
-        sampleProjects.each { project->
-            into("$zipRootDir/samples/$project.name") {
-                from(project.projectDir) {
-                    include "src/main/**"
-                    include "pom.xml"
-                }
-            }
-        }
-    }
+	def zipRootDir = "${project.name}-$version"
+	into(zipRootDir) {
+		from(rootDir) {
+			include '*.adoc'
+			include '*.txt'
+		}
+		into('docs') {
+			with(project(':docs').apiSpec)
+			with(project(':docs:manual').spec)
+			with(project(':docs:guides').spec)
+		}
+		project.coreModuleProjects*.tasks*.withType(AbstractArchiveTask).flatten().each{ archiveTask ->
+			if(archiveTask!=dist){
+				into("$zipRootDir/dist") {
+					from archiveTask.outputs.files
+				}
+			}
+		}
+		sampleProjects.each { project->
+			into("$zipRootDir/samples/$project.name") {
+				from(project.projectDir) {
+					include "src/main/**"
+					include "pom.xml"
+				}
+			}
+		}
+	}
 }
 
 artifacts {
-    archives dist
-    archives project(':docs').docsZip
-    archives project(':docs').schemaZip
+	archives dist
+	archives project(':docs').docsZip
+	archives project(':docs').schemaZip
 }
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '1.10-rc-2'
-}
-

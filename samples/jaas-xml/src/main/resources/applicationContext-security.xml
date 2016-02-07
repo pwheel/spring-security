@@ -9,10 +9,10 @@
 		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd">
 
 
-	<sec:http auto-config="true" use-expressions="true" jaas-api-provision="true">
+	<sec:http auto-config="true" jaas-api-provision="true">
 		<sec:intercept-url pattern="/secure/**" access="isAuthenticated()"/>
 	</sec:http>
-	
+
 	<sec:authentication-manager>
 		<sec:authentication-provider ref="jaasAuthProvider"/>
 	</sec:authentication-manager>

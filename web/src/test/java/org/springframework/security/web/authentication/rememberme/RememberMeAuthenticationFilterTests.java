@@ -37,163 +37,151 @@ import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-
 /**
  * Tests {@link RememberMeAuthenticationFilter}.
  *
  * @author Ben Alex
  */
 public class RememberMeAuthenticationFilterTests {
-    Authentication remembered = new TestingAuthenticationToken("remembered", "password","ROLE_REMEMBERED");
+	Authentication remembered = new TestingAuthenticationToken("remembered", "password",
+			"ROLE_REMEMBERED");
 
-    //~ Methods ========================================================================================================
+	// ~ Methods
+	// ========================================================================================================
 
-    @Before
-    public void setUp() {
-        SecurityContextHolder.clearContext();
-    }
+	@Before
+	public void setUp() {
+		SecurityContextHolder.clearContext();
+	}
 
-    @After
-    public void tearDown() {
-        SecurityContextHolder.clearContext();
-    }
+	@After
+	public void tearDown() {
+		SecurityContextHolder.clearContext();
+	}
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testDetectsAuthenticationManagerProperty() {
-        RememberMeAuthenticationFilter filter = new RememberMeAuthenticationFilter();
-        filter.setAuthenticationManager(mock(AuthenticationManager.class));
-        filter.setRememberMeServices(new NullRememberMeServices());
+	@Test(expected = IllegalArgumentException.class)
+	public void testDetectsAuthenticationManagerProperty() {
+		new RememberMeAuthenticationFilter(null, new NullRememberMeServices());
+	}
 
-        filter.afterPropertiesSet();
+	@Test(expected = IllegalArgumentException.class)
+	public void testDetectsRememberMeServicesProperty() {
+		new RememberMeAuthenticationFilter(mock(AuthenticationManager.class), null);
+	}
 
-        filter.setAuthenticationManager(null);
+	@Test
+	public void testOperationWhenAuthenticationExistsInContextHolder() throws Exception {
+		// Put an Authentication object into the SecurityContextHolder
+		Authentication originalAuth = new TestingAuthenticationToken("user", "password",
+				"ROLE_A");
+		SecurityContextHolder.getContext().setAuthentication(originalAuth);
 
-        filter.afterPropertiesSet();
-    }
+		// Setup our filter correctly
+		RememberMeAuthenticationFilter filter = new RememberMeAuthenticationFilter(
+				mock(AuthenticationManager.class), new MockRememberMeServices(remembered));
+		filter.afterPropertiesSet();
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testDetectsRememberMeServicesProperty() {
-        RememberMeAuthenticationFilter filter = new RememberMeAuthenticationFilter();
-        filter.setAuthenticationManager(mock(AuthenticationManager.class));
+		// Test
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		FilterChain fc = mock(FilterChain.class);
+		request.setRequestURI("x");
+		filter.doFilter(request, new MockHttpServletResponse(), fc);
 
-        // check default is NullRememberMeServices
-        // assertEquals(NullRememberMeServices.class, filter.getRememberMeServices().getClass());
+		// Ensure filter didn't change our original object
+		assertSame(originalAuth, SecurityContextHolder.getContext().getAuthentication());
+		verify(fc)
+				.doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class));
+	}
 
-        // check getter/setter
-        filter.setRememberMeServices(new TokenBasedRememberMeServices());
-        assertEquals(TokenBasedRememberMeServices.class, filter.getRememberMeServices().getClass());
+	@Test
+	public void testOperationWhenNoAuthenticationInContextHolder() throws Exception {
+		AuthenticationManager am = mock(AuthenticationManager.class);
+		when(am.authenticate(remembered)).thenReturn(remembered);
 
-        // check detects if made null
-        filter.setRememberMeServices(null);
+		RememberMeAuthenticationFilter filter = new RememberMeAuthenticationFilter(am,
+				new MockRememberMeServices(remembered));
+		filter.afterPropertiesSet();
 
-        filter.afterPropertiesSet();
-    }
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		FilterChain fc = mock(FilterChain.class);
+		request.setRequestURI("x");
+		filter.doFilter(request, new MockHttpServletResponse(), fc);
 
-    @Test
-    public void testOperationWhenAuthenticationExistsInContextHolder() throws Exception {
-        // Put an Authentication object into the SecurityContextHolder
-        Authentication originalAuth = new TestingAuthenticationToken("user", "password","ROLE_A");
-        SecurityContextHolder.getContext().setAuthentication(originalAuth);
+		// Ensure filter setup with our remembered authentication object
+		assertSame(remembered, SecurityContextHolder.getContext().getAuthentication());
+		verify(fc)
+				.doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class));
+	}
 
-        // Setup our filter correctly
-        RememberMeAuthenticationFilter filter = new RememberMeAuthenticationFilter();
-        filter.setAuthenticationManager(mock(AuthenticationManager.class));
-        filter.setRememberMeServices(new MockRememberMeServices(remembered));
-        filter.afterPropertiesSet();
+	@Test
+	public void onUnsuccessfulLoginIsCalledWhenProviderRejectsAuth() throws Exception {
+		final Authentication failedAuth = new TestingAuthenticationToken("failed", "");
+		AuthenticationManager am = mock(AuthenticationManager.class);
+		when(am.authenticate(any(Authentication.class))).thenThrow(
+				new BadCredentialsException(""));
 
-        // Test
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        FilterChain fc = mock(FilterChain.class);
-        request.setRequestURI("x");
-        filter.doFilter(request, new MockHttpServletResponse(), fc);
+		RememberMeAuthenticationFilter filter = new RememberMeAuthenticationFilter(am,
+				new MockRememberMeServices(remembered)) {
+			protected void onUnsuccessfulAuthentication(HttpServletRequest request,
+					HttpServletResponse response, AuthenticationException failed) {
+				super.onUnsuccessfulAuthentication(request, response, failed);
+				SecurityContextHolder.getContext().setAuthentication(failedAuth);
+			}
+		};
+		filter.setApplicationEventPublisher(mock(ApplicationEventPublisher.class));
+		filter.afterPropertiesSet();
 
-        // Ensure filter didn't change our original object
-        assertSame(originalAuth, SecurityContextHolder.getContext().getAuthentication());
-        verify(fc).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class));
-    }
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		FilterChain fc = mock(FilterChain.class);
+		request.setRequestURI("x");
+		filter.doFilter(request, new MockHttpServletResponse(), fc);
 
-    @Test
-    public void testOperationWhenNoAuthenticationInContextHolder() throws Exception {
+		assertSame(failedAuth, SecurityContextHolder.getContext().getAuthentication());
+		verify(fc)
+				.doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class));
+	}
 
-        RememberMeAuthenticationFilter filter = new RememberMeAuthenticationFilter();
-        AuthenticationManager am = mock(AuthenticationManager.class);
-        when(am.authenticate(remembered)).thenReturn(remembered);
-        filter.setAuthenticationManager(am);
-        filter.setRememberMeServices(new MockRememberMeServices(remembered));
-        filter.afterPropertiesSet();
+	@Test
+	public void authenticationSuccessHandlerIsInvokedOnSuccessfulAuthenticationIfSet()
+			throws Exception {
+		AuthenticationManager am = mock(AuthenticationManager.class);
+		when(am.authenticate(remembered)).thenReturn(remembered);
+		RememberMeAuthenticationFilter filter = new RememberMeAuthenticationFilter(am,
+				new MockRememberMeServices(remembered));
+		filter.setAuthenticationSuccessHandler(new SimpleUrlAuthenticationSuccessHandler(
+				"/target"));
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		MockHttpServletResponse response = new MockHttpServletResponse();
+		FilterChain fc = mock(FilterChain.class);
+		request.setRequestURI("x");
+		filter.doFilter(request, response, fc);
 
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        FilterChain fc = mock(FilterChain.class);
-        request.setRequestURI("x");
-        filter.doFilter(request, new MockHttpServletResponse(), fc);
+		assertEquals("/target", response.getRedirectedUrl());
 
-        // Ensure filter setup with our remembered authentication object
-        assertSame(remembered, SecurityContextHolder.getContext().getAuthentication());
-        verify(fc).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class));
-    }
+		// Should return after success handler is invoked, so chain should not proceed
+		verifyZeroInteractions(fc);
+	}
 
-    @Test
-    public void onUnsuccessfulLoginIsCalledWhenProviderRejectsAuth() throws Exception {
-        final Authentication failedAuth = new TestingAuthenticationToken("failed", "");
+	// ~ Inner Classes
+	// ==================================================================================================
 
-        RememberMeAuthenticationFilter filter = new RememberMeAuthenticationFilter() {
-            protected void onUnsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) {
-                super.onUnsuccessfulAuthentication(request, response, failed);
-                SecurityContextHolder.getContext().setAuthentication(failedAuth);
-            }
-        };
-        AuthenticationManager am = mock(AuthenticationManager.class);
-        when(am.authenticate(any(Authentication.class))).thenThrow(new BadCredentialsException(""));
-        filter.setAuthenticationManager(am);
-        filter.setRememberMeServices(new MockRememberMeServices(remembered));
-        filter.setApplicationEventPublisher(mock(ApplicationEventPublisher.class));
-        filter.afterPropertiesSet();
+	private class MockRememberMeServices implements RememberMeServices {
+		private Authentication authToReturn;
 
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        FilterChain fc = mock(FilterChain.class);
-        request.setRequestURI("x");
-        filter.doFilter(request, new MockHttpServletResponse(), fc);
+		public MockRememberMeServices(Authentication authToReturn) {
+			this.authToReturn = authToReturn;
+		}
 
-        assertSame(failedAuth, SecurityContextHolder.getContext().getAuthentication());
-        verify(fc).doFilter(any(HttpServletRequest.class), any(HttpServletResponse.class));
-    }
+		public Authentication autoLogin(HttpServletRequest request,
+				HttpServletResponse response) {
+			return authToReturn;
+		}
 
-    @Test
-    public void authenticationSuccessHandlerIsInvokedOnSuccessfulAuthenticationIfSet() throws Exception {
-        RememberMeAuthenticationFilter filter = new RememberMeAuthenticationFilter();
-        AuthenticationManager am = mock(AuthenticationManager.class);
-        when(am.authenticate(remembered)).thenReturn(remembered);
-        filter.setAuthenticationManager(am);
-        filter.setRememberMeServices(new MockRememberMeServices(remembered));
-        filter.setAuthenticationSuccessHandler(new SimpleUrlAuthenticationSuccessHandler("/target"));
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        FilterChain fc = mock(FilterChain.class);
-        request.setRequestURI("x");
-        filter.doFilter(request, response, fc);
+		public void loginFail(HttpServletRequest request, HttpServletResponse response) {
+		}
 
-        assertEquals("/target", response.getRedirectedUrl());
-
-        // Should return after success handler is invoked, so chain should not proceed
-        verifyZeroInteractions(fc);
-    }
-
-    //~ Inner Classes ==================================================================================================
-
-    private class MockRememberMeServices implements RememberMeServices {
-        private Authentication authToReturn;
-
-        public MockRememberMeServices(Authentication authToReturn) {
-            this.authToReturn = authToReturn;
-        }
-
-        public Authentication autoLogin(HttpServletRequest request, HttpServletResponse response) {
-            return authToReturn;
-        }
-
-        public void loginFail(HttpServletRequest request, HttpServletResponse response) {}
-
-        public void loginSuccess(HttpServletRequest request, HttpServletResponse response,
-            Authentication successfulAuthentication) {}
-    }
+		public void loginSuccess(HttpServletRequest request,
+				HttpServletResponse response, Authentication successfulAuthentication) {
+		}
+	}
 }
