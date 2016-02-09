@@ -93,8 +93,8 @@ public class BasicLookupStrategy implements LookupStrategy {
 			+ "acli_sid.principal as acl_principal, "
 			+ "acli_sid.sid as acl_sid, "
 			+ "acl_class.class "
-		    + "acl_class.class_id_type  "
-		    + "from acl_object_identity "
+			+ "acl_class.class_id_type  "
+			+ "from acl_object_identity "
 			+ "left join acl_sid acli_sid on acli_sid.id = acl_object_identity.owner_sid "
 			+ "left join acl_class on acl_class.id = acl_object_identity.object_id_class   "
 			+ "left join acl_entry on acl_object_identity.id = acl_entry.acl_object_identity "
@@ -390,17 +390,17 @@ public class BasicLookupStrategy implements LookupStrategy {
 							// Determine prepared statement values for this iteration
 							String type = oid.getType();
 
-                            // No need to check for nulls, as guaranteed non-null by
-                            // ObjectIdentity.getIdentifier() interface contract
-                            String identifier = oid.getIdentifier().toString();
+							// No need to check for nulls, as guaranteed non-null by
+							// ObjectIdentity.getIdentifier() interface contract
+							String identifier = oid.getIdentifier().toString();
 
-                            // Inject values
-                            ps.setString((2 * i) + 1, identifier);
-                            ps.setString((2 * i) + 2, type);
-                            i++;
-                    }
-                }
-            }, new ProcessResultSet(acls, sids));
+							// Inject values
+							ps.setString((2 * i) + 1, identifier);
+							ps.setString((2 * i) + 2, type);
+							i++;
+						}
+					}
+				}, new ProcessResultSet(acls, sids));
 
 		// Lookup the parents, now that our JdbcTemplate has released the database
 		// connection (SEC-547)
@@ -619,18 +619,18 @@ public class BasicLookupStrategy implements LookupStrategy {
 			// If we already have an ACL for this ID, just create the ACE
 			Acl acl = acls.get(id);
 
-            if (acl == null) {
-                // Make an AclImpl and pop it into the Map
+			if (acl == null) {
+				// Make an AclImpl and pop it into the Map
 
-                // If the Java type is a String, check to see if we can convert it to the target id type, e.g. UUID.
-                Serializable identifier = (Serializable) rs.getObject("object_id_identity");
-                if (isString(identifier) && hasValidClassIdType(rs)
-                        && canConvertFromStringTo(classIdTypeFrom(rs))) {
+				// If the Java type is a String, check to see if we can convert it to the target id type, e.g. UUID.
+				Serializable identifier = (Serializable) rs.getObject("object_id_identity");
+				if (isString(identifier) && hasValidClassIdType(rs)
+					&& canConvertFromStringTo(classIdTypeFrom(rs))) {
 
-                    identifier = convertFromStringTo((String) identifier, classIdTypeFrom(rs));
-                }
-                ObjectIdentity objectIdentity = new ObjectIdentityImpl(
-                    rs.getString("class"), identifier);
+					identifier = convertFromStringTo((String) identifier, classIdTypeFrom(rs));
+				}
+				ObjectIdentity objectIdentity = new ObjectIdentityImpl(
+					rs.getString("class"), identifier);
 
 				Acl parentAcl = null;
 				long parentAclId = rs.getLong("parent_object");
