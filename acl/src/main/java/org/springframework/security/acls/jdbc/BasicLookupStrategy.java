@@ -30,6 +30,7 @@ import java.util.Set;
 import javax.sql.DataSource;
 
 import org.springframework.core.convert.ConversionService;
+import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementSetter;
 import org.springframework.jdbc.core.ResultSetExtractor;
@@ -92,7 +93,7 @@ public class BasicLookupStrategy implements LookupStrategy {
 			+ "acl_sid.sid as ace_sid,  "
 			+ "acli_sid.principal as acl_principal, "
 			+ "acli_sid.sid as acl_sid, "
-			+ "acl_class.class "
+			+ "acl_class.class, "
 			+ "acl_class.class_id_type  "
 			+ "from acl_object_identity "
 			+ "left join acl_sid acli_sid on acli_sid.id = acl_object_identity.owner_sid "
@@ -141,7 +142,8 @@ public class BasicLookupStrategy implements LookupStrategy {
 	public BasicLookupStrategy(DataSource dataSource, AclCache aclCache,
 			AclAuthorizationStrategy aclAuthorizationStrategy, AuditLogger auditLogger) {
 		this(dataSource, aclCache, aclAuthorizationStrategy,
-				new DefaultPermissionGrantingStrategy(auditLogger));
+				new DefaultPermissionGrantingStrategy(auditLogger),
+				new DefaultConversionService());
 	}
 
 	/**
@@ -628,6 +630,9 @@ public class BasicLookupStrategy implements LookupStrategy {
 					&& canConvertFromStringTo(classIdTypeFrom(rs))) {
 
 					identifier = convertFromStringTo((String) identifier, classIdTypeFrom(rs));
+				} else {
+					// Assume the identifier should be a Long
+					identifier = Long.valueOf(identifier.toString());
 				}
 				ObjectIdentity objectIdentity = new ObjectIdentityImpl(
 					rs.getString("class"), identifier);

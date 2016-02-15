@@ -22,7 +22,7 @@ create table acl_class(
 create table acl_object_identity(
     id bigserial primary key,
     object_id_class bigint not null,
-    object_id_identity bigint not null,
+    object_id_identity varchar(36) not null,
     parent_object bigint,
     owner_sid bigint,
     entries_inheriting boolean not null,

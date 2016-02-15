@@ -5,10 +5,13 @@ import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Ehcache;
 import org.junit.*;
+import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
+import org.springframework.security.acls.TargetObject;
+import org.springframework.security.acls.TargetObjectWithUUID;
 import org.springframework.security.acls.domain.*;
 import org.springframework.security.acls.model.Acl;
 import org.springframework.security.acls.model.AuditableAccessControlEntry;
@@ -30,8 +33,9 @@ import java.util.*;
 public class BasicLookupStrategyTests {
 
 	private static final Sid BEN_SID = new PrincipalSid("ben");
-	private static final String TARGET_CLASS = "org.springframework.security.acls.TargetObject";
-	private static final String TARGET_CLASS_WITH_UUID = "org.springframework.security.acls.TargetObjectWithUUID";
+	private static final String TARGET_CLASS = TargetObject.class.getName();
+	private static final String TARGET_CLASS_WITH_UUID = TargetObjectWithUUID.class.getName();
+	private static final UUID OBJECT_IDENTITY_UUID = UUID.randomUUID();
 
 	// ~ Instance fields
 	// ================================================================================================
@@ -79,17 +83,19 @@ public class BasicLookupStrategyTests {
 				+ "INSERT INTO acl_class(ID,CLASS) VALUES (2,'"
 				+ TARGET_CLASS
 				+ "');"
-//                + "INSERT INTO acl_class(ID,CLASS) VALUES (3,'"
-//			    + TARGET_CLASS_WITH_UUID
-//			    + "', java.util.UUID);"
+				+ "INSERT INTO acl_class(ID,CLASS,CLASS_ID_TYPE) VALUES (3,'"
+				+ TARGET_CLASS_WITH_UUID
+				+ "', 'java.util.UUID');"
 			    + "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (1,2,100,null,1,1);"
 				+ "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (2,2,101,1,1,1);"
 				+ "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (3,2,102,2,1,1);"
-//                + "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (4,3,102,2,1,1);"
+				+ "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (4,3,'"
+					+ OBJECT_IDENTITY_UUID.toString() + "',null,1,1);"
 			    + "INSERT INTO acl_entry(ID,ACL_OBJECT_IDENTITY,ACE_ORDER,SID,MASK,GRANTING,AUDIT_SUCCESS,AUDIT_FAILURE) VALUES (1,1,0,1,1,1,0,0);"
 				+ "INSERT INTO acl_entry(ID,ACL_OBJECT_IDENTITY,ACE_ORDER,SID,MASK,GRANTING,AUDIT_SUCCESS,AUDIT_FAILURE) VALUES (2,1,1,1,2,0,0,0);"
 				+ "INSERT INTO acl_entry(ID,ACL_OBJECT_IDENTITY,ACE_ORDER,SID,MASK,GRANTING,AUDIT_SUCCESS,AUDIT_FAILURE) VALUES (3,2,0,1,8,1,0,0);"
-				+ "INSERT INTO acl_entry(ID,ACL_OBJECT_IDENTITY,ACE_ORDER,SID,MASK,GRANTING,AUDIT_SUCCESS,AUDIT_FAILURE) VALUES (4,3,0,1,8,0,0,0);";
+				+ "INSERT INTO acl_entry(ID,ACL_OBJECT_IDENTITY,ACE_ORDER,SID,MASK,GRANTING,AUDIT_SUCCESS,AUDIT_FAILURE) VALUES (4,3,0,1,8,0,0,0);"
+				+ "INSERT INTO acl_entry(ID,ACL_OBJECT_IDENTITY,ACE_ORDER,SID,MASK,GRANTING,AUDIT_SUCCESS,AUDIT_FAILURE) VALUES (5,4,0,1,8,0,0,0);";
 		jdbcTemplate.execute(query);
 	}
 
@@ -101,13 +107,15 @@ public class BasicLookupStrategyTests {
 		AclAuthorizationStrategy authorizationStrategy = new AclAuthorizationStrategyImpl(
 				new SimpleGrantedAuthority("ROLE_ADMINISTRATOR"));
 		strategy = new BasicLookupStrategy(dataSource, cache, authorizationStrategy,
-				new DefaultPermissionGrantingStrategy(new ConsoleAuditLogger()));
+				new DefaultPermissionGrantingStrategy(new ConsoleAuditLogger()),
+				new DefaultConversionService());
 		strategy.setPermissionFactory(new DefaultPermissionFactory());
 	}
 
 	@After
 	public void emptyDatabase() {
 		String query = "DELETE FROM acl_entry;"
+				+ "DELETE FROM acl_object_identity WHERE ID = 8;"
 				+ "DELETE FROM acl_object_identity WHERE ID = 7;"
 				+ "DELETE FROM acl_object_identity WHERE ID = 6;"
 				+ "DELETE FROM acl_object_identity WHERE ID = 5;"
@@ -259,7 +267,7 @@ public class BasicLookupStrategyTests {
 
 	@Test
 	public void testAllParentsAreRetrievedWhenChildIsLoaded() throws Exception {
-		String query = "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (4,2,103,1,1,1);";
+		String query = "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (5,2,103,1,1,1);";
 		jdbcTemplate.execute(query);
 
 		ObjectIdentity topParentOid = new ObjectIdentityImpl(TARGET_CLASS,
@@ -292,11 +300,11 @@ public class BasicLookupStrategyTests {
 	@Test
 	public void testReadAllObjectIdentitiesWhenLastElementIsAlreadyCached()
 			throws Exception {
-		String query = "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (4,2,104,null,1,1);"
-				+ "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (5,2,105,4,1,1);"
-				+ "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (6,2,106,4,1,1);"
+		String query = "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (5,2,105,null,1,1);"
+				+ "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (6,2,106,5,1,1);"
 				+ "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (7,2,107,5,1,1);"
-				+ "INSERT INTO acl_entry(ID,ACL_OBJECT_IDENTITY,ACE_ORDER,SID,MASK,GRANTING,AUDIT_SUCCESS,AUDIT_FAILURE) VALUES (5,4,0,1,1,1,0,0)";
+				+ "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (8,2,108,6,1,1);"
+				+ "INSERT INTO acl_entry(ID,ACL_OBJECT_IDENTITY,ACE_ORDER,SID,MASK,GRANTING,AUDIT_SUCCESS,AUDIT_FAILURE) VALUES (6,5,0,1,1,1,0,0)";
 		jdbcTemplate.execute(query);
 
 		ObjectIdentity grandParentOid = new ObjectIdentityImpl(TARGET_CLASS,
@@ -340,13 +348,21 @@ public class BasicLookupStrategyTests {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void nullOwnerIsNotSupported() {
-		String query = "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (4,2,104,null,null,1);";
+		String query = "INSERT INTO acl_object_identity(ID,OBJECT_ID_CLASS,OBJECT_ID_IDENTITY,PARENT_OBJECT,OWNER_SID,ENTRIES_INHERITING) VALUES (5,2,104,null,null,1);";
 
 		jdbcTemplate.execute(query);
 
 		ObjectIdentity oid = new ObjectIdentityImpl(TARGET_CLASS, new Long(104));
 
 		strategy.readAclsById(Arrays.asList(oid), Arrays.asList(BEN_SID));
+	}
+
+	@Test
+	public void testReadObjectIdentityUsingNonLongType() {
+		ObjectIdentity oid = new ObjectIdentityImpl(TARGET_CLASS_WITH_UUID, OBJECT_IDENTITY_UUID);
+		Map<ObjectIdentity, Acl> foundAcls = strategy.readAclsById(Arrays.asList(oid), Arrays.asList(BEN_SID));
+		Assert.assertEquals(1, foundAcls.size());
+		Assert.assertNotNull(foundAcls.get(oid));
 	}
 
 	@Test
