@@ -169,14 +169,14 @@ public class BasicLookupStrategy implements LookupStrategy {
 		fieldAcl.setAccessible(true);
 	}
 
-    public BasicLookupStrategy(DataSource dataSource, AclCache aclCache,
-                               AclAuthorizationStrategy aclAuthorizationStrategy,
-                               PermissionGrantingStrategy grantingStrategy,
-                               ConversionService conversionService) {
-        this(dataSource, aclCache, aclAuthorizationStrategy, grantingStrategy);
-        Assert.notNull(conversionService, "conversionService required");
-        this.conversionService = conversionService;
-    }
+	public BasicLookupStrategy(DataSource dataSource, AclCache aclCache,
+			AclAuthorizationStrategy aclAuthorizationStrategy,
+			PermissionGrantingStrategy grantingStrategy,
+			ConversionService conversionService) {
+		this(dataSource, aclCache, aclAuthorizationStrategy, grantingStrategy);
+		Assert.notNull(conversionService, "conversionService required");
+		this.conversionService = conversionService;
+	}
 
 	// ~ Methods
 	// ========================================================================================================
