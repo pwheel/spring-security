@@ -428,7 +428,7 @@ public class JdbcMutableAclServiceTests extends
 
 	@Test
 	@Transactional
-	public void canReadyAclOfIdentityWithUuidId() throws Exception {
+	public void canReadAclOfIdentityWithUuidId() throws Exception {
 		UUID id = UUID.randomUUID();
 		// Must insert into the tables first, as HSQLDB can't convert UUID to String for database insert
 		// so we need a manual insert into acl_object_identity
