@@ -29,6 +29,7 @@ import java.util.Set;
 
 import javax.sql.DataSource;
 
+import org.springframework.core.convert.ConversionException;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -79,7 +80,7 @@ import org.springframework.util.Assert;
  */
 public class BasicLookupStrategy implements LookupStrategy {
 
-	public final static String DEFAULT_SELECT_CLAUSE = "select acl_object_identity.object_id_identity, "
+	private final static String DEFAULT_SELECT_CLAUSE_COLUMNS = "select acl_object_identity.object_id_identity, "
 			+ "acl_entry.ace_order,  "
 			+ "acl_object_identity.id as acl_id, "
 			+ "acl_object_identity.parent_object, "
@@ -93,13 +94,18 @@ public class BasicLookupStrategy implements LookupStrategy {
 			+ "acl_sid.sid as ace_sid,  "
 			+ "acli_sid.principal as acl_principal, "
 			+ "acli_sid.sid as acl_sid, "
-			+ "acl_class.class, "
-			+ "acl_class.class_id_type  "
-			+ "from acl_object_identity "
+			+ "acl_class.class ";
+	private final static String DEFAULT_SELECT_CLAUSE_ACL_CLASS_ID_TYPE_COLUMN = ", acl_class.class_id_type  ";
+	private final static String DEFAULT_SELECT_CLAUSE_FROM = "from acl_object_identity "
 			+ "left join acl_sid acli_sid on acli_sid.id = acl_object_identity.owner_sid "
 			+ "left join acl_class on acl_class.id = acl_object_identity.object_id_class   "
 			+ "left join acl_entry on acl_object_identity.id = acl_entry.acl_object_identity "
 			+ "left join acl_sid on acl_entry.sid = acl_sid.id  " + "where ( ";
+
+	public final static String DEFAULT_SELECT_CLAUSE = DEFAULT_SELECT_CLAUSE_COLUMNS + DEFAULT_SELECT_CLAUSE_FROM;
+
+	public final static String DEFAULT_ACL_CLASS_ID_SELECT_CLAUSE = DEFAULT_SELECT_CLAUSE_COLUMNS +
+		DEFAULT_SELECT_CLAUSE_ACL_CLASS_ID_TYPE_COLUMN + DEFAULT_SELECT_CLAUSE_FROM;
 
 	private final static String DEFAULT_LOOKUP_KEYS_WHERE_CLAUSE = "(acl_object_identity.id = ?)";
 
@@ -548,6 +554,14 @@ public class BasicLookupStrategy implements LookupStrategy {
 		this.orderByClause = orderByClause;
 	}
 
+	public final void setAclClassIdSupported(boolean aclClassIdSupported) {
+		if (aclClassIdSupported) {
+			Assert.isTrue(this.selectClause.equals(DEFAULT_SELECT_CLAUSE), "Cannot set aclClassIdSupported and override the select clause; "
+				+ "just override the select clause");
+			this.selectClause = DEFAULT_ACL_CLASS_ID_SELECT_CLAUSE;
+		}
+	}
+
 	// ~ Inner Classes
 	// ==================================================================================================
 
@@ -613,6 +627,7 @@ public class BasicLookupStrategy implements LookupStrategy {
 		 * @param rs the ResultSet focused on a current row
 		 *
 		 * @throws SQLException if something goes wrong converting values
+		 * @throws ConversionException if can't convert to the desired Java type
 		 */
 		private void convertCurrentResultIntoObject(Map<Serializable, Acl> acls,
 				ResultSet rs) throws SQLException {
@@ -631,8 +646,8 @@ public class BasicLookupStrategy implements LookupStrategy {
 
 					identifier = convertFromStringTo((String) identifier, classIdTypeFrom(rs));
 				} else {
-					// Assume the identifier should be a Long
-					identifier = Long.valueOf(identifier.toString());
+					// Assume it should be a Long type
+					identifier = convertToLong(identifier);
 				}
 				ObjectIdentity objectIdentity = new ObjectIdentityImpl(
 					rs.getString("class"), identifier);
@@ -707,11 +722,33 @@ public class BasicLookupStrategy implements LookupStrategy {
 	}
 
 	private <T> boolean canConvertFromStringTo(Class<T> targetType) {
-		return conversionService != null && conversionService.canConvert(String.class, targetType);
+		return hasConverstionService() && conversionService.canConvert(String.class, targetType);
 	}
 
 	private <T extends Serializable> T convertFromStringTo(String identifier, Class<T> targetType) {
 		return conversionService.convert(identifier, targetType);
+	}
+
+	private boolean hasConverstionService() {
+		return conversionService != null;
+	}
+
+	/**
+	 * Converts to a {@link Long}, attempting to use the {@link ConversionService} if available.
+	 * @param identifier    The identifier
+	 * @return Long version of the identifier
+	 * @throws NumberFormatException if the string cannot be parsed to a long.
+	 * @throws org.springframework.core.convert.ConversionException if a conversion exception occurred
+	 * @throws IllegalArgumentException if targetType is null
+     */
+	private Long convertToLong(Serializable identifier) {
+		Long idAsLong;
+		if (hasConverstionService()) {
+			idAsLong = conversionService.convert(identifier, Long.class);
+		} else {
+			idAsLong = Long.valueOf(identifier.toString());
+		}
+		return idAsLong;
 	}
 
 	private boolean isString(Serializable object) {

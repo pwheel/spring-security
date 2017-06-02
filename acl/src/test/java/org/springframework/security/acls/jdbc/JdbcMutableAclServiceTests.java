@@ -69,7 +69,6 @@ public class JdbcMutableAclServiceTests extends
 	// ================================================================================================
 
 	private static final String TARGET_CLASS = TargetObject.class.getName();
-	private static final String TARGET_CLASS_WITH_UUID = TargetObjectWithUUID.class.getName();
 
 	private final Authentication auth = new TestingAuthenticationToken("ben", "ignored",
 			"ROLE_ADMINISTRATOR");
@@ -100,10 +99,14 @@ public class JdbcMutableAclServiceTests extends
 	// ~ Methods
 	// ========================================================================================================
 
+	protected String getSqlClassPathResource() {
+		return "createAclSchema.sql";
+	}
+
 	@BeforeTransaction
 	public void createTables() throws Exception {
 		try {
-			new DatabaseSeeder(dataSource, new ClassPathResource("createAclSchema.sql"));
+			new DatabaseSeeder(dataSource, new ClassPathResource(getSqlClassPathResource()));
 			// new DatabaseSeeder(dataSource, new
 			// ClassPathResource("createAclSchemaPostgres.sql"));
 		}
@@ -426,23 +429,6 @@ public class JdbcMutableAclServiceTests extends
 				TARGET_CLASS, Long.valueOf(101))));
 	}
 
-	@Test
-	@Transactional
-	public void canReadAclOfIdentityWithUuidId() throws Exception {
-		UUID id = UUID.randomUUID();
-		// Must insert into the tables first, as HSQLDB can't convert UUID to String for database insert
-		// so we need a manual insert into acl_object_identity
-		jdbcTemplate.update("insert into acl_class (class, class_id_type) values (?, ?)",
-			TARGET_CLASS_WITH_UUID, UUID.class.getName());
-		jdbcTemplate.update("insert into acl_sid (principal, sid) values (1, 'ben')");
-		jdbcTemplate.update("insert into acl_object_identity (object_id_class, object_id_identity, owner_sid, entries_inheriting) "
-			+ "values (?, ?, ?, ?)", 100, id.toString(), 100, true);
-		SecurityContextHolder.getContext().setAuthentication(auth);
-
-		assertNotNull(jdbcMutableAclService.readAclById(new ObjectIdentityImpl(
-			TARGET_CLASS_WITH_UUID, id)));
-	}
-
 	/**
 	 * SEC-655
 	 */
@@ -594,4 +580,11 @@ public class JdbcMutableAclServiceTests extends
 		}
 	}
 
+	protected Authentication getAuth() {
+		return auth;
+	}
+
+	protected JdbcMutableAclService getJdbcMutableAclService() {
+		return jdbcMutableAclService;
+	}
 }
