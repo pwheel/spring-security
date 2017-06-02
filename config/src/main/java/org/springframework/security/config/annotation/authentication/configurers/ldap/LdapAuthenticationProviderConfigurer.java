@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
  */
 package org.springframework.security.config.annotation.authentication.configurers.ldap;
 
+import java.io.IOException;
+import java.net.ServerSocket;
+
 import org.springframework.ldap.core.support.BaseLdapPathContextSource;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -24,6 +27,8 @@ import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.SecurityConfigurerAdapter;
 import org.springframework.security.config.annotation.authentication.ProviderManagerBuilder;
 import org.springframework.security.config.annotation.web.configurers.ChannelSecurityConfigurer;
+import org.springframework.security.config.core.GrantedAuthorityDefaults;
+import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper;
 import org.springframework.security.ldap.DefaultSpringSecurityContextSource;
 import org.springframework.security.ldap.authentication.AbstractLdapAuthenticator;
@@ -42,15 +47,13 @@ import org.springframework.security.ldap.userdetails.PersonContextMapper;
 import org.springframework.security.ldap.userdetails.UserDetailsContextMapper;
 import org.springframework.util.Assert;
 
-import java.io.IOException;
-import java.net.ServerSocket;
-
 /**
  * Configures LDAP {@link AuthenticationProvider} in the {@link ProviderManagerBuilder}.
  *
  * @param <B> the {@link ProviderManagerBuilder} type that this is configuring.
  *
  * @author Rob Winch
+ * @author Eddú Meléndez
  * @since 3.2
  */
 public class LdapAuthenticationProviderConfigurer<B extends ProviderManagerBuilder<B>>
@@ -68,6 +71,7 @@ public class LdapAuthenticationProviderConfigurer<B extends ProviderManagerBuild
 	private Object passwordEncoder;
 	private String passwordAttribute;
 	private LdapAuthoritiesPopulator ldapAuthoritiesPopulator;
+	private GrantedAuthoritiesMapper authoritiesMapper;
 
 	private LdapAuthenticationProvider build() throws Exception {
 		BaseLdapPathContextSource contextSource = getContextSource();
@@ -77,10 +81,7 @@ public class LdapAuthenticationProviderConfigurer<B extends ProviderManagerBuild
 
 		LdapAuthenticationProvider ldapAuthenticationProvider = new LdapAuthenticationProvider(
 				ldapAuthenticator, authoritiesPopulator);
-		SimpleAuthorityMapper simpleAuthorityMapper = new SimpleAuthorityMapper();
-		simpleAuthorityMapper.setPrefix(rolePrefix);
-		simpleAuthorityMapper.afterPropertiesSet();
-		ldapAuthenticationProvider.setAuthoritiesMapper(simpleAuthorityMapper);
+		ldapAuthenticationProvider.setAuthoritiesMapper(getAuthoritiesMapper());
 		if (userDetailsContextMapper != null) {
 			ldapAuthenticationProvider
 					.setUserDetailsContextMapper(userDetailsContextMapper);
@@ -128,9 +129,43 @@ public class LdapAuthenticationProviderConfigurer<B extends ProviderManagerBuild
 				contextSource, groupSearchBase);
 		defaultAuthoritiesPopulator.setGroupRoleAttribute(groupRoleAttribute);
 		defaultAuthoritiesPopulator.setGroupSearchFilter(groupSearchFilter);
+		defaultAuthoritiesPopulator.setRolePrefix(this.rolePrefix);
 
 		this.ldapAuthoritiesPopulator = defaultAuthoritiesPopulator;
 		return defaultAuthoritiesPopulator;
+	}
+
+
+	/**
+	 * Specifies the {@link GrantedAuthoritiesMapper}.
+	 *
+	 * @param grantedAuthoritiesMapper the {@link GrantedAuthoritiesMapper} the default is {@link SimpleAuthorityMapper}
+	 * @return the {@link LdapAuthenticationProviderConfigurer} for further customizations
+	 *
+	 * @author Tony Dalbrekt
+	 * @since 4.1.1
+	 */
+	public LdapAuthenticationProviderConfigurer<B> authoritiesMapper(GrantedAuthoritiesMapper grantedAuthoritiesMapper) {
+		this.authoritiesMapper = grantedAuthoritiesMapper;
+		return this;
+	}
+
+	/**
+	 * Gets the {@link GrantedAuthoritiesMapper} and defaults to {@link SimpleAuthorityMapper}.
+	 *
+	 * @return the {@link GrantedAuthoritiesMapper}
+	 * @throws Exception if errors in {@link SimpleAuthorityMapper#afterPropertiesSet()}
+	 */
+	protected GrantedAuthoritiesMapper getAuthoritiesMapper() throws Exception {
+		if(authoritiesMapper != null) {
+			return authoritiesMapper;
+		}
+
+		SimpleAuthorityMapper simpleAuthorityMapper = new SimpleAuthorityMapper();
+		simpleAuthorityMapper.setPrefix(this.rolePrefix);
+		simpleAuthorityMapper.afterPropertiesSet();
+		this.authoritiesMapper = simpleAuthorityMapper;
+		return simpleAuthorityMapper;
 	}
 
 	/**

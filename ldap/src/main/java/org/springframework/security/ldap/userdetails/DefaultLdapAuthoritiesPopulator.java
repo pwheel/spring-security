@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,24 +16,24 @@
 
 package org.springframework.security.ldap.userdetails;
 
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.ldap.SpringSecurityLdapTemplate;
-import org.springframework.ldap.core.ContextSource;
-import org.springframework.ldap.core.DirContextOperations;
-import org.springframework.ldap.core.LdapTemplate;
-import org.springframework.util.Assert;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import javax.naming.directory.SearchControls;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import javax.naming.directory.SearchControls;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.springframework.ldap.core.ContextSource;
+import org.springframework.ldap.core.DirContextOperations;
+import org.springframework.ldap.core.LdapTemplate;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.ldap.SpringSecurityLdapTemplate;
+import org.springframework.util.Assert;
 
 /**
  * The default strategy for obtaining user role information from the directory.
@@ -159,7 +160,7 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 	public DefaultLdapAuthoritiesPopulator(ContextSource contextSource,
 			String groupSearchBase) {
 		Assert.notNull(contextSource, "contextSource must not be null");
-		ldapTemplate = new SpringSecurityLdapTemplate(contextSource);
+		this.ldapTemplate = new SpringSecurityLdapTemplate(contextSource);
 		getLdapTemplate().setSearchControls(getSearchControls());
 		this.groupSearchBase = groupSearchBase;
 
@@ -167,7 +168,8 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 			logger.info("groupSearchBase is null. No group search will be performed.");
 		}
 		else if (groupSearchBase.length() == 0) {
-			logger.info("groupSearchBase is empty. Searches will be performed from the context source base");
+			logger.info(
+					"groupSearchBase is empty. Searches will be performed from the context source base");
 		}
 	}
 
@@ -196,6 +198,7 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 	 * @param user the user who's authorities are required
 	 * @return the set of roles granted to the user.
 	 */
+	@Override
 	public final Collection<GrantedAuthority> getGrantedAuthorities(
 			DirContextOperations user, String username) {
 		String userDn = user.getNameInNamespace();
@@ -212,8 +215,8 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 			roles.addAll(extraRoles);
 		}
 
-		if (defaultRole != null) {
-			roles.add(defaultRole);
+		if (this.defaultRole != null) {
+			roles.add(this.defaultRole);
 		}
 
 		List<GrantedAuthority> result = new ArrayList<GrantedAuthority>(roles.size());
@@ -231,13 +234,13 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 
 		if (logger.isDebugEnabled()) {
 			logger.debug("Searching for roles for user '" + username + "', DN = " + "'"
-					+ userDn + "', with filter " + groupSearchFilter
+					+ userDn + "', with filter " + this.groupSearchFilter
 					+ " in search base '" + getGroupSearchBase() + "'");
 		}
 
 		Set<String> userRoles = getLdapTemplate().searchForSingleAttributeValues(
-				getGroupSearchBase(), groupSearchFilter,
-				new String[] { userDn, username }, groupRoleAttribute);
+				getGroupSearchBase(), this.groupSearchFilter,
+				new String[] { userDn, username }, this.groupRoleAttribute);
 
 		if (logger.isDebugEnabled()) {
 			logger.debug("Roles from search: " + userRoles);
@@ -245,11 +248,11 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 
 		for (String role : userRoles) {
 
-			if (convertToUpperCase) {
+			if (this.convertToUpperCase) {
 				role = role.toUpperCase();
 			}
 
-			authorities.add(new SimpleGrantedAuthority(rolePrefix + role));
+			authorities.add(new SimpleGrantedAuthority(this.rolePrefix + role));
 		}
 
 		return authorities;
@@ -260,7 +263,7 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 	}
 
 	protected String getGroupSearchBase() {
-		return groupSearchBase;
+		return this.groupSearchBase;
 	}
 
 	/**
@@ -309,7 +312,7 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 	public void setSearchSubtree(boolean searchSubtree) {
 		int searchScope = searchSubtree ? SearchControls.SUBTREE_SCOPE
 				: SearchControls.ONELEVEL_SCOPE;
-		searchControls.setSearchScope(searchScope);
+		this.searchControls.setSearchScope(searchScope);
 	}
 
 	/**
@@ -329,7 +332,7 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 	 * @see org.springframework.security.ldap.SpringSecurityLdapTemplate
 	 */
 	protected SpringSecurityLdapTemplate getLdapTemplate() {
-		return ldapTemplate;
+		return this.ldapTemplate;
 	}
 
 	/**
@@ -339,7 +342,7 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 	 * @see #setGroupRoleAttribute(String)
 	 */
 	protected final String getGroupRoleAttribute() {
-		return groupRoleAttribute;
+		return this.groupRoleAttribute;
 	}
 
 	/**
@@ -349,7 +352,7 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 	 * @see #setGroupSearchFilter(String)
 	 */
 	protected final String getGroupSearchFilter() {
-		return groupSearchFilter;
+		return this.groupSearchFilter;
 	}
 
 	/**
@@ -359,7 +362,7 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 	 * @see #setRolePrefix(String)
 	 */
 	protected final String getRolePrefix() {
-		return rolePrefix;
+		return this.rolePrefix;
 	}
 
 	/**
@@ -369,7 +372,7 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 	 * @see #setConvertToUpperCase(boolean)
 	 */
 	protected final boolean isConvertToUpperCase() {
-		return convertToUpperCase;
+		return this.convertToUpperCase;
 	}
 
 	/**
@@ -379,7 +382,7 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 	 * @see #setDefaultRole(String)
 	 */
 	private GrantedAuthority getDefaultRole() {
-		return defaultRole;
+		return this.defaultRole;
 	}
 
 	/**
@@ -388,6 +391,6 @@ public class DefaultLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator
 	 * @return the search controls
 	 */
 	private SearchControls getSearchControls() {
-		return searchControls;
+		return this.searchControls;
 	}
 }

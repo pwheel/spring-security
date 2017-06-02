@@ -19,12 +19,17 @@ import java.lang.annotation.Annotation;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.expression.Expression;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.invocation.HandlerMethodArgumentResolver;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.StringUtils;
 
 /**
  * Allows resolving the {@link Authentication#getPrincipal()} using the
@@ -76,12 +81,14 @@ import org.springframework.stereotype.Controller;
  * @author Rob Winch
  * @since 4.0
  */
-public final class AuthenticationPrincipalArgumentResolver implements
-		HandlerMethodArgumentResolver {
+public final class AuthenticationPrincipalArgumentResolver
+		implements HandlerMethodArgumentResolver {
+
+	private ExpressionParser parser = new SpelExpressionParser();
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * org.springframework.messaging.handler.invocation.HandlerMethodArgumentResolver#
 	 * supportsParameter(org.springframework.core.MethodParameter)
@@ -92,7 +99,7 @@ public final class AuthenticationPrincipalArgumentResolver implements
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see
 	 * org.springframework.messaging.handler.invocation.HandlerMethodArgumentResolver#
 	 * resolveArgument(org.springframework.core.MethodParameter,
@@ -106,10 +113,22 @@ public final class AuthenticationPrincipalArgumentResolver implements
 			return null;
 		}
 		Object principal = authentication.getPrincipal();
+
+		AuthenticationPrincipal authPrincipal = findMethodAnnotation(
+				AuthenticationPrincipal.class, parameter);
+
+		String expressionToParse = authPrincipal.expression();
+		if (StringUtils.hasLength(expressionToParse)) {
+			StandardEvaluationContext context = new StandardEvaluationContext();
+			context.setRootObject(principal);
+			context.setVariable("this", principal);
+
+			Expression expression = this.parser.parseExpression(expressionToParse);
+			principal = expression.getValue(context);
+		}
+
 		if (principal != null
 				&& !parameter.getParameterType().isAssignableFrom(principal.getClass())) {
-			AuthenticationPrincipal authPrincipal = findMethodAnnotation(
-					AuthenticationPrincipal.class, parameter);
 			if (authPrincipal.errorOnInvalidType()) {
 				throw new ClassCastException(principal + " is not assignable to "
 						+ parameter.getParameterType());

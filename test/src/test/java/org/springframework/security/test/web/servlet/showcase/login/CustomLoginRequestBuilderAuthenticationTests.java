@@ -23,7 +23,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -55,7 +54,8 @@ public class CustomLoginRequestBuilderAuthenticationTests {
 
 	@Test
 	public void authenticationSuccess() throws Exception {
-		mvc.perform(login()).andExpect(status().isMovedTemporarily())
+		mvc.perform(login())
+				.andExpect(status().isFound())
 				.andExpect(redirectedUrl("/"))
 				.andExpect(authenticated().withUsername("user"));
 	}
@@ -63,7 +63,7 @@ public class CustomLoginRequestBuilderAuthenticationTests {
 	@Test
 	public void authenticationFailed() throws Exception {
 		mvc.perform(login().user("notfound").password("invalid"))
-				.andExpect(status().isMovedTemporarily())
+				.andExpect(status().isFound())
 				.andExpect(redirectedUrl("/authenticate?error"))
 				.andExpect(unauthenticated());
 	}

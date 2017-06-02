@@ -15,23 +15,40 @@
  */
 package org.springframework.security.config.annotation.web.configurers
 
-import org.springframework.beans.factory.BeanCreationException
-import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpStatus
 import org.springframework.security.config.annotation.AnyObjectPostProcessor
 import org.springframework.security.config.annotation.BaseSpringSpec
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
-import org.springframework.security.config.annotation.web.configurers.LogoutConfigurerTests.RememberMeNoLogoutHandler;
 import org.springframework.security.web.authentication.RememberMeServices
 import org.springframework.security.web.authentication.logout.LogoutFilter
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler
+import org.springframework.security.web.util.matcher.RequestMatcher
 
 /**
  *
  * @author Rob Winch
  */
 class LogoutConfigurerTests extends BaseSpringSpec {
+
+	def defaultLogoutSuccessHandlerForNullLogoutHandler() {
+		setup:
+		LogoutConfigurer config = new LogoutConfigurer();
+		when:
+		config.defaultLogoutSuccessHandlerFor(null, Mock(RequestMatcher))
+		then:
+		thrown(IllegalArgumentException)
+	}
+
+	def defaultLogoutSuccessHandlerForNullMatcher() {
+		setup:
+		LogoutConfigurer config = new LogoutConfigurer();
+		when:
+		config.defaultLogoutSuccessHandlerFor(Mock(LogoutSuccessHandler), null)
+		then:
+		thrown(IllegalArgumentException)
+	}
 
 	def "logout ObjectPostProcessor"() {
 		setup:
@@ -70,14 +87,25 @@ class LogoutConfigurerTests extends BaseSpringSpec {
 		}
 	}
 
-	def "SEC-2311: Logout allows other methods if CSRF is disabled"() {
+	def "Logout allows other methods if CSRF is disabled"() {
 		when:
 			loadConfig(CsrfDisabledConfig)
-			request.method = "GET"
+			request.method = method
 			request.servletPath = "/logout"
 			findFilter(LogoutFilter).doFilter(request,response,chain)
 		then:
-			response.redirectedUrl == "/login?logout"
+			response.status == httpStatus.value()
+			response.redirectedUrl == url
+		where:
+			method    | httpStatus       | url
+			"GET"     | HttpStatus.FOUND | "/login?logout"
+			"POST"    | HttpStatus.FOUND | "/login?logout"
+			"PUT"     | HttpStatus.FOUND | "/login?logout"
+			"DELETE"  | HttpStatus.FOUND | "/login?logout"
+			"OPTIONS" | HttpStatus.OK    | null
+			"HEAD"    | HttpStatus.OK    | null
+			"TRACE"   | HttpStatus.OK    | null
+
 	}
 
 	@EnableWebSecurity
@@ -92,14 +120,25 @@ class LogoutConfigurerTests extends BaseSpringSpec {
 	}
 
 
-	def "SEC-2311: Logout allows other methods if CSRF is disabled with custom logout URL"() {
+	def "Logout allows other methods if CSRF is disabled with custom logout URL"() {
 		when:
 			loadConfig(CsrfDisabledCustomLogoutUrlConfig)
-			request.method = "GET"
+			request.method = method
 			request.servletPath = "/custom/logout"
 			findFilter(LogoutFilter).doFilter(request,response,chain)
 		then:
-			response.redirectedUrl == "/login?logout"
+			response.status == httpStatus.value()
+			response.redirectedUrl == url
+		where:
+			method    | httpStatus       | url
+			"GET"     | HttpStatus.FOUND | "/login?logout"
+			"POST"    | HttpStatus.FOUND | "/login?logout"
+			"PUT"     | HttpStatus.FOUND | "/login?logout"
+			"DELETE"  | HttpStatus.FOUND | "/login?logout"
+			"OPTIONS" | HttpStatus.OK    | null
+			"HEAD"    | HttpStatus.OK    | null
+			"TRACE"   | HttpStatus.OK    | null
+
 	}
 
 	@EnableWebSecurity
@@ -144,5 +183,72 @@ class LogoutConfigurerTests extends BaseSpringSpec {
 					.rememberMe()
 					.rememberMeServices(REMEMBER_ME)
 		}
+	}
+
+	def "LogoutConfigurer content negotiation default redirects"() {
+		setup:
+			loadConfig(LogoutHandlerContentNegotiation)
+		when:
+			login()
+			request.method = 'POST'
+			request.servletPath = '/logout'
+			springSecurityFilterChain.doFilter(request,response,chain)
+		then:
+			response.status == 302
+			response.redirectedUrl == '/login?logout'
+	}
+
+	// gh-3282
+	def "LogoutConfigurer content negotiation json 201"() {
+		setup:
+			loadConfig(LogoutHandlerContentNegotiation)
+		when:
+			login()
+			request.method = 'POST'
+			request.servletPath = '/logout'
+			request.addHeader('Accept', 'application/json')
+			springSecurityFilterChain.doFilter(request,response,chain)
+		then:
+			response.status == 204
+	}
+
+	@EnableWebSecurity
+	static class LogoutHandlerContentNegotiation extends WebSecurityConfigurerAdapter {
+	}
+	// gh-3902
+	def "logout in chrome is 302"() {
+		setup:
+		loadConfig(LogoutHandlerContentNegotiationForChrome)
+		when:
+		login()
+		request.method = 'POST'
+		request.servletPath = '/logout'
+		request.addHeader('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
+		springSecurityFilterChain.doFilter(request,response,chain)
+		then:
+		response.status == 302
+	}
+
+	@EnableWebSecurity
+	static class LogoutHandlerContentNegotiationForChrome extends WebSecurityConfigurerAdapter {
+	}
+
+	// gh-3997
+	def "LogoutConfigurer for XMLHttpRequest is 204"() {
+		setup:
+			loadConfig(LogoutXMLHttpRequestConfig)
+		when:
+			login()
+			request.method = 'POST'
+			request.servletPath = '/logout'
+			request.addHeader('Accept', 'text/html,application/json')
+			request.addHeader('X-Requested-With', 'XMLHttpRequest')
+			springSecurityFilterChain.doFilter(request,response,chain)
+		then:
+			response.status == 204
+	}
+
+	@EnableWebSecurity
+	static class LogoutXMLHttpRequestConfig extends WebSecurityConfigurerAdapter {
 	}
 }

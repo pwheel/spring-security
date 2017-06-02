@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,10 @@
  */
 package org.springframework.security.config.annotation.web.configurers;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -25,10 +27,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.web.header.HeaderWriter;
 import org.springframework.security.web.header.HeaderWriterFilter;
-import org.springframework.security.web.header.writers.CacheControlHeadersWriter;
-import org.springframework.security.web.header.writers.HstsHeaderWriter;
-import org.springframework.security.web.header.writers.XContentTypeOptionsHeaderWriter;
-import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
+import org.springframework.security.web.header.writers.*;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
 import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter.XFrameOptionsMode;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -41,7 +41,7 @@ import org.springframework.util.Assert;
  * </p>
  *
  * <p>
- * The default headers are include are:
+ * The default headers include are:
  * </p>
  *
  * <pre>
@@ -55,6 +55,9 @@ import org.springframework.util.Assert;
  * </pre>
  *
  * @author Rob Winch
+ * @author Tim Ysewyn
+ * @author Joe Grandja
+ * @author Eddú Meléndez
  * @since 3.2
  */
 public class HeadersConfigurer<H extends HttpSecurityBuilder<H>> extends
@@ -72,6 +75,12 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>> extends
 	private final HstsConfig hsts = new HstsConfig();
 
 	private final FrameOptionsConfig frameOptions = new FrameOptionsConfig();
+
+	private final HpkpConfig hpkp = new HpkpConfig();
+
+	private final ContentSecurityPolicyConfig contentSecurityPolicy = new ContentSecurityPolicyConfig();
+
+	private final ReferrerPolicyConfig referrerPolicy = new ReferrerPolicyConfig();
 
 	/**
 	 * Creates a new instance
@@ -218,7 +227,7 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>> extends
 		}
 
 		/**
-		 * Allows completing configuration of Strict Transport Security and continuing
+		 * Allows completing configuration of X-XSS-Protection and continuing
 		 * configuration of headers.
 		 *
 		 * @return the {@link HeadersConfigurer} for additional configuration
@@ -273,7 +282,7 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>> extends
 		}
 
 		/**
-		 * Allows completing configuration of Strict Transport Security and continuing
+		 * Allows completing configuration of Cache Control and continuing
 		 * configuration of headers.
 		 *
 		 * @return the {@link HeadersConfigurer} for additional configuration
@@ -473,6 +482,243 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>> extends
 	}
 
 	/**
+	 * Allows customizing the {@link HpkpHeaderWriter} which provides support for <a
+	 * href="http://tools.ietf.org/html/rfc7469">HTTP Public Key Pinning (HPKP)</a>.
+	 *
+	 * @return the {@link HeadersConfigurer} for additional customizations
+	 *
+	 * @since 4.1
+	 */
+	public HpkpConfig httpPublicKeyPinning() {
+		return hpkp.enable();
+	}
+
+	public final class HpkpConfig {
+		private HpkpHeaderWriter writer;
+
+		private HpkpConfig() {}
+
+		/**
+		 * <p>
+		 * Sets the value for the pin- directive of the Public-Key-Pins header.
+		 * </p>
+		 *
+		 * <p>
+		 * The pin directive specifies a way for web host operators to indicate
+		 * a cryptographic identity that should be bound to a given web host.
+		 * See <a href="http://tools.ietf.org/html/rfc7469#section-2.1.1">Section 2.1.1</a> for additional details.
+		 * </p>
+		 *
+		 * @param pins the map of base64-encoded SPKI fingerprint &amp; cryptographic hash algorithm pairs.
+		 * @throws IllegalArgumentException if pins is null
+		 */
+		public HpkpConfig withPins(Map<String, String> pins) {
+			writer.setPins(pins);
+			return this;
+		}
+
+		/**
+		 * <p>
+		 * Adds a list of SHA256 hashed pins for the pin- directive of the Public-Key-Pins header.
+		 * </p>
+		 *
+		 * <p>
+		 * The pin directive specifies a way for web host operators to indicate
+		 * a cryptographic identity that should be bound to a given web host.
+		 * See <a href="http://tools.ietf.org/html/rfc7469#section-2.1.1">Section 2.1.1</a> for additional details.
+		 * </p>
+		 *
+		 * @param pins a list of base64-encoded SPKI fingerprints.
+		 * @throws IllegalArgumentException if a pin is null
+		 */
+		public HpkpConfig addSha256Pins(String ... pins) {
+			writer.addSha256Pins(pins);
+			return this;
+		}
+
+		/**
+		 * <p>
+		 * Sets the value (in seconds) for the max-age directive of the Public-Key-Pins header.
+		 * The default is 60 days.
+		 * </p>
+		 *
+		 * <p>
+		 * This instructs browsers how long they should regard the host (from whom the message was received)
+		 * as a known pinned host. See <a href="http://tools.ietf.org/html/rfc7469#section-2.1.2">Section
+		 * 2.1.2</a> for additional details.
+		 * </p>
+		 *
+		 * @param maxAgeInSeconds the maximum amount of time (in seconds) to regard the host
+		 * as a known pinned host.
+		 * @throws IllegalArgumentException if maxAgeInSeconds is negative
+		 */
+		public HpkpConfig maxAgeInSeconds(long maxAgeInSeconds) {
+			writer.setMaxAgeInSeconds(maxAgeInSeconds);
+			return this;
+		}
+
+		/**
+		 * <p>
+		 * If true, the pinning policy applies to this pinned host as well as any subdomains
+		 * of the host's domain name. The default is false.
+		 * </p>
+		 *
+		 * <p>
+		 * See <a href="http://tools.ietf.org/html/rfc7469#section-2.1.3">Section 2.1.3</a>
+		 * for additional details.
+		 * </p>
+		 *
+		 * @param includeSubDomains true to include subdomains, else false
+		 */
+		public HpkpConfig includeSubDomains(boolean includeSubDomains) {
+			writer.setIncludeSubDomains(includeSubDomains);
+			return this;
+		}
+
+		/**
+		 * <p>
+		 * If true, the browser should not terminate the connection with the server. The default is true.
+		 * </p>
+		 *
+		 * <p>
+		 * See <a href="http://tools.ietf.org/html/rfc7469#section-2.1">Section 2.1</a>
+		 * for additional details.
+		 * </p>
+		 *
+		 * @param reportOnly true to report only, else false
+		 */
+		public HpkpConfig reportOnly(boolean reportOnly) {
+			writer.setReportOnly(reportOnly);
+			return this;
+		}
+
+		/**
+		 * <p>
+		 * Sets the URI to which the browser should report pin validation failures.
+		 * </p>
+		 *
+		 * <p>
+		 * See <a href="http://tools.ietf.org/html/rfc7469#section-2.1.4">Section 2.1.4</a>
+		 * for additional details.
+		 * </p>
+		 *
+		 * @param reportUri the URI where the browser should send the report to.
+		 */
+		public HpkpConfig reportUri(URI reportUri) {
+			writer.setReportUri(reportUri);
+			return this;
+		}
+
+		/**
+		 * <p>
+		 * Sets the URI to which the browser should report pin validation failures.
+		 * </p>
+		 *
+		 * <p>
+		 * See <a href="http://tools.ietf.org/html/rfc7469#section-2.1.4">Section 2.1.4</a>
+		 * for additional details.
+		 * </p>
+		 *
+		 * @param reportUri the URI where the browser should send the report to.
+		 * @throws IllegalArgumentException if the reportUri is not a valid URI
+		 */
+		public HpkpConfig reportUri(String reportUri) {
+			writer.setReportUri(reportUri);
+			return this;
+		}
+
+		/**
+		 * Prevents the header from being added to the response.
+		 *
+		 * @return the {@link HeadersConfigurer} for additional configuration.
+		 */
+		public HeadersConfigurer<H> disable() {
+			writer = null;
+			return and();
+		}
+
+		/**
+		 * Allows completing configuration of Public Key Pinning and continuing
+		 * configuration of headers.
+		 *
+		 * @return the {@link HeadersConfigurer} for additional configuration
+		 */
+		public HeadersConfigurer<H> and() {
+			return HeadersConfigurer.this;
+		}
+
+		/**
+		 * Ensures that Public-Key-Pins or Public-Key-Pins-Report-Only is enabled if it is not already
+		 *
+		 * @return the {@link HstsConfig} for additional customization
+		 */
+		private HpkpConfig enable() {
+			if (writer == null) {
+				writer = new HpkpHeaderWriter();
+			}
+			return this;
+		}
+	}
+
+	/**
+	 * <p>
+	 * Allows configuration for <a href="https://www.w3.org/TR/CSP2/">Content Security Policy (CSP) Level 2</a>.
+	 * </p>
+	 *
+	 * <p>
+	 * Calling this method automatically enables (includes) the Content-Security-Policy header in the response
+	 * using the supplied security policy directive(s).
+	 * </p>
+	 *
+	 * <p>
+	 * Configuration is provided to the {@link ContentSecurityPolicyHeaderWriter} which supports the writing
+	 * of the two headers as detailed in the W3C Candidate Recommendation:
+	 * </p>
+	 * <ul>
+	 * 	<li>Content-Security-Policy</li>
+	 * 	<li>Content-Security-Policy-Report-Only</li>
+	 * </ul>
+	 *
+	 * @see ContentSecurityPolicyHeaderWriter
+	 * @since 4.1
+	 * @return the ContentSecurityPolicyConfig for additional configuration
+	 * @throws IllegalArgumentException if policyDirectives is null or empty
+	 */
+	public ContentSecurityPolicyConfig contentSecurityPolicy(String policyDirectives) {
+		this.contentSecurityPolicy.writer =
+				new ContentSecurityPolicyHeaderWriter(policyDirectives);
+		return contentSecurityPolicy;
+	}
+
+	public final class ContentSecurityPolicyConfig {
+		private ContentSecurityPolicyHeaderWriter writer;
+
+		private ContentSecurityPolicyConfig() {
+		}
+
+		/**
+		 * Enables (includes) the Content-Security-Policy-Report-Only header in the response.
+		 *
+		 * @return the {@link ContentSecurityPolicyConfig} for additional configuration
+		 */
+		public ContentSecurityPolicyConfig reportOnly() {
+			this.writer.setReportOnly(true);
+			return this;
+		}
+
+		/**
+		 * Allows completing configuration of Content Security Policy and continuing
+		 * configuration of headers.
+		 *
+		 * @return the {@link HeadersConfigurer} for additional configuration
+		 */
+		public HeadersConfigurer<H> and() {
+			return HeadersConfigurer.this;
+		}
+
+	}
+
+	/**
 	 * Clears all of the default headers from the response. After doing so, one can add
 	 * headers back. For example, if you only want to use Spring Security's cache control
 	 * you can use the following:
@@ -526,6 +772,9 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>> extends
 		addIfNotNull(writers, cacheControl.writer);
 		addIfNotNull(writers, hsts.writer);
 		addIfNotNull(writers, frameOptions.writer);
+		addIfNotNull(writers, hpkp.writer);
+		addIfNotNull(writers, contentSecurityPolicy.writer);
+		addIfNotNull(writers, referrerPolicy.writer);
 		writers.addAll(headerWriters);
 		return writers;
 	}
@@ -534,5 +783,69 @@ public class HeadersConfigurer<H extends HttpSecurityBuilder<H>> extends
 		if (value != null) {
 			values.add(value);
 		}
+	}
+
+	/**
+	 * <p>
+	 * Allows configuration for <a href="https://www.w3.org/TR/referrer-policy/">Referrer Policy</a>.
+	 * </p>
+	 *
+	 * <p>
+	 * Configuration is provided to the {@link ReferrerPolicyHeaderWriter} which support the writing
+	 * of the header as detailed in the W3C Technical Report:
+	 * </p>
+	 * <ul>
+	 *  <li>Referrer-Policy</li>
+	 * </ul>
+	 *
+	 * <p>Default value is:</p>
+	 *
+	 * <pre>
+	 * Referrer-Policy: no-referrer
+	 * </pre>
+	 *
+	 * @see ReferrerPolicyHeaderWriter
+	 * @since 4.2
+	 * @return the ReferrerPolicyConfig for additional configuration
+	 */
+	public ReferrerPolicyConfig referrerPolicy() {
+		this.referrerPolicy.writer = new ReferrerPolicyHeaderWriter();
+		return this.referrerPolicy;
+	}
+
+	/**
+	 * <p>
+	 * Allows configuration for <a href="https://www.w3.org/TR/referrer-policy/">Referrer Policy</a>.
+	 * </p>
+	 *
+	 * <p>
+	 * Configuration is provided to the {@link ReferrerPolicyHeaderWriter} which support the writing
+	 * of the header as detailed in the W3C Technical Report:
+	 * </p>
+	 * <ul>
+	 *  <li>Referrer-Policy</li>
+	 * </ul>
+	 *
+	 * @see ReferrerPolicyHeaderWriter
+	 * @since 4.2
+	 * @return the ReferrerPolicyConfig for additional configuration
+	 * @throws IllegalArgumentException if policy is null or empty
+	 */
+	public ReferrerPolicyConfig referrerPolicy(ReferrerPolicy policy) {
+		this.referrerPolicy.writer = new ReferrerPolicyHeaderWriter(policy);
+		return this.referrerPolicy;
+	}
+
+	public final class ReferrerPolicyConfig {
+
+		private ReferrerPolicyHeaderWriter writer;
+
+		private ReferrerPolicyConfig() {
+		}
+
+		public HeadersConfigurer<H> and() {
+			return HeadersConfigurer.this;
+		}
+
 	}
 }

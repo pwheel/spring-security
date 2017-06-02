@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,12 +16,10 @@
 
 package org.springframework.security.web.authentication;
 
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.*;
 
 import javax.servlet.ServletException;
-
-import junit.framework.TestCase;
 
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -37,7 +36,7 @@ import org.springframework.security.core.AuthenticationException;
  *
  * @author Ben Alex
  */
-public class UsernamePasswordAuthenticationFilterTests extends TestCase {
+public class UsernamePasswordAuthenticationFilterTests {
 	// ~ Methods
 	// ========================================================================================================
 
@@ -57,9 +56,8 @@ public class UsernamePasswordAuthenticationFilterTests extends TestCase {
 
 		Authentication result = filter.attemptAuthentication(request,
 				new MockHttpServletResponse());
-		assertTrue(result != null);
-		assertEquals("127.0.0.1",
-				((WebAuthenticationDetails) result.getDetails()).getRemoteAddress());
+		assertThat(result != null).isTrue();
+		assertThat(((WebAuthenticationDetails) result.getDetails()).getRemoteAddress()).isEqualTo("127.0.0.1");
 	}
 
 	@Test
@@ -71,8 +69,8 @@ public class UsernamePasswordAuthenticationFilterTests extends TestCase {
 
 		UsernamePasswordAuthenticationFilter filter = new UsernamePasswordAuthenticationFilter();
 		filter.setAuthenticationManager(createAuthenticationManager());
-		assertNotNull(filter
-				.attemptAuthentication(request, new MockHttpServletResponse()));
+		assertThat(filter
+				.attemptAuthentication(request, new MockHttpServletResponse())).isNotNull();
 	}
 
 	@Test
@@ -84,8 +82,8 @@ public class UsernamePasswordAuthenticationFilterTests extends TestCase {
 
 		UsernamePasswordAuthenticationFilter filter = new UsernamePasswordAuthenticationFilter();
 		filter.setAuthenticationManager(createAuthenticationManager());
-		assertNotNull(filter
-				.attemptAuthentication(request, new MockHttpServletResponse()));
+		assertThat(filter
+				.attemptAuthentication(request, new MockHttpServletResponse())).isNotNull();
 	}
 
 	@Test
@@ -101,9 +99,8 @@ public class UsernamePasswordAuthenticationFilterTests extends TestCase {
 
 		Authentication result = filter.attemptAuthentication(request,
 				new MockHttpServletResponse());
-		assertNotNull(result);
-		assertEquals("127.0.0.1",
-				((WebAuthenticationDetails) result.getDetails()).getRemoteAddress());
+		assertThat(result).isNotNull();
+		assertThat(((WebAuthenticationDetails) result.getDetails()).getRemoteAddress()).isEqualTo("127.0.0.1");
 	}
 
 	@Test
@@ -121,7 +118,7 @@ public class UsernamePasswordAuthenticationFilterTests extends TestCase {
 
 		Authentication result = filter.attemptAuthentication(request,
 				new MockHttpServletResponse());
-		assertEquals("rod", result.getName());
+		assertThat(result.getName()).isEqualTo("rod");
 	}
 
 	@Test
@@ -158,7 +155,7 @@ public class UsernamePasswordAuthenticationFilterTests extends TestCase {
 
 		filter.attemptAuthentication(request, new MockHttpServletResponse());
 
-		assertNull(request.getSession(false));
+		assertThat(request.getSession(false)).isNull();
 	}
 
 	private AuthenticationManager createAuthenticationManager() {

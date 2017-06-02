@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,8 +24,8 @@ import java.util.Collections;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.CredentialsContainer;
+import org.springframework.security.core.AuthenticatedPrincipal;
 import org.springframework.security.core.authority.AuthorityUtils;
-import org.springframework.security.core.userdetails.UserDetails;
 
 /**
  * Base class for <code>Authentication</code> objects.
@@ -39,8 +40,8 @@ public abstract class AbstractAuthenticationToken implements Authentication,
 	// ~ Instance fields
 	// ================================================================================================
 
-	private Object details;
 	private final Collection<GrantedAuthority> authorities;
+	private Object details;
 	private boolean authenticated = false;
 
 	// ~ Constructors
@@ -50,7 +51,7 @@ public abstract class AbstractAuthenticationToken implements Authentication,
 	 * Creates a token with the supplied array of authorities.
 	 *
 	 * @param authorities the collection of <tt>GrantedAuthority</tt>s for the principal
-	 * represented by this authentication object.
+	 *                    represented by this authentication object.
 	 */
 	public AbstractAuthenticationToken(Collection<? extends GrantedAuthority> authorities) {
 		if (authorities == null) {
@@ -78,8 +79,8 @@ public abstract class AbstractAuthenticationToken implements Authentication,
 	}
 
 	public String getName() {
-		if (this.getPrincipal() instanceof UserDetails) {
-			return ((UserDetails) this.getPrincipal()).getUsername();
+		if (this.getPrincipal() instanceof AuthenticatedPrincipal) {
+			return ((AuthenticatedPrincipal) this.getPrincipal()).getName();
 		}
 
 		if (getPrincipal() instanceof Principal) {
@@ -214,8 +215,7 @@ public abstract class AbstractAuthenticationToken implements Authentication,
 
 				sb.append(authority);
 			}
-		}
-		else {
+		} else {
 			sb.append("Not granted any authorities");
 		}
 

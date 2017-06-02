@@ -1,6 +1,21 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.access.intercept.aspectj.aspect;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,7 +26,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.security.access.AccessDecisionManager;
+
 import org.springframework.security.access.AccessDecisionVoter;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.annotation.Secured;
@@ -129,9 +144,9 @@ public class AnnotationSecurityAspectTests {
 		configureForElAnnotations();
 		SecurityContextHolder.getContext().setAuthentication(anne);
 		List<String> objects = prePostSecured.postFilterMethod();
-		assertEquals(2, objects.size());
-		assertTrue(objects.contains("apple"));
-		assertTrue(objects.contains("aubergine"));
+		assertThat(objects).hasSize(2);
+		assertThat(objects.contains("apple")).isTrue();
+		assertThat(objects.contains("aubergine")).isTrue();
 	}
 
 	private void configureForElAnnotations() {

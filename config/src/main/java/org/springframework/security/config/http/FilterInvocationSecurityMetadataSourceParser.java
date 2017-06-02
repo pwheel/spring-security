@@ -1,10 +1,30 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.config.http;
+
+import static org.springframework.security.config.http.HttpSecurityBeanDefinitionParser.ATT_REQUEST_MATCHER_REF;
 
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.w3c.dom.Element;
+import org.springframework.beans.BeanMetadataElement;
 import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.parsing.BeanComponentDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.ManagedMap;
@@ -20,7 +40,6 @@ import org.springframework.security.web.access.intercept.DefaultFilterInvocation
 import org.springframework.security.web.access.intercept.FilterInvocationSecurityMetadataSource;
 import org.springframework.util.StringUtils;
 import org.springframework.util.xml.DomUtils;
-import org.w3c.dom.Element;
 
 /**
  * Allows for convenient creation of a {@link FilterInvocationSecurityMetadataSource} bean
@@ -33,12 +52,13 @@ public class FilterInvocationSecurityMetadataSourceParser implements BeanDefinit
 	private static final String ATT_HTTP_METHOD = "method";
 	private static final String ATT_PATTERN = "pattern";
 	private static final String ATT_ACCESS = "access";
+	private static final String ATT_SERVLET_PATH = "servlet-path";
 	private static final Log logger = LogFactory
 			.getLog(FilterInvocationSecurityMetadataSourceParser.class);
 
 	public BeanDefinition parse(Element element, ParserContext parserContext) {
 		List<Element> interceptUrls = DomUtils.getChildElementsByTagName(element,
-				"intercept-url");
+			Elements.INTERCEPT_URL);
 
 		// Check for attributes that aren't allowed in this context
 		for (Element elt : interceptUrls) {
@@ -55,6 +75,12 @@ public class FilterInvocationSecurityMetadataSourceParser implements BeanDefinit
 				parserContext.getReaderContext().error(
 						"The attribute '" + HttpSecurityBeanDefinitionParser.ATT_FILTERS
 								+ "' isn't allowed here.", elt);
+			}
+
+			if (StringUtils.hasLength(elt.getAttribute(ATT_SERVLET_PATH))) {
+				parserContext.getReaderContext().error(
+					"The attribute '" + ATT_SERVLET_PATH
+						+ "' isn't allowed here.", elt);
 			}
 		}
 
@@ -76,7 +102,7 @@ public class FilterInvocationSecurityMetadataSourceParser implements BeanDefinit
 		MatcherType matcherType = MatcherType.fromElement(httpElt);
 		boolean useExpressions = isUseExpressions(httpElt);
 
-		ManagedMap<BeanDefinition, BeanDefinition> requestToAttributesMap = parseInterceptUrlsForFilterInvocationRequestMap(
+		ManagedMap<BeanMetadataElement, BeanDefinition> requestToAttributesMap = parseInterceptUrlsForFilterInvocationRequestMap(
 				matcherType, interceptUrls, useExpressions, addAllAuth, pc);
 		BeanDefinitionBuilder fidsBuilder;
 
@@ -111,8 +137,7 @@ public class FilterInvocationSecurityMetadataSourceParser implements BeanDefinit
 	}
 
 	static String registerDefaultExpressionHandler(ParserContext pc) {
-		BeanDefinition expressionHandler = BeanDefinitionBuilder.rootBeanDefinition(
-				DefaultWebSecurityExpressionHandler.class).getBeanDefinition();
+		BeanDefinition expressionHandler = GrantedAuthorityDefaultsParserUtils.registerWithDefaultRolePrefix(pc, DefaultWebSecurityExpressionHandlerBeanFactory.class);
 		String expressionHandlerRef = pc.getReaderContext().generateBeanName(
 				expressionHandler);
 		pc.registerBeanComponent(new BeanComponentDefinition(expressionHandler,
@@ -126,11 +151,11 @@ public class FilterInvocationSecurityMetadataSourceParser implements BeanDefinit
 		return !StringUtils.hasText(useExpressions) || "true".equals(useExpressions);
 	}
 
-	private static ManagedMap<BeanDefinition, BeanDefinition> parseInterceptUrlsForFilterInvocationRequestMap(
+	private static ManagedMap<BeanMetadataElement, BeanDefinition> parseInterceptUrlsForFilterInvocationRequestMap(
 			MatcherType matcherType, List<Element> urlElts, boolean useExpressions,
 			boolean addAuthenticatedAll, ParserContext parserContext) {
 
-		ManagedMap<BeanDefinition, BeanDefinition> filterInvocationDefinitionMap = new ManagedMap<BeanDefinition, BeanDefinition>();
+		ManagedMap<BeanMetadataElement, BeanDefinition> filterInvocationDefinitionMap = new ManagedMap<BeanMetadataElement, BeanDefinition>();
 
 		for (Element urlElt : urlElts) {
 			String access = urlElt.getAttribute(ATT_ACCESS);
@@ -139,8 +164,10 @@ public class FilterInvocationSecurityMetadataSourceParser implements BeanDefinit
 			}
 
 			String path = urlElt.getAttribute(ATT_PATTERN);
+			String matcherRef = urlElt.getAttribute(ATT_REQUEST_MATCHER_REF);
+			boolean hasMatcherRef = StringUtils.hasText(matcherRef);
 
-			if (!StringUtils.hasText(path)) {
+			if (!hasMatcherRef && !StringUtils.hasText(path)) {
 				parserContext.getReaderContext().error(
 						"path attribute cannot be empty or null", urlElt);
 			}
@@ -150,7 +177,16 @@ public class FilterInvocationSecurityMetadataSourceParser implements BeanDefinit
 				method = null;
 			}
 
-			BeanDefinition matcher = matcherType.createMatcher(path, method);
+			String servletPath = urlElt.getAttribute(ATT_SERVLET_PATH);
+			if (!StringUtils.hasText(servletPath)) {
+				servletPath = null;
+			} else if (!MatcherType.mvc.equals(matcherType)) {
+				parserContext.getReaderContext().error(
+					ATT_SERVLET_PATH + " is not applicable for request-matcher: '" + matcherType.name() + "'", urlElt);
+			}
+
+			BeanMetadataElement matcher = hasMatcherRef ? new RuntimeBeanReference(matcherRef) : matcherType.createMatcher(parserContext, path,
+					method, servletPath);
 			BeanDefinitionBuilder attributeBuilder = BeanDefinitionBuilder
 					.rootBeanDefinition(SecurityConfig.class);
 
@@ -158,7 +194,7 @@ public class FilterInvocationSecurityMetadataSourceParser implements BeanDefinit
 				logger.info("Creating access control expression attribute '" + access
 						+ "' for " + path);
 				// The single expression will be parsed later by the
-				// ExpressionFilterInvocationSecurityMetadataSource
+				// ExpressionBasedFilterInvocationSecurityMetadataSource
 				attributeBuilder.addConstructorArgValue(new String[] { access });
 				attributeBuilder.setFactoryMethod("createList");
 
@@ -179,7 +215,8 @@ public class FilterInvocationSecurityMetadataSourceParser implements BeanDefinit
 
 		if (addAuthenticatedAll && filterInvocationDefinitionMap.isEmpty()) {
 
-			BeanDefinition matcher = matcherType.createMatcher("/**", null);
+			BeanDefinition matcher = matcherType.createMatcher(parserContext, "/**",
+					null);
 			BeanDefinitionBuilder attributeBuilder = BeanDefinitionBuilder
 					.rootBeanDefinition(SecurityConfig.class);
 			attributeBuilder.addConstructorArgValue(new String[] { "authenticated" });
@@ -191,4 +228,12 @@ public class FilterInvocationSecurityMetadataSourceParser implements BeanDefinit
 		return filterInvocationDefinitionMap;
 	}
 
+	static class DefaultWebSecurityExpressionHandlerBeanFactory extends GrantedAuthorityDefaultsParserUtils.AbstractGrantedAuthorityDefaultsBeanFactory {
+		private DefaultWebSecurityExpressionHandler handler = new DefaultWebSecurityExpressionHandler();
+
+		public DefaultWebSecurityExpressionHandler getBean() {
+			handler.setDefaultRolePrefix(this.rolePrefix);
+			return handler;
+		}
+	}
 }

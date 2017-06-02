@@ -23,9 +23,11 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.expression.SecurityExpressionHandler;
 import org.springframework.security.config.annotation.AbstractConfiguredSecurityBuilder;
 import org.springframework.security.config.annotation.ObjectPostProcessor;
@@ -47,6 +49,7 @@ import org.springframework.security.web.access.intercept.FilterSecurityIntercept
 import org.springframework.security.web.debug.DebugFilter;
 import org.springframework.security.web.firewall.DefaultHttpFirewall;
 import org.springframework.security.web.firewall.HttpFirewall;
+import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.Assert;
 import org.springframework.web.filter.DelegatingFilterProxy;
@@ -80,7 +83,7 @@ public final class WebSecurity extends
 
 	private final List<SecurityBuilder<? extends SecurityFilterChain>> securityFilterChainBuilders = new ArrayList<SecurityBuilder<? extends SecurityFilterChain>>();
 
-	private final IgnoredRequestConfigurer ignoredRequestRegistry = new IgnoredRequestConfigurer();
+	private IgnoredRequestConfigurer ignoredRequestRegistry;
 
 	private FilterSecurityInterceptor filterSecurityInterceptor;
 
@@ -110,7 +113,7 @@ public final class WebSecurity extends
 
 	/**
 	 * <p>
-	 * Allows adding {@link RequestMatcher} instances that should that Spring Security
+	 * Allows adding {@link RequestMatcher} instances that Spring Security
 	 * should ignore. Web Security provided by Spring Security (including the
 	 * {@link SecurityContext}) will not be available on {@link HttpServletRequest} that
 	 * match. Typically the requests that are registered should be that of only static
@@ -307,19 +310,61 @@ public final class WebSecurity extends
 	}
 
 	/**
+	 * An {@link IgnoredRequestConfigurer} that allows optionally configuring the
+	 * {@link MvcRequestMatcher#setMethod(HttpMethod)}
+	 *
+	 * @author Rob Winch
+	 */
+	public final class MvcMatchersIgnoredRequestConfigurer
+			extends IgnoredRequestConfigurer {
+		private final List<MvcRequestMatcher> mvcMatchers;
+
+		private MvcMatchersIgnoredRequestConfigurer(ApplicationContext context,
+				List<MvcRequestMatcher> mvcMatchers) {
+			super(context);
+			this.mvcMatchers = mvcMatchers;
+		}
+
+		public IgnoredRequestConfigurer servletPath(String servletPath) {
+			for (MvcRequestMatcher matcher : this.mvcMatchers) {
+				matcher.setServletPath(servletPath);
+			}
+			return this;
+		}
+	}
+
+	/**
 	 * Allows registering {@link RequestMatcher} instances that should be ignored by
 	 * Spring Security.
 	 *
 	 * @author Rob Winch
 	 * @since 3.2
 	 */
-	public final class IgnoredRequestConfigurer extends
-			AbstractRequestMatcherRegistry<IgnoredRequestConfigurer> {
+	public class IgnoredRequestConfigurer
+			extends AbstractRequestMatcherRegistry<IgnoredRequestConfigurer> {
+
+		private IgnoredRequestConfigurer(ApplicationContext context) {
+			setApplicationContext(context);
+		}
+
+		@Override
+		public MvcMatchersIgnoredRequestConfigurer mvcMatchers(HttpMethod method,
+				String... mvcPatterns) {
+			List<MvcRequestMatcher> mvcMatchers = createMvcMatchers(method, mvcPatterns);
+			WebSecurity.this.ignoredRequests.addAll(mvcMatchers);
+			return new MvcMatchersIgnoredRequestConfigurer(getApplicationContext(),
+					mvcMatchers);
+		}
+
+		@Override
+		public MvcMatchersIgnoredRequestConfigurer mvcMatchers(String... mvcPatterns) {
+			return mvcMatchers(null, mvcPatterns);
+		}
 
 		@Override
 		protected IgnoredRequestConfigurer chainRequestMatchers(
 				List<RequestMatcher> requestMatchers) {
-			ignoredRequests.addAll(requestMatchers);
+			WebSecurity.this.ignoredRequests.addAll(requestMatchers);
 			return this;
 		}
 
@@ -329,13 +374,13 @@ public final class WebSecurity extends
 		public WebSecurity and() {
 			return WebSecurity.this;
 		}
-
-		private IgnoredRequestConfigurer() {
-		}
 	}
 
+	@Override
 	public void setApplicationContext(ApplicationContext applicationContext)
 			throws BeansException {
-		defaultWebSecurityExpressionHandler.setApplicationContext(applicationContext);
+		this.defaultWebSecurityExpressionHandler
+				.setApplicationContext(applicationContext);
+		this.ignoredRequestRegistry = new IgnoredRequestConfigurer(applicationContext);
 	}
 }

@@ -1,14 +1,17 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.springframework.security.ldap.authentication.ad;
 
@@ -45,10 +48,8 @@ import javax.naming.directory.SearchResult;
 
 import java.util.Hashtable;
 
-import static org.fest.assertions.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider.ContextFactory;
 
@@ -72,8 +73,8 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 
 	@Test
 	public void bindPrincipalIsCreatedCorrectly() throws Exception {
-		assertEquals("joe@mydomain.eu", provider.createBindPrincipal("joe"));
-		assertEquals("joe@mydomain.eu", provider.createBindPrincipal("joe@mydomain.eu"));
+		assertThat(provider.createBindPrincipal("joe")).isEqualTo("joe@mydomain.eu");
+		assertThat(provider.createBindPrincipal("joe@mydomain.eu")).isEqualTo("joe@mydomain.eu");
 	}
 
 	@Test
@@ -107,7 +108,7 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 		Authentication result = customProvider.authenticate(joe);
 
 		// then
-		assertTrue(result.isAuthenticated());
+		assertThat(result.isAuthenticated()).isTrue();
 	}
 
 	@Test
@@ -134,7 +135,7 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 		Authentication result = customProvider.authenticate(joe);
 
 		// then
-		assertTrue(result.isAuthenticated());
+		assertThat(result.isAuthenticated()).isTrue();
 		verify(ctx).search(any(DistinguishedName.class), eq(defaultSearchFilter),
 				any(Object[].class), any(SearchControls.class));
 	}
@@ -166,7 +167,7 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 
 		// then
 		assertThat(captor.getValue()).containsOnly("joe@mydomain.eu");
-		assertTrue(result.isAuthenticated());
+		assertThat(result.isAuthenticated()).isTrue();
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -327,7 +328,7 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 
 		try {
 			provider.authenticate(joe);
-			fail();
+			fail("BadCredentialsException should had been thrown");
 		}
 		catch (BadCredentialsException expected) {
 		}
@@ -429,13 +430,13 @@ public class ActiveDirectoryLdapAuthenticationProviderTests {
 
 		Authentication result = provider.authenticate(joe);
 
-		assertEquals(0, result.getAuthorities().size());
+		assertThat(result.getAuthorities()).isEmpty();
 
 		dca.addAttributeValue("memberOf", "CN=Admin,CN=Users,DC=mydomain,DC=eu");
 
 		result = provider.authenticate(joe);
 
-		assertEquals(1, result.getAuthorities().size());
+		assertThat(result.getAuthorities()).hasSize(1);
 	}
 
 	static class MockNamingEnumeration implements NamingEnumeration<SearchResult> {

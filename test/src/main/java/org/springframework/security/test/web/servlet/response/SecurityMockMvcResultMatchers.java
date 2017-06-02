@@ -15,12 +15,11 @@
  */
 package org.springframework.security.test.web.servlet.response;
 
-import static org.springframework.test.util.AssertionErrors.assertEquals;
-import static org.springframework.test.util.AssertionErrors.assertTrue;
-
 import java.util.ArrayList;
 import java.util.Collection;
 
+import org.springframework.security.authentication.AuthenticationTrustResolver;
+import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -32,10 +31,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 
+import static org.springframework.test.util.AssertionErrors.assertEquals;
+import static org.springframework.test.util.AssertionErrors.assertTrue;
+
 /**
  * Security related {@link MockMvc} {@link ResultMatcher}s.
  *
  * @author Rob Winch
+ * @author Eddú Meléndez
  * @since 4.0
  */
 public final class SecurityMockMvcResultMatchers {
@@ -77,15 +80,16 @@ public final class SecurityMockMvcResultMatchers {
 	 * @author Rob Winch
 	 * @since 4.0
 	 */
-	public static final class AuthenticatedMatcher extends
-			AuthenticationMatcher<AuthenticatedMatcher> {
+	public static final class AuthenticatedMatcher
+			extends AuthenticationMatcher<AuthenticatedMatcher> {
 
 		private SecurityContext expectedContext;
 		private Authentication expectedAuthentication;
 		private Object expectedAuthenticationPrincipal;
 		private String expectedAuthenticationName;
-		private Collection<GrantedAuthority> expectedGrantedAuthorities;
+		private Collection<? extends GrantedAuthority> expectedGrantedAuthorities;
 
+		@Override
 		public void match(MvcResult result) throws Exception {
 			SecurityContext context = load(result);
 
@@ -108,10 +112,11 @@ public final class SecurityMockMvcResultMatchers {
 			if (this.expectedAuthenticationPrincipal != null) {
 				assertTrue("Authentication cannot be null",
 						context.getAuthentication() != null);
-				assertEquals(this.expectedAuthenticationPrincipal + " does not equal "
-						+ context.getAuthentication().getPrincipal(),
-						this.expectedAuthenticationPrincipal, context.getAuthentication()
-								.getPrincipal());
+				assertEquals(
+						this.expectedAuthenticationPrincipal + " does not equal "
+								+ context.getAuthentication().getPrincipal(),
+						this.expectedAuthenticationPrincipal,
+						context.getAuthentication().getPrincipal());
 			}
 
 			if (this.expectedAuthenticationName != null) {
@@ -125,8 +130,9 @@ public final class SecurityMockMvcResultMatchers {
 				assertTrue("Authentication cannot be null", auth != null);
 				Collection<? extends GrantedAuthority> authorities = auth
 						.getAuthorities();
-				assertTrue(authorities + " does not contain the same authorities as "
-						+ this.expectedGrantedAuthorities,
+				assertTrue(
+						authorities + " does not contain the same authorities as "
+								+ this.expectedGrantedAuthorities,
 						authorities.containsAll(this.expectedGrantedAuthorities));
 				assertTrue(this.expectedGrantedAuthorities
 						+ " does not contain the same authorities as " + authorities,
@@ -194,7 +200,8 @@ public final class SecurityMockMvcResultMatchers {
 		 * @param expected the {@link Authentication#getAuthorities()}
 		 * @return the {@link AuthenticatedMatcher} for further customization
 		 */
-		public AuthenticatedMatcher withAuthorities(Collection<GrantedAuthority> expected) {
+		public AuthenticatedMatcher withAuthorities(
+				Collection<? extends GrantedAuthority> expected) {
 			this.expectedGrantedAuthorities = expected;
 			return this;
 		}
@@ -224,13 +231,18 @@ public final class SecurityMockMvcResultMatchers {
 	 * @author Rob Winch
 	 * @since 4.0
 	 */
-	private static final class UnAuthenticatedMatcher extends
-			AuthenticationMatcher<UnAuthenticatedMatcher> {
+	private static final class UnAuthenticatedMatcher
+			extends AuthenticationMatcher<UnAuthenticatedMatcher> {
+		private AuthenticationTrustResolver trustResolver = new AuthenticationTrustResolverImpl();
 
+		@Override
 		public void match(MvcResult result) throws Exception {
 			SecurityContext context = load(result);
 
-			assertEquals("", null, context.getAuthentication());
+			Authentication authentication = context.getAuthentication();
+			assertTrue("Expected anonymous Authentication got " + context,
+					authentication == null
+							|| this.trustResolver.isAnonymous(authentication));
 		}
 
 		private UnAuthenticatedMatcher() {

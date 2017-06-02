@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,10 @@ package org.springframework.security.config.annotation.web.configuration;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -32,6 +34,7 @@ import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.io.support.SpringFactoriesLoader;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationTrustResolver;
 import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
@@ -42,6 +45,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.WebSecurityConfigurer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.DefaultLoginPageConfigurer;
 import org.springframework.security.config.annotation.web.configurers.SecurityContextConfigurer;
 import org.springframework.security.core.Authentication;
@@ -57,8 +61,23 @@ import org.springframework.web.accept.ContentNegotiationStrategy;
 import org.springframework.web.accept.HeaderContentNegotiationStrategy;
 
 /**
- * Provides a convenient base class for creating a {@link WebSecurityConfigurer} instance.
- * The implementation allows customization by overriding methods.
+ * Provides a convenient base class for creating a {@link WebSecurityConfigurer}
+ * instance. The implementation allows customization by overriding methods.
+ *
+ * <p>
+ * Will automatically apply the result of looking up
+ * {@link AbstractHttpConfigurer} from {@link SpringFactoriesLoader} to allow
+ * developers to extend the defaults.
+ * To do this, you must create a class that extends AbstractHttpConfigurer and then create a file in the classpath at "META-INF/spring.factories" that looks something like:
+ * </p>
+ * <pre>
+ * org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer = sample.MyClassThatExtendsAbstractHttpConfigurer
+ * </pre>
+ * If you have multiple classes that should be added you can use "," to separate the values. For example:
+ *
+ * <pre>
+ * org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer = sample.MyClassThatExtendsAbstractHttpConfigurer, sample.OtherThatExtendsAbstractHttpConfigurer
+ * </pre>
  *
  * @see EnableWebSecurity
  *
@@ -103,7 +122,7 @@ public abstract class WebSecurityConfigurerAdapter implements
 	 * enabled. Disabling the default configuration should be considered more advanced
 	 * usage as it requires more understanding of how the framework is implemented.
 	 *
-	 * @param disableDefaults true if the default configuration should be enabled, else
+	 * @param disableDefaults true if the default configuration should be disabled, else
 	 * false
 	 */
 	protected WebSecurityConfigurerAdapter(boolean disableDefaults) {
@@ -163,6 +182,7 @@ public abstract class WebSecurityConfigurerAdapter implements
 	 * ] * @return the {@link HttpSecurity}
 	 * @throws Exception
 	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	protected final HttpSecurity getHttp() throws Exception {
 		if (http != null) {
 			return http;
@@ -174,12 +194,10 @@ public abstract class WebSecurityConfigurerAdapter implements
 
 		AuthenticationManager authenticationManager = authenticationManager();
 		authenticationBuilder.parentAuthenticationManager(authenticationManager);
+		Map<Class<? extends Object>, Object> sharedObjects = createSharedObjects();
+
 		http = new HttpSecurity(objectPostProcessor, authenticationBuilder,
-				localConfigureAuthenticationBldr.getSharedObjects());
-		http.setSharedObject(UserDetailsService.class, userDetailsService());
-		http.setSharedObject(ApplicationContext.class, context);
-		http.setSharedObject(ContentNegotiationStrategy.class, contentNegotiationStrategy);
-		http.setSharedObject(AuthenticationTrustResolver.class, trustResolver);
+				sharedObjects);
 		if (!disableDefaults) {
 			// @formatter:off
 			http
@@ -195,6 +213,13 @@ public abstract class WebSecurityConfigurerAdapter implements
 				.apply(new DefaultLoginPageConfigurer<HttpSecurity>()).and()
 				.logout();
 			// @formatter:on
+			ClassLoader classLoader = this.context.getClassLoader();
+			List<AbstractHttpConfigurer> defaultHttpConfigurers =
+					SpringFactoriesLoader.loadFactories(AbstractHttpConfigurer.class, classLoader);
+
+			for(AbstractHttpConfigurer configurer : defaultHttpConfigurers) {
+				http.apply(configurer);
+			}
 		}
 		configure(http);
 		return http;
@@ -329,6 +354,14 @@ public abstract class WebSecurityConfigurerAdapter implements
 	}
 	// @formatter:on
 
+	/**
+	 * Gets the ApplicationContext
+	 * @return the context
+	 */
+	protected final ApplicationContext getApplicationContext() {
+		return this.context;
+	}
+
 	@Autowired
 	public void setApplicationContext(ApplicationContext context) {
 		this.context = context;
@@ -365,6 +398,21 @@ public abstract class WebSecurityConfigurerAdapter implements
 	public void setAuthenticationConfiguration(
 			AuthenticationConfiguration authenticationConfiguration) {
 		this.authenticationConfiguration = authenticationConfiguration;
+	}
+
+	/**
+	 * Creates the shared objects
+	 *
+	 * @return the shared Objects
+	 */
+	private Map<Class<? extends Object>, Object> createSharedObjects() {
+		Map<Class<? extends Object>, Object> sharedObjects = new HashMap<Class<? extends Object>, Object>();
+		sharedObjects.putAll(localConfigureAuthenticationBldr.getSharedObjects());
+		sharedObjects.put(UserDetailsService.class, userDetailsService());
+		sharedObjects.put(ApplicationContext.class, context);
+		sharedObjects.put(ContentNegotiationStrategy.class, contentNegotiationStrategy);
+		sharedObjects.put(AuthenticationTrustResolver.class, trustResolver);
+		return sharedObjects;
 	}
 
 	/**
@@ -481,4 +529,5 @@ public abstract class WebSecurityConfigurerAdapter implements
 			}
 		}
 	}
+
 }

@@ -21,6 +21,8 @@ import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.springframework.context.ApplicationContext;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.AbstractRequestMatcherRegistry;
 import org.springframework.security.config.annotation.web.HttpSecurityBuilder;
@@ -33,7 +35,9 @@ import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfLogoutHandler;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
+import org.springframework.security.web.csrf.LazyCsrfTokenRepository;
 import org.springframework.security.web.csrf.MissingCsrfTokenException;
+import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
 import org.springframework.security.web.session.InvalidSessionAccessDeniedHandler;
 import org.springframework.security.web.session.InvalidSessionStrategy;
 import org.springframework.security.web.util.matcher.AndRequestMatcher;
@@ -43,8 +47,9 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.Assert;
 
 /**
- * Adds <a href="https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)"
- * >CSRF</a> protection for the methods as specified by
+ * Adds
+ * <a href="https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)" >CSRF</a>
+ * protection for the methods as specified by
  * {@link #requireCsrfProtectionMatcher(RequestMatcher)}.
  *
  * <h2>Security Filters</h2>
@@ -62,36 +67,39 @@ import org.springframework.util.Assert;
  * <h2>Shared Objects Used</h2>
  *
  * <ul>
- * <li>
- * {@link ExceptionHandlingConfigurer#accessDeniedHandler(AccessDeniedHandler)} is used to
- * determine how to handle CSRF attempts</li>
+ * <li>{@link ExceptionHandlingConfigurer#accessDeniedHandler(AccessDeniedHandler)} is
+ * used to determine how to handle CSRF attempts</li>
  * <li>{@link InvalidSessionStrategy}</li>
  * </ul>
  *
  * @author Rob Winch
  * @since 3.2
  */
-public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>> extends
-		AbstractHttpConfigurer<CsrfConfigurer<H>, H> {
-	private CsrfTokenRepository csrfTokenRepository = new HttpSessionCsrfTokenRepository();
+public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>>
+		extends AbstractHttpConfigurer<CsrfConfigurer<H>, H> {
+	private CsrfTokenRepository csrfTokenRepository = new LazyCsrfTokenRepository(
+			new HttpSessionCsrfTokenRepository());
 	private RequestMatcher requireCsrfProtectionMatcher = CsrfFilter.DEFAULT_CSRF_MATCHER;
 	private List<RequestMatcher> ignoredCsrfProtectionMatchers = new ArrayList<RequestMatcher>();
+	private final ApplicationContext context;
 
 	/**
 	 * Creates a new instance
 	 * @see HttpSecurity#csrf()
 	 */
-	public CsrfConfigurer() {
+	public CsrfConfigurer(ApplicationContext context) {
+		this.context = context;
 	}
 
 	/**
 	 * Specify the {@link CsrfTokenRepository} to use. The default is an
-	 * {@link HttpSessionCsrfTokenRepository}.
+	 * {@link HttpSessionCsrfTokenRepository} wrapped by {@link LazyCsrfTokenRepository}.
 	 *
 	 * @param csrfTokenRepository the {@link CsrfTokenRepository} to use
 	 * @return the {@link CsrfConfigurer} for further customizations
 	 */
-	public CsrfConfigurer<H> csrfTokenRepository(CsrfTokenRepository csrfTokenRepository) {
+	public CsrfConfigurer<H> csrfTokenRepository(
+			CsrfTokenRepository csrfTokenRepository) {
 		Assert.notNull(csrfTokenRepository, "csrfTokenRepository cannot be null");
 		this.csrfTokenRepository = csrfTokenRepository;
 		return this;
@@ -138,13 +146,14 @@ public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>> extends
 	 * @since 4.0
 	 */
 	public CsrfConfigurer<H> ignoringAntMatchers(String... antPatterns) {
-		return new IgnoreCsrfProtectionRegistry().antMatchers(antPatterns).and();
+		return new IgnoreCsrfProtectionRegistry(this.context).antMatchers(antPatterns)
+				.and();
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public void configure(H http) throws Exception {
-		CsrfFilter filter = new CsrfFilter(csrfTokenRepository);
+		CsrfFilter filter = new CsrfFilter(this.csrfTokenRepository);
 		RequestMatcher requireCsrfProtectionMatcher = getRequireCsrfProtectionMatcher();
 		if (requireCsrfProtectionMatcher != null) {
 			filter.setRequireCsrfProtectionMatcher(requireCsrfProtectionMatcher);
@@ -155,14 +164,14 @@ public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>> extends
 		}
 		LogoutConfigurer<H> logoutConfigurer = http.getConfigurer(LogoutConfigurer.class);
 		if (logoutConfigurer != null) {
-			logoutConfigurer.addLogoutHandler(new CsrfLogoutHandler(csrfTokenRepository));
+			logoutConfigurer
+					.addLogoutHandler(new CsrfLogoutHandler(this.csrfTokenRepository));
 		}
 		SessionManagementConfigurer<H> sessionConfigurer = http
 				.getConfigurer(SessionManagementConfigurer.class);
 		if (sessionConfigurer != null) {
-			sessionConfigurer
-					.addSessionAuthenticationStrategy(new CsrfAuthenticationStrategy(
-							csrfTokenRepository));
+			sessionConfigurer.addSessionAuthenticationStrategy(
+					new CsrfAuthenticationStrategy(this.csrfTokenRepository));
 		}
 		filter = postProcess(filter);
 		http.addFilter(filter);
@@ -175,12 +184,12 @@ public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>> extends
 	 * @return the {@link RequestMatcher} to use
 	 */
 	private RequestMatcher getRequireCsrfProtectionMatcher() {
-		if (ignoredCsrfProtectionMatchers.isEmpty()) {
-			return requireCsrfProtectionMatcher;
+		if (this.ignoredCsrfProtectionMatchers.isEmpty()) {
+			return this.requireCsrfProtectionMatcher;
 		}
-		return new AndRequestMatcher(requireCsrfProtectionMatcher,
-				new NegatedRequestMatcher(new OrRequestMatcher(
-						ignoredCsrfProtectionMatchers)));
+		return new AndRequestMatcher(this.requireCsrfProtectionMatcher,
+				new NegatedRequestMatcher(
+						new OrRequestMatcher(this.ignoredCsrfProtectionMatchers)));
 	}
 
 	/**
@@ -238,7 +247,8 @@ public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>> extends
 	 */
 	private AccessDeniedHandler createAccessDeniedHandler(H http) {
 		InvalidSessionStrategy invalidSessionStrategy = getInvalidSessionStrategy(http);
-		AccessDeniedHandler defaultAccessDeniedHandler = getDefaultAccessDeniedHandler(http);
+		AccessDeniedHandler defaultAccessDeniedHandler = getDefaultAccessDeniedHandler(
+				http);
 		if (invalidSessionStrategy == null) {
 			return defaultAccessDeniedHandler;
 		}
@@ -258,16 +268,62 @@ public final class CsrfConfigurer<H extends HttpSecurityBuilder<H>> extends
 	 * @author Rob Winch
 	 * @since 4.0
 	 */
-	private class IgnoreCsrfProtectionRegistry extends
-			AbstractRequestMatcherRegistry<IgnoreCsrfProtectionRegistry> {
+	private class IgnoreCsrfProtectionRegistry
+			extends AbstractRequestMatcherRegistry<IgnoreCsrfProtectionRegistry> {
+
+		/**
+		 * @param context
+		 */
+		private IgnoreCsrfProtectionRegistry(ApplicationContext context) {
+			setApplicationContext(context);
+		}
+
+		@Override
+		public MvcMatchersIgnoreCsrfProtectionRegistry mvcMatchers(HttpMethod method,
+				String... mvcPatterns) {
+			List<MvcRequestMatcher> mvcMatchers = createMvcMatchers(method, mvcPatterns);
+			CsrfConfigurer.this.ignoredCsrfProtectionMatchers.addAll(mvcMatchers);
+			return new MvcMatchersIgnoreCsrfProtectionRegistry(getApplicationContext(),
+					mvcMatchers);
+		}
+
+		@Override
+		public MvcMatchersIgnoreCsrfProtectionRegistry mvcMatchers(String... mvcPatterns) {
+			return mvcMatchers(null, mvcPatterns);
+		}
 
 		public CsrfConfigurer<H> and() {
 			return CsrfConfigurer.this;
 		}
 
+		@Override
 		protected IgnoreCsrfProtectionRegistry chainRequestMatchers(
 				List<RequestMatcher> requestMatchers) {
-			ignoredCsrfProtectionMatchers.addAll(requestMatchers);
+			CsrfConfigurer.this.ignoredCsrfProtectionMatchers.addAll(requestMatchers);
+			return this;
+		}
+	}
+
+	/**
+	 * An {@link IgnoreCsrfProtectionRegistry} that allows optionally configuring the
+	 * {@link MvcRequestMatcher#setMethod(HttpMethod)}
+	 *
+	 * @author Rob Winch
+	 */
+	private final class MvcMatchersIgnoreCsrfProtectionRegistry
+			extends IgnoreCsrfProtectionRegistry {
+		private final List<MvcRequestMatcher> mvcMatchers;
+
+		private MvcMatchersIgnoreCsrfProtectionRegistry(ApplicationContext context,
+				List<MvcRequestMatcher> mvcMatchers) {
+			super(context);
+			this.mvcMatchers = mvcMatchers;
+		}
+
+		public IgnoreCsrfProtectionRegistry servletPath(String servletPath) {
+			for (MvcRequestMatcher matcher : this.mvcMatchers) {
+				matcher.setServletPath(servletPath);
+			}
 			return this;
 		}
 	}

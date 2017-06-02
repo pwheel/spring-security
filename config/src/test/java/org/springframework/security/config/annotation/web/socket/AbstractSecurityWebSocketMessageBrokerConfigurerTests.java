@@ -1,21 +1,22 @@
 /*
+ * Copyright 2002-2016 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.springframework.security.config.annotation.web.socket;
 
-import static org.fest.assertions.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -114,6 +115,15 @@ public class AbstractSecurityWebSocketMessageBrokerConfigurerTests {
 
 		messageUser = null;
 		clientInboundChannel().send(message("/permitAll"));
+	}
+
+	// gh-3797
+	@Test
+	public void beanResolver() {
+		loadConfig(SockJsSecurityConfig.class);
+
+		messageUser = null;
+		clientInboundChannel().send(message("/beanResolver"));
 	}
 
 	@Test
@@ -434,7 +444,7 @@ public class AbstractSecurityWebSocketMessageBrokerConfigurerTests {
 		// @formatter:on
 
 		@Bean
-		public SecurityExpressionHandler<Message<Object>> messageSecurityExpressionHandler() {
+		public static SecurityExpressionHandler<Message<Object>> messageSecurityExpressionHandler() {
 			return new DefaultMessageSecurityExpressionHandler<Object>() {
 				@Override
 				protected SecurityExpressionOperations createSecurityExpressionRoot(
@@ -593,6 +603,7 @@ public class AbstractSecurityWebSocketMessageBrokerConfigurerTests {
 		protected void configureInbound(MessageSecurityMetadataSourceRegistry messages) {
 			messages
 				.simpDestMatchers("/permitAll/**").permitAll()
+				.simpDestMatchers("/beanResolver/**").access("@security.check()")
 				.anyMessage().denyAll();
 		}
 		// @formatter:on
@@ -611,6 +622,20 @@ public class AbstractSecurityWebSocketMessageBrokerConfigurerTests {
 		@Bean
 		public TestHandshakeHandler testHandshakeHandler() {
 			return new TestHandshakeHandler();
+		}
+
+		@Bean
+		public SecurityCheck security() {
+			return new SecurityCheck();
+		}
+
+		static class SecurityCheck {
+			private boolean check;
+
+			public boolean check() {
+				check = !check;
+				return check;
+			}
 		}
 	}
 

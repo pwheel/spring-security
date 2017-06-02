@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -51,6 +52,17 @@ public class WebAuthenticationDetails implements Serializable {
 
 		HttpSession session = request.getSession(false);
 		this.sessionId = (session != null) ? session.getId() : null;
+	}
+
+	/**
+	 * Constructor to add Jackson2 serialize/deserialize support
+	 *
+	 * @param remoteAddress remote address of current request
+	 * @param sessionId session id
+	 */
+	private WebAuthenticationDetails(final String remoteAddress, final String sessionId) {
+		this.remoteAddress = remoteAddress;
+		this.sessionId = sessionId;
 	}
 
 	// ~ Methods

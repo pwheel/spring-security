@@ -1,6 +1,21 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.config.authentication;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +48,7 @@ public class AuthenticationManagerBeanDefinitionParserTests {
 	// SEC-1225
 	public void providersAreRegisteredAsTopLevelBeans() throws Exception {
 		setContext(CONTEXT);
-		assertEquals(1, appContext.getBeansOfType(AuthenticationProvider.class).size());
+		assertThat(appContext.getBeansOfType(AuthenticationProvider.class)).hasSize(1);
 	}
 
 	@Test
@@ -45,11 +60,11 @@ public class AuthenticationManagerBeanDefinitionParserTests {
 		ProviderManager pm = (ProviderManager) appContext
 				.getBeansOfType(ProviderManager.class).values().toArray()[0];
 		Object eventPublisher = FieldUtils.getFieldValue(pm, "eventPublisher");
-		assertNotNull(eventPublisher);
-		assertTrue(eventPublisher instanceof DefaultAuthenticationEventPublisher);
+		assertThat(eventPublisher).isNotNull();
+		assertThat(eventPublisher instanceof DefaultAuthenticationEventPublisher).isTrue();
 
 		pm.authenticate(new UsernamePasswordAuthenticationToken("bob", "bobspassword"));
-		assertEquals(1, listener.events.size());
+		assertThat(listener.events).hasSize(1);
 	}
 
 	@Test
@@ -57,7 +72,7 @@ public class AuthenticationManagerBeanDefinitionParserTests {
 		setContext(CONTEXT);
 		ProviderManager pm = (ProviderManager) appContext
 				.getBeansOfType(ProviderManager.class).values().toArray()[0];
-		assertTrue(pm.isEraseCredentialsAfterAuthentication());
+		assertThat(pm.isEraseCredentialsAfterAuthentication()).isTrue();
 	}
 
 	@Test
@@ -65,7 +80,7 @@ public class AuthenticationManagerBeanDefinitionParserTests {
 		setContext("<authentication-manager erase-credentials='false'/>");
 		ProviderManager pm = (ProviderManager) appContext
 				.getBeansOfType(ProviderManager.class).values().toArray()[0];
-		assertFalse(pm.isEraseCredentialsAfterAuthentication());
+		assertThat(pm.isEraseCredentialsAfterAuthentication()).isFalse();
 	}
 
 	private void setContext(String context) {

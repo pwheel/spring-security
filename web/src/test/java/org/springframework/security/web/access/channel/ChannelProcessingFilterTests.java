@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +16,7 @@
 
 package org.springframework.security.web.access.channel;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -150,13 +151,13 @@ public class ChannelProcessingFilterTests {
 	public void testGetterSetters() throws Exception {
 		ChannelProcessingFilter filter = new ChannelProcessingFilter();
 		filter.setChannelDecisionManager(new MockChannelDecisionManager(false, "MOCK"));
-		assertTrue(filter.getChannelDecisionManager() != null);
+		assertThat(filter.getChannelDecisionManager() != null).isTrue();
 
 		MockFilterInvocationDefinitionMap fids = new MockFilterInvocationDefinitionMap(
 				"/path", false, "MOCK");
 
 		filter.setSecurityMetadataSource(fids);
-		assertSame(fids, filter.getSecurityMetadataSource());
+		assertThat(filter.getSecurityMetadataSource()).isSameAs(fids);
 
 		filter.afterPropertiesSet();
 	}

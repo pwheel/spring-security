@@ -1,6 +1,21 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.access.method;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import org.aopalliance.intercept.MethodInvocation;
@@ -27,13 +42,13 @@ public class DelegatingMethodSecurityMetadataSourceTests {
 				.thenReturn(null);
 		sources.add(delegate);
 		mds = new DelegatingMethodSecurityMetadataSource(sources);
-		assertSame(sources, mds.getMethodSecurityMetadataSources());
-		assertTrue(mds.getAllConfigAttributes().isEmpty());
+		assertThat(mds.getMethodSecurityMetadataSources()).isSameAs(sources);
+		assertThat(mds.getAllConfigAttributes().isEmpty()).isTrue();
 		MethodInvocation mi = new SimpleMethodInvocation(null,
 				String.class.getMethod("toString"));
-		assertEquals(Collections.emptyList(), mds.getAttributes(mi));
+		assertThat(mds.getAttributes(mi)).isEqualTo(Collections.emptyList());
 		// Exercise the cached case
-		assertEquals(Collections.emptyList(), mds.getAttributes(mi));
+		assertThat(mds.getAttributes(mi)).isEqualTo(Collections.emptyList());
 	}
 
 	@Test
@@ -46,15 +61,14 @@ public class DelegatingMethodSecurityMetadataSourceTests {
 		when(delegate.getAttributes(toString, String.class)).thenReturn(attributes);
 		sources.add(delegate);
 		mds = new DelegatingMethodSecurityMetadataSource(sources);
-		assertSame(sources, mds.getMethodSecurityMetadataSources());
-		assertTrue(mds.getAllConfigAttributes().isEmpty());
+		assertThat(mds.getMethodSecurityMetadataSources()).isSameAs(sources);
+		assertThat(mds.getAllConfigAttributes().isEmpty()).isTrue();
 		MethodInvocation mi = new SimpleMethodInvocation("", toString);
-		assertSame(attributes, mds.getAttributes(mi));
+		assertThat(mds.getAttributes(mi)).isSameAs(attributes);
 		// Exercise the cached case
-		assertSame(attributes, mds.getAttributes(mi));
-		assertTrue(mds.getAttributes(
-				new SimpleMethodInvocation(null, String.class.getMethod("length")))
-				.isEmpty());
+		assertThat(mds.getAttributes(mi)).isSameAs(attributes);
+		assertThat(mds.getAttributes(
+				new SimpleMethodInvocation(null, String.class.getMethod("length")))).isEmpty();;
 	}
 
 }

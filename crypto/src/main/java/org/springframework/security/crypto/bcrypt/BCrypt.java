@@ -257,6 +257,8 @@ public class BCrypt {
 			8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27,
 			-1, -1, -1, -1, -1, -1, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
 			41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, -1, -1, -1, -1, -1 };
+	static final int MIN_LOG_ROUNDS = 4;
+	static final int MAX_LOG_ROUNDS = 31;
 	// Expanded Blowfish key
 	private int P[];
 	private int S[];
@@ -530,14 +532,19 @@ public class BCrypt {
 	 * @param password the password to hash
 	 * @param salt the salt to hash with (perhaps generated using BCrypt.gensalt)
 	 * @return the hashed password
+	 * @throws IllegalArgumentException if invalid salt is passed
 	 */
-	public static String hashpw(String password, String salt) {
+	public static String hashpw(String password, String salt) throws IllegalArgumentException {
 		BCrypt B;
 		String real_salt;
 		byte passwordb[], saltb[], hashed[];
 		char minor = (char) 0;
 		int rounds, off = 0;
 		StringBuilder rs = new StringBuilder();
+
+		if (salt == null) {
+			throw new IllegalArgumentException("salt cannot be null");
+		}
 
 		int saltLength = salt.length();
 
@@ -600,12 +607,12 @@ public class BCrypt {
 	/**
 	 * Generate a salt for use with the BCrypt.hashpw() method
 	 * @param log_rounds the log2 of the number of rounds of hashing to apply - the work
-	 * factor therefore increases as 2**log_rounds.
+	 * factor therefore increases as 2**log_rounds. Minimum 4, maximum 31.
 	 * @param random an instance of SecureRandom to use
 	 * @return an encoded salt value
 	 */
 	public static String gensalt(int log_rounds, SecureRandom random) {
-		if (log_rounds < 4 || log_rounds > 31) {
+		if (log_rounds < MIN_LOG_ROUNDS || log_rounds > MAX_LOG_ROUNDS) {
 			throw new IllegalArgumentException("Bad number of rounds");
 		}
 		StringBuilder rs = new StringBuilder();
@@ -626,7 +633,7 @@ public class BCrypt {
 	/**
 	 * Generate a salt for use with the BCrypt.hashpw() method
 	 * @param log_rounds the log2 of the number of rounds of hashing to apply - the work
-	 * factor therefore increases as 2**log_rounds.
+	 * factor therefore increases as 2**log_rounds. Minimum 4, maximum 31.
 	 * @return an encoded salt value
 	 */
 	public static String gensalt(int log_rounds) {

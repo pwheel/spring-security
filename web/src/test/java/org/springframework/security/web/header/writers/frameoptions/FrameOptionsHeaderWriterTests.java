@@ -15,10 +15,8 @@
  */
 package org.springframework.security.web.header.writers.frameoptions;
 
-import static org.fest.assertions.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
-
-import java.util.Collections;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -109,5 +107,18 @@ public class FrameOptionsHeaderWriterTests {
 		assertThat(response.getHeaderNames().size()).isEqualTo(1);
 		assertThat(response.getHeader(XFrameOptionsHeaderWriter.XFRAME_OPTIONS_HEADER))
 				.isEqualTo("SAMEORIGIN");
+	}
+
+	@Test
+	public void writeHeadersTwiceLastWins() {
+		writer = new XFrameOptionsHeaderWriter(XFrameOptionsMode.SAMEORIGIN);
+		writer.writeHeaders(request, response);
+
+		writer = new XFrameOptionsHeaderWriter(XFrameOptionsMode.DENY);
+		writer.writeHeaders(request, response);
+
+		assertThat(response.getHeaderNames().size()).isEqualTo(1);
+		assertThat(response.getHeader(XFrameOptionsHeaderWriter.XFRAME_OPTIONS_HEADER))
+				.isEqualTo("DENY");
 	}
 }

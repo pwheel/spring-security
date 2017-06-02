@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,10 +16,11 @@
 
 package org.springframework.security.web.authentication.switchuser;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import org.junit.*;
+import org.junit.rules.ExpectedException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.AccountExpiredException;
@@ -52,6 +54,8 @@ import java.util.*;
 public class SwitchUserFilterTests {
 	private final static List<GrantedAuthority> ROLES_12 = AuthorityUtils
 			.createAuthorityList("ROLE_ONE", "ROLE_TWO");
+	@Rule
+	public ExpectedException thrown = ExpectedException.none();
 
 	@Before
 	public void authenticateCurrentUser() {
@@ -86,6 +90,17 @@ public class SwitchUserFilterTests {
 
 	}
 
+	private Authentication switchToUserWithAuthorityRole(String name, String switchAuthorityRole) {
+		MockHttpServletRequest request = new MockHttpServletRequest();
+		request.addParameter(SwitchUserFilter.SPRING_SECURITY_SWITCH_USERNAME_KEY, name);
+
+		SwitchUserFilter filter = new SwitchUserFilter();
+		filter.setUserDetailsService(new MockUserDetailsService());
+		filter.setSwitchAuthorityRole(switchAuthorityRole);
+
+		return filter.attemptSwitchUser(request);
+	}
+
 	@Test
 	public void requiresExitUserMatchesCorrectly() {
 		SwitchUserFilter filter = new SwitchUserFilter();
@@ -94,7 +109,7 @@ public class SwitchUserFilterTests {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.setRequestURI("/j_spring_security_my_exit_user");
 
-		assertTrue(filter.requiresExitUser(request));
+		assertThat(filter.requiresExitUser(request)).isTrue();
 	}
 
 	@Test
@@ -105,7 +120,7 @@ public class SwitchUserFilterTests {
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.setRequestURI("/j_spring_security_my_switch_user");
 
-		assertTrue(filter.requiresSwitchUser(request));
+		assertThat(filter.requiresSwitchUser(request)).isTrue();
 	}
 
 	@Test(expected = UsernameNotFoundException.class)
@@ -142,7 +157,7 @@ public class SwitchUserFilterTests {
 
 	@Test
 	public void attemptSwitchUserIsSuccessfulWithValidUser() throws Exception {
-		assertNotNull(switchToUser("jacklord"));
+		assertThat(switchToUser("jacklord")).isNotNull();
 	}
 
 	@Test
@@ -162,7 +177,7 @@ public class SwitchUserFilterTests {
 		filter.doFilter(request, response, chain);
 		verify(chain, never()).doFilter(request, response);
 
-		assertNotNull(response.getErrorMessage());
+		assertThat(response.getErrorMessage()).isNotNull();
 
 		// Now check for the redirect
 		request.setContextPath("/mywebapp");
@@ -178,9 +193,8 @@ public class SwitchUserFilterTests {
 		filter.doFilter(request, response, chain);
 		verify(chain, never()).doFilter(request, response);
 
-		assertEquals("/mywebapp/switchfailed", response.getRedirectedUrl());
-		assertEquals("/switchfailed",
-				FieldUtils.getFieldValue(filter, "switchFailureUrl"));
+		assertThat(response.getRedirectedUrl()).isEqualTo("/mywebapp/switchfailed");
+		assertThat(FieldUtils.getFieldValue(filter, "switchFailureUrl")).isEqualTo("/switchfailed");
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -208,7 +222,7 @@ public class SwitchUserFilterTests {
 		filter.setSwitchUserUrl("/login/impersonate");
 
 		request.setRequestURI("/webapp/login/impersonate;jsessionid=8JHDUD723J8");
-		assertTrue(filter.requiresSwitchUser(request));
+		assertThat(filter.requiresSwitchUser(request)).isTrue();
 	}
 
 	@Test
@@ -246,8 +260,8 @@ public class SwitchUserFilterTests {
 		// check current user, should be back to original user (dano)
 		Authentication targetAuth = SecurityContextHolder.getContext()
 				.getAuthentication();
-		assertNotNull(targetAuth);
-		assertEquals("dano", targetAuth.getPrincipal());
+		assertThat(targetAuth).isNotNull();
+		assertThat(targetAuth.getPrincipal()).isEqualTo("dano");
 	}
 
 	@Test(expected = AuthenticationException.class)
@@ -291,7 +305,7 @@ public class SwitchUserFilterTests {
 
 		verify(chain, never()).doFilter(request, response);
 
-		assertEquals("/webapp/someOtherUrl", response.getRedirectedUrl());
+		assertThat(response.getRedirectedUrl()).isEqualTo("/webapp/someOtherUrl");
 	}
 
 	@Test
@@ -324,7 +338,7 @@ public class SwitchUserFilterTests {
 
 		verify(chain, never()).doFilter(request, response);
 
-		assertEquals("/someOtherUrl", response.getRedirectedUrl());
+		assertThat(response.getRedirectedUrl()).isEqualTo("/someOtherUrl");
 	}
 
 	@Test
@@ -359,9 +373,9 @@ public class SwitchUserFilterTests {
 		// check current user
 		Authentication targetAuth = SecurityContextHolder.getContext()
 				.getAuthentication();
-		assertNotNull(targetAuth);
-		assertTrue(targetAuth.getPrincipal() instanceof UserDetails);
-		assertEquals("jacklord", ((User) targetAuth.getPrincipal()).getUsername());
+		assertThat(targetAuth).isNotNull();
+		assertThat(targetAuth.getPrincipal() instanceof UserDetails).isTrue();
+		assertThat(((User) targetAuth.getPrincipal()).getUsername()).isEqualTo("jacklord");
 	}
 
 	@Test
@@ -387,10 +401,10 @@ public class SwitchUserFilterTests {
 		});
 
 		Authentication result = filter.attemptSwitchUser(request);
-		assertTrue(result != null);
-		assertEquals(2, result.getAuthorities().size());
-		assertTrue(AuthorityUtils.authorityListToSet(result.getAuthorities()).contains(
-				"ROLE_NEW"));
+		assertThat(result != null).isTrue();
+		assertThat(result.getAuthorities()).hasSize(2);
+		assertThat(AuthorityUtils.authorityListToSet(result.getAuthorities())).contains(
+				"ROLE_NEW");
 	}
 
 	// SEC-1763
@@ -412,9 +426,61 @@ public class SwitchUserFilterTests {
 			}
 		}
 
-		assertSame(source, switchedFrom.getSource());
+		assertThat(switchedFrom).isNotNull();
+		assertThat(source).isSameAs(switchedFrom.getSource());
 	}
 
+	// gh-3697
+	@Test
+	public void switchAuthorityRoleCannotBeNull() throws Exception {
+		thrown.expect(IllegalArgumentException.class);
+		thrown.expectMessage("switchAuthorityRole cannot be null");
+		switchToUserWithAuthorityRole("dano", null);
+	}
+
+	// gh-3697
+	@Test
+	public void switchAuthorityRoleCanBeChanged() throws Exception {
+		String switchAuthorityRole = "PREVIOUS_ADMINISTRATOR";
+
+		// original user
+		UsernamePasswordAuthenticationToken source = new UsernamePasswordAuthenticationToken(
+				"orig", "hawaii50", ROLES_12);
+		SecurityContextHolder.getContext().setAuthentication(source);
+		SecurityContextHolder.getContext().setAuthentication(switchToUser("jacklord"));
+		Authentication switched = switchToUserWithAuthorityRole("dano", switchAuthorityRole);
+
+		SwitchUserGrantedAuthority switchedFrom = null;
+
+		for (GrantedAuthority ga : switched.getAuthorities()) {
+			if (ga instanceof SwitchUserGrantedAuthority) {
+				switchedFrom = (SwitchUserGrantedAuthority) ga;
+				break;
+			}
+		}
+
+		assertThat(switchedFrom).isNotNull();
+		assertThat(switchedFrom.getSource()).isSameAs(source);
+		assertThat(switchAuthorityRole).isEqualTo(switchedFrom.getAuthority());
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void setSwitchFailureUrlWhenNullThenThrowException() {
+		SwitchUserFilter filter = new SwitchUserFilter();
+		filter.setSwitchFailureUrl(null);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void setSwitchFailureUrlWhenEmptyThenThrowException() {
+		SwitchUserFilter filter = new SwitchUserFilter();
+		filter.setSwitchFailureUrl("");
+	}
+
+	@Test
+	public void setSwitchFailureUrlWhenValidThenNoException() {
+		SwitchUserFilter filter = new SwitchUserFilter();
+		filter.setSwitchFailureUrl("/foo");
+	}
 	// ~ Inner Classes
 	// ==================================================================================================
 

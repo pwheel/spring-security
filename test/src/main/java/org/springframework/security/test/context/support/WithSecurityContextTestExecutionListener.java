@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2014 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.TestContext;
 import org.springframework.test.context.TestExecutionListener;
 import org.springframework.test.context.support.AbstractTestExecutionListener;
+import org.springframework.test.util.MetaAnnotationUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
@@ -39,11 +40,11 @@ import org.springframework.test.web.servlet.MockMvc;
  * too.
  *
  * @author Rob Winch
+ * @author Eddú Meléndez
  * @since 4.0
  */
-public class WithSecurityContextTestExecutionListener extends
-		AbstractTestExecutionListener {
-
+public class WithSecurityContextTestExecutionListener
+		extends AbstractTestExecutionListener {
 
 	/**
 	 * Sets up the {@link SecurityContext} for each test method. First the specific method
@@ -53,42 +54,77 @@ public class WithSecurityContextTestExecutionListener extends
 	 */
 	@Override
 	public void beforeTestMethod(TestContext testContext) throws Exception {
-		SecurityContext securityContext = createSecurityContext(testContext.getTestMethod(),
-				testContext);
+		SecurityContext securityContext = createSecurityContext(
+				testContext.getTestMethod(), testContext);
 		if (securityContext == null) {
-			securityContext = createSecurityContext(testContext.getTestClass(), testContext);
+			securityContext = createSecurityContext(testContext.getTestClass(),
+					testContext);
 		}
 		if (securityContext != null) {
 			TestSecurityContextHolder.setContext(securityContext);
 		}
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private SecurityContext createSecurityContext(AnnotatedElement annotated,
 			TestContext context) {
-		WithSecurityContext withUser = AnnotationUtils.findAnnotation(
-				annotated, WithSecurityContext.class);
-		if (withUser != null) {
-			WithSecurityContextFactory factory = createFactory(withUser, context);
-			Class<? extends Annotation> type = (Class<? extends Annotation>) GenericTypeResolver.resolveTypeArgument(factory.getClass(), WithSecurityContextFactory.class);
-			Annotation annotation  = AnnotationUtils.findAnnotation(annotated, type);
-			try {
-				return factory.createSecurityContext(annotation);
-			}
-			catch (RuntimeException e) {
-				throw new IllegalStateException(
-						"Unable to create SecurityContext using " + annotation, e);
+		WithSecurityContext withSecurityContext = AnnotationUtils
+				.findAnnotation(annotated, WithSecurityContext.class);
+		return createSecurityContext(annotated, withSecurityContext, context);
+	}
+
+	private SecurityContext createSecurityContext(Class<?> annotated,
+			TestContext context) {
+		MetaAnnotationUtils.AnnotationDescriptor<WithSecurityContext> withSecurityContextDescriptor = MetaAnnotationUtils
+				.findAnnotationDescriptor(annotated, WithSecurityContext.class);
+		WithSecurityContext withSecurityContext = withSecurityContextDescriptor == null
+				? null : withSecurityContextDescriptor.getAnnotation();
+		return createSecurityContext(annotated, withSecurityContext, context);
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private SecurityContext createSecurityContext(AnnotatedElement annotated,
+			WithSecurityContext withSecurityContext, TestContext context) {
+		if (withSecurityContext == null) {
+			return null;
+		}
+		WithSecurityContextFactory factory = createFactory(withSecurityContext, context);
+		Class<? extends Annotation> type = (Class<? extends Annotation>) GenericTypeResolver
+				.resolveTypeArgument(factory.getClass(),
+						WithSecurityContextFactory.class);
+		Annotation annotation = findAnnotation(annotated, type);
+		try {
+			return factory.createSecurityContext(annotation);
+		}
+		catch (RuntimeException e) {
+			throw new IllegalStateException(
+					"Unable to create SecurityContext using " + annotation, e);
+		}
+	}
+
+	private Annotation findAnnotation(AnnotatedElement annotated,
+			Class<? extends Annotation> type) {
+		Annotation findAnnotation = AnnotationUtils.findAnnotation(annotated, type);
+		if (findAnnotation != null) {
+			return findAnnotation;
+		}
+		Annotation[] allAnnotations = AnnotationUtils.getAnnotations(annotated);
+		for (Annotation annotationToTest : allAnnotations) {
+			WithSecurityContext withSecurityContext = AnnotationUtils.findAnnotation(
+					annotationToTest.annotationType(), WithSecurityContext.class);
+			if (withSecurityContext != null) {
+				return annotationToTest;
 			}
 		}
 		return null;
 	}
 
 	private WithSecurityContextFactory<? extends Annotation> createFactory(
-			WithSecurityContext withUser, TestContext testContext) {
-		Class<? extends WithSecurityContextFactory<? extends Annotation>> clazz = withUser
+			WithSecurityContext withSecurityContext, TestContext testContext) {
+		Class<? extends WithSecurityContextFactory<? extends Annotation>> clazz = withSecurityContext
 				.factory();
 		try {
-			return testContext.getApplicationContext().getAutowireCapableBeanFactory().createBean(clazz);
+			return testContext.getApplicationContext().getAutowireCapableBeanFactory()
+					.createBean(clazz);
 		}
 		catch (IllegalStateException e) {
 			return BeanUtils.instantiateClass(clazz);
@@ -108,10 +144,10 @@ public class WithSecurityContextTestExecutionListener extends
 	}
 
 	/**
-	 * Returns {@code 1000}.
+	 * Returns {@code 10000}.
 	 */
 	@Override
 	public int getOrder() {
-		return 1000;
+		return 10000;
 	}
 }

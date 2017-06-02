@@ -25,39 +25,31 @@ The following provides information on setting up a development environment that 
 # Understand the basics 
 Not sure what a pull request is, or how to submit one? Take a look at GitHub's excellent [help documentation first](https://help.github.com/articles/using-pull-requests).
 
-# Search JIRA first; create an issue if necessary
-Is there already an issue that addresses your concern? Do a bit of searching in our [JIRA issue tracker](https://jira.springsource.org/browse/SEC) to see if you can find something similar. If not, please create a new issue before submitting a pull request unless the change is not a user facing issue.
+# Search GitHub issues; create an issue if necessary
+Is there already an issue that addresses your concern? Do a bit of searching in our [GitHub issues ](https://github.com/spring-projects/spring-security/issues) to see if you can find something similar. If not, please create a new issue before submitting a pull request unless the change is not a user facing issue.
 
 # Discuss non-trivial contribution ideas with committers
-If you're considering anything more than correcting a typo or fixing a minor bug , please discuss it on the [Spring Security forums](http://forum.springsource.org/forumdisplay.php?33-Security) before submitting a pull request. We're happy to provide guidance but please spend an hour or two researching the subject on your own including searching the forums for prior discussions.
+If you're considering anything more than correcting a typo or fixing a minor bug, please discuss it on the [Spring Security Gitter](https://gitter.im/spring-projects/spring-security) before submitting a pull request. We're happy to provide guidance but please spend an hour or two researching the subject on your own including searching the forums for prior discussions.
 
 # Sign the Contributor License Agreement
-If you have not previously done so, please fill out and submit the [SpringSource CLA form](https://support.springsource.com/spring_committer_signup). You'll receive a token when this process is complete. Keep track of this, you may be asked for it later!
 
-* For **Project** select _Spring Security_
-* For **Project Lead** enter _Rob Winch_
-* Note that emailing/postal mailing a signed copy is not necessary. Submission of the web form is all that is required.
-
-When you've completed the web form, simply add the following in a comment on your pull request:
-
-> I have signed and agree to the terms of the SpringSource Individual Contributor License Agreement.
-
-You do not need to include your token/id. Please add the statement above to all future pull requests as well, simply so the Spring Security team knows immediately that this process is complete.
+If you have not previously done so, please fill out and
+submit the [Contributor License Agreement](https://cla.pivotal.io/sign/spring).
 
 # Create your branch from master
 Create your topic branch to be submitted as a pull request from master. The Spring team will consider your pull request for backporting on a case-by-case basis; you don't need to worry about submitting anything for backporting.
 
 # Use short branch names
-Branches used when submitting pull requests should preferably be named according to JIRA issues, e.g. 'SEC-1234'. Otherwise, use succinct, lower-case, dash (-) delimited names, such as 'fix-warnings', 'fix-typo', etc. This is important, because branch names show up in the merge commits that result from accepting pull requests, and should be as expressive and concise as possible.
+Branches used when submitting pull requests should preferably be named according to GitHub issues, e.g. 'gh-1234' or 'gh-1234-fix-npe'. Otherwise, use succinct, lower-case, dash (-) delimited names, such as 'fix-warnings', 'fix-typo', etc. This is important, because branch names show up in the merge commits that result from accepting pull requests, and should be as expressive and concise as possible.
 
 #Keep commits focused
 
-Remember each JIRA should be focused on a single item of interest since the JIRA tickets are used to produce the changelog. Since each commit should be tied to a JIRA, ensure that your commits are focused. For example, do not include an update to a transitive library in your commit unless the JIRA is to update the library. Reviewing your commits is essential before sending a pull request.
+Remember each ticket should be focused on a single item of interest since the tickets are used to produce the changelog. Since each commit should be tied to a single GitHub issue, ensure that your commits are focused. For example, do not include an update to a transitive library in your commit unless the GitHub is to update the library. Reviewing your commits is essential before sending a pull request.
 
 # Mind the whitespace
 Please carefully follow the whitespace and formatting conventions already present in the framework. 
 
-1. Spaces, not tabs
+1. Tabs, not spaces
 1. Unix (LF), not dos (CRLF) line endings
 1. Eliminate all trailing whitespace
 1. Aim to wrap code at 120 characters, but favor readability over wrapping
@@ -112,11 +104,20 @@ e.g.
  */
 </pre>
 
-#Submit JUnit test cases for all behavior changes
+# Submit JUnit test cases for all behavior changes
 Search the codebase to find related unit tests and add additional `@Test` methods within. 
 
 1. Any new tests should end in the name Tests (note this is plural). For example, a valid name would be `FilterChainProxyTests`. An invalid name would be `FilterChainProxyTest`.
 2. New test methods should not start with test. This is an old JUnit3 convention and is not necessary since the method is annotated with @Test.
+
+# Update spring-security-x.y.rnc for schema changes
+Update the [RELAX NG](http://www.relaxng.org) schema `spring-security-x.y.rnc` instead of `spring-security-x.y.xsd` if you contribute changes to supported XML configuration. The XML schema file can be generated the following Gradle task:
+
+<pre>
+./gradlew spring-security-config:rncToXsd
+</pre>
+
+Changes to the XML schema will be overwritten by the Gradle build task.
 
 # Squash commits
 Use git rebase --interactive, git add --patch and other tools to "squash" multiple commits into atomic changes. In addition to the man pages for git, there are many resources online to help you understand how these tools work. Here is one: http://book.git-scm.com/4_interactive_rebasing.html.
@@ -150,7 +151,7 @@ git config user.email user@mail.com
 # Format commit messages
 
 <pre>
-SEC-1234: Short (50 chars or less) summary of changes
+Short (50 chars or less) summary of changes
 
 More detailed explanatory text, if necessary.  Wrap it to about 72
 characters or so.  In some contexts, the first line is treated as the
@@ -165,13 +166,15 @@ Further paragraphs come after blank lines.
 
  - Typically a hyphen or asterisk is used for the bullet, preceded by a
    single space, with blank lines in between, but conventions vary here
+
+Fixes gh-123
 </pre>
 
 
-1. The commit subject should start with the associated jira issue followed by a : as shown in the example above
-2. Keep the subject line to 50 characters or less if possible
-3. Do not end the subject line with a period
-4. In the body of the commit message, explain how things worked before this commit, what has changed, and how things work now
+1. Keep the subject line to 50 characters or less if possible
+2. Do not end the subject line with a period
+3. In the body of the commit message, explain how things worked before this commit, what has changed, and how things work now
+3. Include Fixes gh-<issue-number> at the end if this fixes a GitHub issue  
 
 # Run all tests prior to submission
 
@@ -188,13 +191,13 @@ Follow the same conventions for pull request subject lines as mentioned above fo
 In the body:
 
 1. Explain your use case. What led you to submit this change? Why were existing mechanisms in the framework insufficient? Make a case that this is a general-purpose problem and that yours is a general-purpose solution, etc
-2. Add any additional information and ask questions; start a conversation, or continue one from JIRA
-3. Mention the JIRA issue ID
+2. Add any additional information and ask questions; start a conversation, or continue one from GitHub Issues
+3. Mention any GitHub Issues
 4. Also mention that you have submitted the CLA as described above
 Note that for pull requests containing a single commit, GitHub will default the subject line and body of the pull request to match the subject line and body of the commit message. This is fine, but please also include the items above in the body of the request.
 
-# Mention your pull request on the associated JIRA issue
-Add a comment to the associated JIRA issue(s) linking to your new pull request.
+# Mention your pull request on the associated GitHub issue
+Add a comment to the associated GitHub issue(s) linking to your new pull request.
 
 # Expect discussion and rework
 The Spring team takes a very conservative approach to accepting contributions to the framework. This is to keep code quality and stability as high as possible, and to keep complexity at a minimum. Your changes, if accepted, may be heavily modified prior to merging. You will retain "Author:" attribution for your Git commits granted that the bulk of your changes remain intact. You may be asked to rework the submission for style (as explained above) and/or substance. Again, we strongly recommend discussing any serious submissions with the Spring Framework team prior to engaging in serious development work.

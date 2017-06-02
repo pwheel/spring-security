@@ -15,17 +15,21 @@
  */
 package org.springframework.security.config.annotation.web;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.configurers.AbstractConfigAttributeRequestMatcherRegistry;
+import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
-import org.springframework.util.ObjectUtils;
+import org.springframework.util.ClassUtils;
+import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * A base class for registering {@link RequestMatcher}'s. For example, it might allow for
@@ -39,6 +43,21 @@ import org.springframework.util.ObjectUtils;
  */
 public abstract class AbstractRequestMatcherRegistry<C> {
 	private static final RequestMatcher ANY_REQUEST = AnyRequestMatcher.INSTANCE;
+
+	private ApplicationContext context;
+
+	protected final void setApplicationContext(ApplicationContext context) {
+		this.context = context;
+	}
+
+	/**
+	 * Gets the {@link ApplicationContext}
+	 *
+	 * @return the {@link ApplicationContext}
+	 */
+	protected final ApplicationContext getApplicationContext() {
+		return this.context;
+	}
 
 	/**
 	 * Maps any request.
@@ -91,6 +110,71 @@ public abstract class AbstractRequestMatcherRegistry<C> {
 	 */
 	public C antMatchers(String... antPatterns) {
 		return chainRequestMatchers(RequestMatchers.antMatchers(antPatterns));
+	}
+
+	/**
+	 * <p>
+	 * Maps an {@link MvcRequestMatcher} that does not care which {@link HttpMethod} is
+	 * used. This matcher will use the same rules that Spring MVC uses for matching. For
+	 * example, often times a mapping of the path "/path" will match on "/path", "/path/",
+	 * "/path.html", etc.
+	 * </p>
+	 * <p>
+	 * If the current request will not be processed by Spring MVC, a reasonable default
+	 * using the pattern as a ant pattern will be used.
+	 * </p>
+	 *
+	 * @param mvcPatterns the patterns to match on. The rules for matching are defined by
+	 * Spring MVC
+	 * @return the object that is chained after creating the {@link RequestMatcher}.
+	 */
+	public abstract C mvcMatchers(String... mvcPatterns);
+
+	/**
+	 * <p>
+	 * Maps an {@link MvcRequestMatcher} that also specifies a specific {@link HttpMethod}
+	 * to match on. This matcher will use the same rules that Spring MVC uses for
+	 * matching. For example, often times a mapping of the path "/path" will match on
+	 * "/path", "/path/", "/path.html", etc.
+	 * </p>
+	 * <p>
+	 * If the current request will not be processed by Spring MVC, a reasonable default
+	 * using the pattern as a ant pattern will be used.
+	 * </p>
+	 *
+	 * @param method the HTTP method to match on
+	 * @param mvcPatterns the patterns to match on. The rules for matching are defined by
+	 * Spring MVC
+	 * @return the object that is chained after creating the {@link RequestMatcher}.
+	 */
+	public abstract C mvcMatchers(HttpMethod method, String... mvcPatterns);
+
+	/**
+	 * Creates {@link MvcRequestMatcher} instances for the method and patterns passed in
+	 *
+	 * @param method the HTTP method to use or null if any should be used
+	 * @param mvcPatterns the Spring MVC patterns to match on
+	 * @return a List of {@link MvcRequestMatcher} instances
+	 */
+	protected final List<MvcRequestMatcher> createMvcMatchers(HttpMethod method,
+			String... mvcPatterns) {
+		boolean isServlet30 = ClassUtils.isPresent("javax.servlet.ServletRegistration", getClass().getClassLoader());
+		ObjectPostProcessor<Object> opp = this.context.getBean(ObjectPostProcessor.class);
+		HandlerMappingIntrospector introspector = new HandlerMappingIntrospector(
+				this.context);
+		List<MvcRequestMatcher> matchers = new ArrayList<MvcRequestMatcher>(
+				mvcPatterns.length);
+		for (String mvcPattern : mvcPatterns) {
+			MvcRequestMatcher matcher = new MvcRequestMatcher(introspector, mvcPattern);
+			if (isServlet30) {
+				opp.postProcess(matcher);
+			}
+			if (method != null) {
+				matcher.setMethod(method);
+			}
+			matchers.add(matcher);
+		}
+		return matchers;
 	}
 
 	/**
@@ -222,4 +306,5 @@ public abstract class AbstractRequestMatcherRegistry<C> {
 		private RequestMatchers() {
 		}
 	}
+
 }

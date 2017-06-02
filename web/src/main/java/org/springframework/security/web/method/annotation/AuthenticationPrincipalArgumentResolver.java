@@ -19,10 +19,16 @@ import java.lang.annotation.Annotation;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.expression.BeanResolver;
+import org.springframework.expression.Expression;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -78,15 +84,18 @@ import org.springframework.web.method.support.ModelAndViewContainer;
  * @author Rob Winch
  * @since 4.0
  */
-public final class AuthenticationPrincipalArgumentResolver implements
-		HandlerMethodArgumentResolver {
+public final class AuthenticationPrincipalArgumentResolver
+		implements HandlerMethodArgumentResolver {
+
+	private ExpressionParser parser = new SpelExpressionParser();
+
+	private BeanResolver beanResolver;
 
 	/*
 	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.springframework.web.method.support.HandlerMethodArgumentResolver#supportsParameter
-	 * (org.springframework.core.MethodParameter)
+	 *
+	 * @see org.springframework.web.method.support.HandlerMethodArgumentResolver#
+	 * supportsParameter (org.springframework.core.MethodParameter)
 	 */
 	public boolean supportsParameter(MethodParameter parameter) {
 		return findMethodAnnotation(AuthenticationPrincipal.class, parameter) != null;
@@ -94,10 +103,9 @@ public final class AuthenticationPrincipalArgumentResolver implements
 
 	/*
 	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.springframework.web.method.support.HandlerMethodArgumentResolver#resolveArgument
-	 * (org.springframework.core.MethodParameter,
+	 *
+	 * @see org.springframework.web.method.support.HandlerMethodArgumentResolver#
+	 * resolveArgument (org.springframework.core.MethodParameter,
 	 * org.springframework.web.method.support.ModelAndViewContainer,
 	 * org.springframework.web.context.request.NativeWebRequest,
 	 * org.springframework.web.bind.support.WebDataBinderFactory)
@@ -111,10 +119,24 @@ public final class AuthenticationPrincipalArgumentResolver implements
 			return null;
 		}
 		Object principal = authentication.getPrincipal();
+
+		AuthenticationPrincipal authPrincipal = findMethodAnnotation(
+				AuthenticationPrincipal.class, parameter);
+
+		String expressionToParse = authPrincipal.expression();
+		if (StringUtils.hasLength(expressionToParse)) {
+			StandardEvaluationContext context = new StandardEvaluationContext();
+			context.setRootObject(principal);
+			context.setVariable("this", principal);
+			context.setBeanResolver(beanResolver);
+
+			Expression expression = this.parser.parseExpression(expressionToParse);
+			principal = expression.getValue(context);
+		}
+
 		if (principal != null
 				&& !parameter.getParameterType().isAssignableFrom(principal.getClass())) {
-			AuthenticationPrincipal authPrincipal = findMethodAnnotation(
-					AuthenticationPrincipal.class, parameter);
+
 			if (authPrincipal.errorOnInvalidType()) {
 				throw new ClassCastException(principal + " is not assignable to "
 						+ parameter.getParameterType());
@@ -124,6 +146,14 @@ public final class AuthenticationPrincipalArgumentResolver implements
 			}
 		}
 		return principal;
+	}
+
+	/**
+	 * Sets the {@link BeanResolver} to be used on the expressions
+	 * @param beanResolver the {@link BeanResolver} to use
+	 */
+	public void setBeanResolver(BeanResolver beanResolver) {
+		this.beanResolver = beanResolver;
 	}
 
 	/**

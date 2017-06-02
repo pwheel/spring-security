@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,11 +16,13 @@
 
 package org.springframework.security.authentication.rememberme;
 
+
+import static org.assertj.core.api.Assertions.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.TestCase;
-
+import org.junit.Test;
 import org.springframework.security.authentication.RememberMeAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -30,20 +33,20 @@ import org.springframework.security.core.authority.AuthorityUtils;
  *
  * @author Ben Alex
  */
-public class RememberMeAuthenticationTokenTests extends TestCase {
+public class RememberMeAuthenticationTokenTests {
 	private static final List<GrantedAuthority> ROLES_12 = AuthorityUtils
 			.createAuthorityList("ROLE_ONE", "ROLE_TWO");
 
 	// ~ Methods
 	// ========================================================================================================
-
+	@Test
 	public void testConstructorRejectsNulls() {
 		try {
 			new RememberMeAuthenticationToken(null, "Test", ROLES_12);
 			fail("Should have thrown IllegalArgumentException");
 		}
 		catch (IllegalArgumentException expected) {
-			assertTrue(true);
+
 		}
 
 		try {
@@ -51,7 +54,7 @@ public class RememberMeAuthenticationTokenTests extends TestCase {
 			fail("Should have thrown IllegalArgumentException");
 		}
 		catch (IllegalArgumentException expected) {
-			assertTrue(true);
+
 		}
 
 		try {
@@ -61,65 +64,69 @@ public class RememberMeAuthenticationTokenTests extends TestCase {
 			fail("Should have thrown IllegalArgumentException");
 		}
 		catch (IllegalArgumentException expected) {
-			assertTrue(true);
+
 		}
 	}
 
+	@Test
 	public void testEqualsWhenEqual() {
 		RememberMeAuthenticationToken token1 = new RememberMeAuthenticationToken("key",
 				"Test", ROLES_12);
 		RememberMeAuthenticationToken token2 = new RememberMeAuthenticationToken("key",
 				"Test", ROLES_12);
 
-		assertEquals(token1, token2);
+		assertThat(token2).isEqualTo(token1);
 	}
 
+	@Test
 	public void testGetters() {
 		RememberMeAuthenticationToken token = new RememberMeAuthenticationToken("key",
 				"Test", ROLES_12);
 
-		assertEquals("key".hashCode(), token.getKeyHash());
-		assertEquals("Test", token.getPrincipal());
-		assertEquals("", token.getCredentials());
-		assertTrue(AuthorityUtils.authorityListToSet(token.getAuthorities()).contains(
-				"ROLE_ONE"));
-		assertTrue(AuthorityUtils.authorityListToSet(token.getAuthorities()).contains(
-				"ROLE_TWO"));
-		assertTrue(token.isAuthenticated());
+		assertThat(token.getKeyHash()).isEqualTo("key".hashCode());
+		assertThat(token.getPrincipal()).isEqualTo("Test");
+		assertThat(token.getCredentials()).isEqualTo("");
+		assertThat(AuthorityUtils.authorityListToSet(token.getAuthorities())).contains("ROLE_ONE");
+		assertThat(AuthorityUtils.authorityListToSet(token.getAuthorities())).contains("ROLE_TWO");
+		assertThat(token.isAuthenticated()).isTrue();
 	}
 
+	@Test
 	public void testNotEqualsDueToAbstractParentEqualsCheck() {
 		RememberMeAuthenticationToken token1 = new RememberMeAuthenticationToken("key",
 				"Test", ROLES_12);
 		RememberMeAuthenticationToken token2 = new RememberMeAuthenticationToken("key",
 				"DIFFERENT_PRINCIPAL", ROLES_12);
 
-		assertFalse(token1.equals(token2));
+		assertThat(token1.equals(token2)).isFalse();
 	}
 
+	@Test
 	public void testNotEqualsDueToDifferentAuthenticationClass() {
 		RememberMeAuthenticationToken token1 = new RememberMeAuthenticationToken("key",
 				"Test", ROLES_12);
 		UsernamePasswordAuthenticationToken token2 = new UsernamePasswordAuthenticationToken(
 				"Test", "Password", ROLES_12);
 
-		assertFalse(token1.equals(token2));
+		assertThat(token1.equals(token2)).isFalse();
 	}
 
+	@Test
 	public void testNotEqualsDueToKey() {
 		RememberMeAuthenticationToken token1 = new RememberMeAuthenticationToken("key",
 				"Test", ROLES_12);
 		RememberMeAuthenticationToken token2 = new RememberMeAuthenticationToken(
 				"DIFFERENT_KEY", "Test", ROLES_12);
 
-		assertFalse(token1.equals(token2));
+		assertThat(token1.equals(token2)).isFalse();
 	}
 
+	@Test
 	public void testSetAuthenticatedIgnored() {
 		RememberMeAuthenticationToken token = new RememberMeAuthenticationToken("key",
 				"Test", ROLES_12);
-		assertTrue(token.isAuthenticated());
+		assertThat(token.isAuthenticated()).isTrue();
 		token.setAuthenticated(false);
-		assertTrue(!token.isAuthenticated());
+		assertThat(!token.isAuthenticated()).isTrue();
 	}
 }

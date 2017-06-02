@@ -23,7 +23,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -60,4 +59,14 @@ public @interface WithUserDetails {
 	 * @return
 	 */
 	String value() default "user";
+
+	/**
+	 * The bean name for the {@link UserDetailsService} to use. If this is not
+	 * provided, then the lookup is done by type and expects only a single
+	 * {@link UserDetailsService} bean to be exposed.
+	 *
+	 * @return the bean name for the {@link UserDetailsService} to use.
+	 * @since 4.1
+	 */
+	String userDetailsServiceBeanName() default "";
 }

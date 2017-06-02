@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,8 +17,6 @@
 package org.springframework.security.web.authentication.logout;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -48,6 +47,7 @@ import org.springframework.web.filter.GenericFilterBean;
  * which constructor was used.
  *
  * @author Ben Alex
+ * @author Eddú Meléndez
  */
 public class LogoutFilter extends GenericFilterBean {
 
@@ -56,7 +56,7 @@ public class LogoutFilter extends GenericFilterBean {
 
 	private RequestMatcher logoutRequestMatcher;
 
-	private final List<LogoutHandler> handlers;
+	private final LogoutHandler handler;
 	private final LogoutSuccessHandler logoutSuccessHandler;
 
 	// ~ Constructors
@@ -70,16 +70,14 @@ public class LogoutFilter extends GenericFilterBean {
 	 */
 	public LogoutFilter(LogoutSuccessHandler logoutSuccessHandler,
 			LogoutHandler... handlers) {
-		Assert.notEmpty(handlers, "LogoutHandlers are required");
-		this.handlers = Arrays.asList(handlers);
+		this.handler = new CompositeLogoutHandler(handlers);
 		Assert.notNull(logoutSuccessHandler, "logoutSuccessHandler cannot be null");
 		this.logoutSuccessHandler = logoutSuccessHandler;
 		setFilterProcessesUrl("/logout");
 	}
 
 	public LogoutFilter(String logoutSuccessUrl, LogoutHandler... handlers) {
-		Assert.notEmpty(handlers, "LogoutHandlers are required");
-		this.handlers = Arrays.asList(handlers);
+		this.handler = new CompositeLogoutHandler(handlers);
 		Assert.isTrue(
 				!StringUtils.hasLength(logoutSuccessUrl)
 						|| UrlUtils.isValidRedirectUrl(logoutSuccessUrl),
@@ -108,9 +106,7 @@ public class LogoutFilter extends GenericFilterBean {
 						+ "' and transferring to logout destination");
 			}
 
-			for (LogoutHandler handler : handlers) {
-				handler.logout(request, response, auth);
-			}
+			this.handler.logout(request, response, auth);
 
 			logoutSuccessHandler.onLogoutSuccess(request, response, auth);
 

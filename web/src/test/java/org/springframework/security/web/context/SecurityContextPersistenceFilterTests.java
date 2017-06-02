@@ -1,7 +1,21 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.web.context;
 
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
@@ -38,7 +52,7 @@ public class SecurityContextPersistenceFilterTests {
 
 		filter.doFilter(request, response, chain);
 		verify(chain).doFilter(any(ServletRequest.class), any(ServletResponse.class));
-		assertNull(SecurityContextHolder.getContext().getAuthentication());
+		assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
 	}
 
 	@Test
@@ -52,12 +66,12 @@ public class SecurityContextPersistenceFilterTests {
 				any(ServletResponse.class));
 		try {
 			filter.doFilter(request, response, chain);
-			fail();
+			fail("IOException should have been thrown");
 		}
 		catch (IOException expected) {
 		}
 
-		assertNull(SecurityContextHolder.getContext().getAuthentication());
+		assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
 	}
 
 	@Test
@@ -80,8 +94,7 @@ public class SecurityContextPersistenceFilterTests {
 		final FilterChain chain = new FilterChain() {
 			public void doFilter(ServletRequest request, ServletResponse response)
 					throws IOException, ServletException {
-				assertEquals(beforeAuth, SecurityContextHolder.getContext()
-						.getAuthentication());
+				assertThat(SecurityContextHolder.getContext().getAuthentication()).isEqualTo(beforeAuth);
 				// Change the context here
 				SecurityContextHolder.setContext(scExpectedAfter);
 			}
@@ -114,7 +127,7 @@ public class SecurityContextPersistenceFilterTests {
 		SecurityContextPersistenceFilter filter = new SecurityContextPersistenceFilter();
 		filter.setForceEagerSessionCreation(true);
 		filter.doFilter(request, response, chain);
-		assertNotNull(request.getSession(false));
+		assertThat(request.getSession(false)).isNotNull();
 	}
 
 	@Test
@@ -127,7 +140,7 @@ public class SecurityContextPersistenceFilterTests {
 		SecurityContextPersistenceFilter filter = new SecurityContextPersistenceFilter(
 				repo);
 		filter.doFilter(request, response, chain);
-		assertFalse(repo.containsContext(request));
-		assertNull(request.getSession(false));
+		assertThat(repo.containsContext(request)).isFalse();
+		assertThat(request.getSession(false)).isNull();
 	}
 }

@@ -1,6 +1,21 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.config.authentication;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 
 import org.springframework.security.config.util.InMemoryXmlApplicationContext;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -56,8 +71,8 @@ public class UserServiceBeanDefinitionParserTests {
 		UserDetailsService userService = (UserDetailsService) appContext
 				.getBean("service");
 		UserDetails joe = userService.loadUserByUsername("joe");
-		assertEquals("joespassword", joe.getPassword());
-		assertEquals(2, joe.getAuthorities().size());
+		assertThat(joe.getPassword()).isEqualTo("joespassword");
+		assertThat(joe.getAuthorities()).hasSize(2);
 	}
 
 	@Test
@@ -67,7 +82,7 @@ public class UserServiceBeanDefinitionParserTests {
 		UserDetailsService userService = (UserDetailsService) appContext
 				.getBean("service");
 		UserDetails joe = userService.loadUserByUsername("joe");
-		assertTrue(joe.getPassword().length() > 0);
+		assertThat(joe.getPassword().length() > 0).isTrue();
 		Long.parseLong(joe.getPassword());
 	}
 
@@ -79,13 +94,14 @@ public class UserServiceBeanDefinitionParserTests {
 				+ "</user-service>");
 		UserDetailsService userService = (UserDetailsService) appContext
 				.getBean("service");
-		assertEquals("http://joe.myopenid.com/",
-				userService.loadUserByUsername("http://joe.myopenid.com/").getUsername());
-		assertEquals(
-				"https://www.google.com/accounts/o8/id?id=MPtOaenBIk5yzW9n7n9",
+		assertThat(
+				userService.loadUserByUsername("http://joe.myopenid.com/").getUsername())
+				.isEqualTo("http://joe.myopenid.com/");
+		assertThat(
 				userService.loadUserByUsername(
 						"https://www.google.com/accounts/o8/id?id=MPtOaenBIk5yzW9n7n9")
-						.getUsername());
+						.getUsername())
+				.isEqualTo("https://www.google.com/accounts/o8/id?id=MPtOaenBIk5yzW9n7n9");
 	}
 
 	@Test
@@ -97,10 +113,10 @@ public class UserServiceBeanDefinitionParserTests {
 		UserDetailsService userService = (UserDetailsService) appContext
 				.getBean("service");
 		UserDetails joe = userService.loadUserByUsername("joe");
-		assertFalse(joe.isAccountNonLocked());
+		assertThat(joe.isAccountNonLocked()).isFalse();
 		// Check case-sensitive lookup SEC-1432
 		UserDetails bob = userService.loadUserByUsername("Bob");
-		assertFalse(bob.isEnabled());
+		assertThat(bob.isEnabled()).isFalse();
 	}
 
 	@Test(expected = FatalBeanException.class)

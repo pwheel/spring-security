@@ -1,14 +1,17 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.springframework.security.web.authentication.preauth;
 
@@ -30,7 +33,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.WebAttributes;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.security.web.authentication.*;
 import org.springframework.util.Assert;
 import org.springframework.web.filter.GenericFilterBean;
 
@@ -81,6 +84,8 @@ public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFi
 	private boolean continueFilterChainOnUnsuccessfulAuthentication = true;
 	private boolean checkForPrincipalChanges;
 	private boolean invalidateSessionOnPrincipalChange = true;
+	private AuthenticationSuccessHandler authenticationSuccessHandler = null;
+	private AuthenticationFailureHandler authenticationFailureHandler = null;
 
 	/**
 	 * Check whether all required properties have been set.
@@ -153,7 +158,7 @@ public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFi
 	/**
 	 * Do the actual authentication for a pre-authenticated user.
 	 */
-	private void doAuthenticate(HttpServletRequest request, HttpServletResponse response) {
+	private void doAuthenticate(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 		Authentication authResult;
 
 		Object principal = getPreAuthenticatedPrincipal(request);
@@ -226,7 +231,7 @@ public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFi
 	 * manager into the secure context.
 	 */
 	protected void successfulAuthentication(HttpServletRequest request,
-			HttpServletResponse response, Authentication authResult) {
+			HttpServletResponse response, Authentication authResult) throws IOException, ServletException {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Authentication success: " + authResult);
 		}
@@ -235,6 +240,10 @@ public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFi
 		if (this.eventPublisher != null) {
 			eventPublisher.publishEvent(new InteractiveAuthenticationSuccessEvent(
 					authResult, this.getClass()));
+		}
+
+		if(authenticationSuccessHandler != null) {
+			authenticationSuccessHandler.onAuthenticationSuccess(request, response, authResult);
 		}
 	}
 
@@ -245,13 +254,17 @@ public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFi
 	 * Caches the failure exception as a request attribute
 	 */
 	protected void unsuccessfulAuthentication(HttpServletRequest request,
-			HttpServletResponse response, AuthenticationException failed) {
+			HttpServletResponse response, AuthenticationException failed) throws IOException, ServletException {
 		SecurityContextHolder.clearContext();
 
 		if (logger.isDebugEnabled()) {
 			logger.debug("Cleared security context due to exception", failed);
 		}
 		request.setAttribute(WebAttributes.AUTHENTICATION_EXCEPTION, failed);
+
+		if(authenticationFailureHandler != null) {
+			authenticationFailureHandler.onAuthenticationFailure(request, response, failed);
+		}
 	}
 
 	/**
@@ -319,6 +332,20 @@ public abstract class AbstractPreAuthenticatedProcessingFilter extends GenericFi
 	public void setInvalidateSessionOnPrincipalChange(
 			boolean invalidateSessionOnPrincipalChange) {
 		this.invalidateSessionOnPrincipalChange = invalidateSessionOnPrincipalChange;
+	}
+
+	/**
+	 * Sets the strategy used to handle a successful authentication.
+	 */
+	public void setAuthenticationSuccessHandler(AuthenticationSuccessHandler authenticationSuccessHandler) {
+		this.authenticationSuccessHandler = authenticationSuccessHandler;
+	}
+
+	/**
+	 * Sets the strategy used to handle a failed authentication.
+	 */
+	public void setAuthenticationFailureHandler(AuthenticationFailureHandler authenticationFailureHandler) {
+		this.authenticationFailureHandler = authenticationFailureHandler;
 	}
 
 	/**

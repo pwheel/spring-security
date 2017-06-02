@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +16,7 @@
 
 package org.springframework.security.ldap.authentication;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -42,16 +43,16 @@ public class LdapShaPasswordEncoderTests {
 
 	@Test
 	public void invalidPasswordFails() {
-		assertFalse(sha.isPasswordValid("{SHA}ddSFGmjXYPbZC+NXR2kCzBRjqiE=",
-				"wrongpassword", null));
+		assertThat(sha.isPasswordValid("{SHA}ddSFGmjXYPbZC+NXR2kCzBRjqiE=",
+				"wrongpassword", null)).isFalse();
 	}
 
 	@Test
 	public void invalidSaltedPasswordFails() {
-		assertFalse(sha.isPasswordValid("{SSHA}25ro4PKC8jhQZ26jVsozhX/xaP0suHgX",
-				"wrongpassword", null));
-		assertFalse(sha.isPasswordValid("{SSHA}PQy2j+6n5ytA+YlAKkM8Fh4p6u2JxfVd",
-				"wrongpassword", null));
+		assertThat(sha.isPasswordValid("{SSHA}25ro4PKC8jhQZ26jVsozhX/xaP0suHgX",
+				"wrongpassword", null)).isFalse();
+		assertThat(sha.isPasswordValid("{SSHA}PQy2j+6n5ytA+YlAKkM8Fh4p6u2JxfVd",
+				"wrongpassword", null)).isFalse();
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -65,15 +66,15 @@ public class LdapShaPasswordEncoderTests {
 	@Test
 	public void validPasswordSucceeds() {
 		sha.setForceLowerCasePrefix(false);
-		assertTrue(sha.isPasswordValid("{SHA}ddSFGmjXYPbZC+NXR2kCzBRjqiE=",
-				"boabspasswurd", null));
-		assertTrue(sha.isPasswordValid("{sha}ddSFGmjXYPbZC+NXR2kCzBRjqiE=",
-				"boabspasswurd", null));
+		assertThat(sha.isPasswordValid("{SHA}ddSFGmjXYPbZC+NXR2kCzBRjqiE=",
+				"boabspasswurd", null)).isTrue();
+		assertThat(sha.isPasswordValid("{sha}ddSFGmjXYPbZC+NXR2kCzBRjqiE=",
+				"boabspasswurd", null)).isTrue();
 		sha.setForceLowerCasePrefix(true);
-		assertTrue(sha.isPasswordValid("{SHA}ddSFGmjXYPbZC+NXR2kCzBRjqiE=",
-				"boabspasswurd", null));
-		assertTrue(sha.isPasswordValid("{sha}ddSFGmjXYPbZC+NXR2kCzBRjqiE=",
-				"boabspasswurd", null));
+		assertThat(sha.isPasswordValid("{SHA}ddSFGmjXYPbZC+NXR2kCzBRjqiE=",
+				"boabspasswurd", null)).isTrue();
+		assertThat(sha.isPasswordValid("{sha}ddSFGmjXYPbZC+NXR2kCzBRjqiE=",
+				"boabspasswurd", null)).isTrue();
 	}
 
 	/**
@@ -82,40 +83,40 @@ public class LdapShaPasswordEncoderTests {
 	@Test
 	public void validSaltedPasswordSucceeds() {
 		sha.setForceLowerCasePrefix(false);
-		assertTrue(sha.isPasswordValid("{SSHA}25ro4PKC8jhQZ26jVsozhX/xaP0suHgX",
-				"boabspasswurd", null));
-		assertTrue(sha.isPasswordValid("{ssha}PQy2j+6n5ytA+YlAKkM8Fh4p6u2JxfVd",
-				"boabspasswurd", null));
+		assertThat(sha.isPasswordValid("{SSHA}25ro4PKC8jhQZ26jVsozhX/xaP0suHgX",
+				"boabspasswurd", null)).isTrue();
+		assertThat(sha.isPasswordValid("{ssha}PQy2j+6n5ytA+YlAKkM8Fh4p6u2JxfVd",
+				"boabspasswurd", null)).isTrue();
 		sha.setForceLowerCasePrefix(true);
-		assertTrue(sha.isPasswordValid("{SSHA}25ro4PKC8jhQZ26jVsozhX/xaP0suHgX",
-				"boabspasswurd", null));
-		assertTrue(sha.isPasswordValid("{ssha}PQy2j+6n5ytA+YlAKkM8Fh4p6u2JxfVd",
-				"boabspasswurd", null));
+		assertThat(sha.isPasswordValid("{SSHA}25ro4PKC8jhQZ26jVsozhX/xaP0suHgX",
+				"boabspasswurd", null)).isTrue();
+		assertThat(sha.isPasswordValid("{ssha}PQy2j+6n5ytA+YlAKkM8Fh4p6u2JxfVd",
+				"boabspasswurd", null)).isTrue();
 	}
 
 	@Test
 	// SEC-1031
 	public void fullLengthOfHashIsUsedInComparison() throws Exception {
 		// Change the first hash character from '2' to '3'
-		assertFalse(sha.isPasswordValid("{SSHA}35ro4PKC8jhQZ26jVsozhX/xaP0suHgX",
-				"boabspasswurd", null));
+		assertThat(sha.isPasswordValid("{SSHA}35ro4PKC8jhQZ26jVsozhX/xaP0suHgX",
+				"boabspasswurd", null)).isFalse();
 		// Change the last hash character from 'X' to 'Y'
-		assertFalse(sha.isPasswordValid("{SSHA}25ro4PKC8jhQZ26jVsozhX/xaP0suHgY",
-				"boabspasswurd", null));
+		assertThat(sha.isPasswordValid("{SSHA}25ro4PKC8jhQZ26jVsozhX/xaP0suHgY",
+				"boabspasswurd", null)).isFalse();
 	}
 
 	@Test
 	public void correctPrefixCaseIsUsed() {
 		sha.setForceLowerCasePrefix(false);
-		assertEquals("{SHA}ddSFGmjXYPbZC+NXR2kCzBRjqiE=",
+		assertThat("{SHA}ddSFGmjXYPbZC+NXR2kCzBRjqiE=").isEqualTo(
 				sha.encodePassword("boabspasswurd", null));
-		assertTrue(sha.encodePassword("somepassword", "salt".getBytes()).startsWith(
+		assertThat(sha.encodePassword("somepassword", "salt".getBytes()).startsWith(
 				"{SSHA}"));
 
 		sha.setForceLowerCasePrefix(true);
-		assertEquals("{sha}ddSFGmjXYPbZC+NXR2kCzBRjqiE=",
+		assertThat("{sha}ddSFGmjXYPbZC+NXR2kCzBRjqiE=").isEqualTo(
 				sha.encodePassword("boabspasswurd", null));
-		assertTrue(sha.encodePassword("somepassword", "salt".getBytes()).startsWith(
+		assertThat(sha.encodePassword("somepassword", "salt".getBytes()).startsWith(
 				"{ssha}"));
 
 	}

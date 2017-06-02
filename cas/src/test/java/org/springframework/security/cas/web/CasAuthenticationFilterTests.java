@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,15 +16,10 @@
 
 package org.springframework.security.cas.web;
 
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Method;
-
 import javax.servlet.FilterChain;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import org.jasig.cas.client.proxy.ProxyGrantingTicketStorage;
 import org.junit.After;
@@ -39,11 +35,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
-import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
-import org.springframework.security.web.authentication.NullRememberMeServices;
-import org.springframework.util.ReflectionUtils;
 
 /**
  * Tests {@link CasAuthenticationFilter}.
@@ -81,11 +74,11 @@ public class CasAuthenticationFilterTests {
 			}
 		});
 
-		assertTrue(filter.requiresAuthentication(request, new MockHttpServletResponse()));
+		assertThat(filter.requiresAuthentication(request, new MockHttpServletResponse())).isTrue();
 
 		Authentication result = filter.attemptAuthentication(request,
 				new MockHttpServletResponse());
-		assertTrue(result != null);
+		assertThat(result != null).isTrue();
 	}
 
 	@Test(expected = AuthenticationException.class)
@@ -110,7 +103,7 @@ public class CasAuthenticationFilterTests {
 		MockHttpServletResponse response = new MockHttpServletResponse();
 
 		request.setServletPath(url);
-		assertTrue(filter.requiresAuthentication(request, response));
+		assertThat(filter.requiresAuthentication(request, response)).isTrue();
 	}
 
 	@Test
@@ -120,13 +113,13 @@ public class CasAuthenticationFilterTests {
 		MockHttpServletResponse response = new MockHttpServletResponse();
 
 		request.setServletPath("/pgtCallback");
-		assertFalse(filter.requiresAuthentication(request, response));
+		assertThat(filter.requiresAuthentication(request, response)).isFalse();
 		filter.setProxyReceptorUrl(request.getServletPath());
-		assertFalse(filter.requiresAuthentication(request, response));
+		assertThat(filter.requiresAuthentication(request, response)).isFalse();
 		filter.setProxyGrantingTicketStorage(mock(ProxyGrantingTicketStorage.class));
-		assertTrue(filter.requiresAuthentication(request, response));
+		assertThat(filter.requiresAuthentication(request, response)).isTrue();
 		request.setServletPath("/other");
-		assertFalse(filter.requiresAuthentication(request, response));
+		assertThat(filter.requiresAuthentication(request, response)).isFalse();
 	}
 
 	@Test
@@ -142,23 +135,23 @@ public class CasAuthenticationFilterTests {
 		MockHttpServletResponse response = new MockHttpServletResponse();
 
 		request.setServletPath(url);
-		assertTrue(filter.requiresAuthentication(request, response));
+		assertThat(filter.requiresAuthentication(request, response)).isTrue();
 
 		request.setServletPath("/other");
-		assertFalse(filter.requiresAuthentication(request, response));
+		assertThat(filter.requiresAuthentication(request, response)).isFalse();
 		request.setParameter(properties.getArtifactParameter(), "value");
-		assertTrue(filter.requiresAuthentication(request, response));
+		assertThat(filter.requiresAuthentication(request, response)).isTrue();
 		SecurityContextHolder.getContext().setAuthentication(
 				new AnonymousAuthenticationToken("key", "principal", AuthorityUtils
 						.createAuthorityList("ROLE_ANONYMOUS")));
-		assertTrue(filter.requiresAuthentication(request, response));
+		assertThat(filter.requiresAuthentication(request, response)).isTrue();
 		SecurityContextHolder.getContext().setAuthentication(
 				new TestingAuthenticationToken("un", "principal", AuthorityUtils
 						.createAuthorityList("ROLE_ANONYMOUS")));
-		assertTrue(filter.requiresAuthentication(request, response));
+		assertThat(filter.requiresAuthentication(request, response)).isTrue();
 		SecurityContextHolder.getContext().setAuthentication(
 				new TestingAuthenticationToken("un", "principal", "ROLE_ANONYMOUS"));
-		assertFalse(filter.requiresAuthentication(request, response));
+		assertThat(filter.requiresAuthentication(request, response)).isFalse();
 	}
 
 	@Test
@@ -170,7 +163,7 @@ public class CasAuthenticationFilterTests {
 		request.setServletPath("/pgtCallback");
 		filter.setProxyGrantingTicketStorage(mock(ProxyGrantingTicketStorage.class));
 		filter.setProxyReceptorUrl(request.getServletPath());
-		assertNull(filter.attemptAuthentication(request, response));
+		assertThat(filter.attemptAuthentication(request, response)).isNull();
 	}
 
 	@Test
@@ -196,8 +189,8 @@ public class CasAuthenticationFilterTests {
 		filter.afterPropertiesSet();
 
 		filter.doFilter(request, response, chain);
-		assertFalse("Authentication should not be null", SecurityContextHolder
-				.getContext().getAuthentication() == null);
+		assertThat(SecurityContextHolder
+				.getContext().getAuthentication()).isNotNull().withFailMessage("Authentication should not be null");
 		verify(chain).doFilter(request, response);
 		verifyZeroInteractions(successHandler);
 

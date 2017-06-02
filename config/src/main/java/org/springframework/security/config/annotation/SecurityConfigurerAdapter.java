@@ -16,9 +16,11 @@
 package org.springframework.security.config.annotation;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.core.GenericTypeResolver;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 
 /**
  * A base class for {@link SecurityConfigurer} that allows subclasses to only implement
@@ -27,6 +29,7 @@ import org.springframework.core.GenericTypeResolver;
  * that is being configured.
  *
  * @author Rob Winch
+ * @author Wallace Wadge
  *
  * @param <O> The Object being built by B
  * @param <B> The Builder that is building O and is configured by
@@ -130,7 +133,9 @@ public abstract class SecurityConfigurerAdapter<O, B extends SecurityBuilder<O>>
 		 */
 		private boolean addObjectPostProcessor(
 				ObjectPostProcessor<? extends Object> objectPostProcessor) {
-			return this.postProcessors.add(objectPostProcessor);
+			boolean result = this.postProcessors.add(objectPostProcessor);
+			Collections.sort(postProcessors, AnnotationAwareOrderComparator.INSTANCE);
+			return result;
 		}
 	}
 }

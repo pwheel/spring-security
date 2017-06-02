@@ -27,7 +27,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -64,14 +63,15 @@ public class CustomConfigAuthenticationTests {
 	public void authenticationSuccess() throws Exception {
 		mvc.perform(
 				formLogin("/authenticate").user("user", "user").password("pass",
-						"password")).andExpect(status().isMovedTemporarily())
+						"password")).andExpect(status().isFound())
 				.andExpect(redirectedUrl("/"))
 				.andExpect(authenticated().withUsername("user"));
 	}
 
 	@Test
 	public void withUserSuccess() throws Exception {
-		mvc.perform(get("/").with(user("user"))).andExpect(status().isNotFound())
+		mvc.perform(get("/").with(user("user")))
+				.andExpect(status().isNotFound())
 				.andExpect(authenticated().withUsername("user"));
 	}
 
@@ -79,7 +79,7 @@ public class CustomConfigAuthenticationTests {
 	public void authenticationFailed() throws Exception {
 		mvc.perform(
 				formLogin("/authenticate").user("user", "notfound").password("pass",
-						"invalid")).andExpect(status().isMovedTemporarily())
+						"invalid")).andExpect(status().isFound())
 				.andExpect(redirectedUrl("/authenticate?error"))
 				.andExpect(unauthenticated());
 	}

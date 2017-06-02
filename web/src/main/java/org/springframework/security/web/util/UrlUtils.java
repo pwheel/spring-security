@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -79,7 +80,7 @@ public final class UrlUtils {
 	 * Obtains the web application-specific fragment of the request URL.
 	 * <p>
 	 * Under normal spec conditions,
-	 * 
+	 *
 	 * <pre>
 	 * requestURI = contextPath + servletPath + pathInfo
 	 * </pre>
@@ -128,7 +129,7 @@ public final class UrlUtils {
 	 * Returns true if the supplied URL starts with a "/" or is absolute.
 	 */
 	public static boolean isValidRedirectUrl(String url) {
-		return url != null && url.startsWith("/") || isAbsoluteUrl(url);
+		return url != null && (url.startsWith("/") || isAbsoluteUrl(url));
 	}
 
 	/**
@@ -136,6 +137,9 @@ public final class UrlUtils {
 	 * defined in RFC 1738.
 	 */
 	public static boolean isAbsoluteUrl(String url) {
+		if(url == null) {
+			return false;
+		}
 		final Pattern ABSOLUTE_URL = Pattern.compile("\\A[a-z0-9.+-]+://.*",
 				Pattern.CASE_INSENSITIVE);
 

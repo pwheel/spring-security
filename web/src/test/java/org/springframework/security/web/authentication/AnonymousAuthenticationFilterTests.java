@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,16 +16,7 @@
 
 package org.springframework.security.web.authentication;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-
-import org.junit.*;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.security.authentication.TestingAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.AuthorityUtils;
-import org.springframework.security.core.context.SecurityContextHolder;
+import java.io.IOException;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -32,12 +24,27 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import java.io.IOException;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests {@link AnonymousAuthenticationFilter}.
  *
  * @author Ben Alex
+ * @author Eddú Meléndez
  */
 public class AnonymousAuthenticationFilterTests {
 
@@ -84,7 +91,7 @@ public class AnonymousAuthenticationFilterTests {
 				new MockHttpServletResponse(), new MockFilterChain(true));
 
 		// Ensure filter didn't change our original object
-		assertEquals(originalAuth, SecurityContextHolder.getContext().getAuthentication());
+		assertThat(SecurityContextHolder.getContext().getAuthentication()).isEqualTo(originalAuth);
 	}
 
 	@Test
@@ -101,9 +108,8 @@ public class AnonymousAuthenticationFilterTests {
 				new MockHttpServletResponse(), new MockFilterChain(true));
 
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		assertEquals("anonymousUsername", auth.getPrincipal());
-		assertTrue(AuthorityUtils.authorityListToSet(auth.getAuthorities()).contains(
-				"ROLE_ANONYMOUS"));
+		assertThat(auth.getPrincipal()).isEqualTo("anonymousUsername");
+		assertThat(AuthorityUtils.authorityListToSet(auth.getAuthorities())).contains("ROLE_ANONYMOUS");
 		SecurityContextHolder.getContext().setAuthentication(null); // so anonymous fires
 																	// again
 	}

@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +16,7 @@
 
 package org.springframework.security.authentication.anonymous;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 
 import org.junit.*;
 import org.springframework.security.authentication.AnonymousAuthenticationProvider;
@@ -59,7 +60,7 @@ public class AnonymousAuthenticationProviderTests {
 			fail("Should have thrown IllegalArgumentException");
 		}
 		catch (IllegalArgumentException expected) {
-			assertTrue(true);
+
 		}
 	}
 
@@ -67,7 +68,7 @@ public class AnonymousAuthenticationProviderTests {
 	public void testGettersSetters() throws Exception {
 		AnonymousAuthenticationProvider aap = new AnonymousAuthenticationProvider(
 				"qwerty");
-		assertEquals("qwerty", aap.getKey());
+		assertThat(aap.getKey()).isEqualTo("qwerty");
 	}
 
 	@Test
@@ -77,10 +78,10 @@ public class AnonymousAuthenticationProviderTests {
 
 		TestingAuthenticationToken token = new TestingAuthenticationToken("user",
 				"password", "ROLE_A");
-		assertFalse(aap.supports(TestingAuthenticationToken.class));
+		assertThat(aap.supports(TestingAuthenticationToken.class)).isFalse();
 
 		// Try it anyway
-		assertNull(aap.authenticate(token));
+		assertThat(aap.authenticate(token)).isNull();
 	}
 
 	@Test
@@ -93,14 +94,14 @@ public class AnonymousAuthenticationProviderTests {
 
 		Authentication result = aap.authenticate(token);
 
-		assertEquals(result, token);
+		assertThat(token).isEqualTo(result);
 	}
 
 	@Test
 	public void testSupports() {
 		AnonymousAuthenticationProvider aap = new AnonymousAuthenticationProvider(
 				"qwerty");
-		assertTrue(aap.supports(AnonymousAuthenticationToken.class));
-		assertFalse(aap.supports(TestingAuthenticationToken.class));
+		assertThat(aap.supports(AnonymousAuthenticationToken.class)).isTrue();
+		assertThat(aap.supports(TestingAuthenticationToken.class)).isFalse();
 	}
 }

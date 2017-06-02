@@ -22,8 +22,6 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.BeanMetadataElement;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanReference;
-import org.springframework.beans.factory.config.ConstructorArgumentValues;
-import org.springframework.beans.factory.config.ConstructorArgumentValues.ValueHolder;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.parsing.BeanComponentDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -483,7 +481,7 @@ final class AuthenticationConfigBuilder {
 							SimpleAttributes2GrantedAuthoritiesMapper.class));
 
 			String roles = jeeElt.getAttribute(ATT_MAPPABLE_ROLES);
-			Assert.state(StringUtils.hasText(roles));
+			Assert.hasLength(roles, "roles is expected to have length");
 			BeanDefinitionBuilder rolesBuilder = BeanDefinitionBuilder
 					.rootBeanDefinition(StringUtils.class);
 			rolesBuilder.addConstructorArgValue(roles);

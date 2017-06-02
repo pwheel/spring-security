@@ -19,6 +19,8 @@ import org.springframework.security.config.annotation.web.HttpSecurityBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.authentication.ForwardAuthenticationFailureHandler;
+import org.springframework.security.web.authentication.ForwardAuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
@@ -36,8 +38,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
  * The following Filters are populated
  *
  * <ul>
- * <li>
- * {@link UsernamePasswordAuthenticationFilter}</li>
+ * <li>{@link UsernamePasswordAuthenticationFilter}</li>
  * </ul>
  *
  * <h2>Shared Objects Created</h2>
@@ -45,7 +46,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
  * The following shared objects are populated
  *
  * <ul>
- * <li> {@link AuthenticationEntryPoint}</li>
+ * <li>{@link AuthenticationEntryPoint}</li>
  * </ul>
  *
  * <h2>Shared Objects Used</h2>
@@ -54,7 +55,8 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
  *
  * <ul>
  * <li>{@link org.springframework.security.authentication.AuthenticationManager}</li>
- * <li>{@link RememberMeServices} - is optionally used. See {@link RememberMeConfigurer}</li>
+ * <li>{@link RememberMeServices} - is optionally used. See {@link RememberMeConfigurer}
+ * </li>
  * <li>{@link SessionAuthenticationStrategy} - is optionally used. See
  * {@link SessionManagementConfigurer}</li>
  * <li>{@link DefaultLoginPageGeneratingFilter} - if present will be populated with
@@ -62,10 +64,10 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
  * </ul>
  *
  * @author Rob Winch
+ * @author Shazin Sadakath
  * @since 3.2
  */
-public final class FormLoginConfigurer<H extends HttpSecurityBuilder<H>>
-		extends
+public final class FormLoginConfigurer<H extends HttpSecurityBuilder<H>> extends
 		AbstractAuthenticationFilterConfigurer<H, FormLoginConfigurer<H>, UsernamePasswordAuthenticationFilter> {
 
 	/**
@@ -176,6 +178,7 @@ public final class FormLoginConfigurer<H extends HttpSecurityBuilder<H>>
 	 * "/login")
 	 * @return the {@link FormLoginConfigurer} for additional customization
 	 */
+	@Override
 	public FormLoginConfigurer<H> loginPage(String loginPage) {
 		return super.loginPage(loginPage);
 	}
@@ -206,6 +209,28 @@ public final class FormLoginConfigurer<H extends HttpSecurityBuilder<H>>
 		return this;
 	}
 
+	/**
+	 * Forward Authentication Failure Handler
+	 *
+	 * @param forwardUrl the target URL in case of failure
+	 * @return he {@link FormLoginConfigurer} for additional customization
+	 */
+	public FormLoginConfigurer<H> failureForwardUrl(String forwardUrl) {
+		failureHandler(new ForwardAuthenticationFailureHandler(forwardUrl));
+		return this;
+	}
+
+	/**
+	 * Forward Authentication Success Handler
+	 *
+	 * @param forwardUrl the target URL in case of success
+	 * @return he {@link FormLoginConfigurer} for additional customization
+	 */
+	public FormLoginConfigurer<H> successForwardUrl(String forwardUrl) {
+		successHandler(new ForwardAuthenticationSuccessHandler(forwardUrl));
+		return this;
+	}
+
 	@Override
 	public void init(H http) throws Exception {
 		super.init(http);
@@ -214,7 +239,7 @@ public final class FormLoginConfigurer<H extends HttpSecurityBuilder<H>>
 
 	/*
 	 * (non-Javadoc)
-	 * 
+	 *
 	 * @see org.springframework.security.config.annotation.web.configurers.
 	 * AbstractAuthenticationFilterConfigurer
 	 * #createLoginProcessingUrlMatcher(java.lang.String)

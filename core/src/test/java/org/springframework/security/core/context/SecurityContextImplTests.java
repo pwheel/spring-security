@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,18 +16,18 @@
 
 package org.springframework.security.core.context;
 
-import junit.framework.TestCase;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextImpl;
 
 /**
  * Tests {@link SecurityContextImpl}.
  *
  * @author Ben Alex
  */
-public class SecurityContextImplTests extends TestCase {
+public class SecurityContextImplTests {
 	// ~ Constructors
 	// ===================================================================================================
 
@@ -34,24 +35,21 @@ public class SecurityContextImplTests extends TestCase {
 		super();
 	}
 
-	public SecurityContextImplTests(String arg0) {
-		super(arg0);
-	}
-
 	// ~ Methods
 	// ========================================================================================================
-
+	@Test
 	public void testEmptyObjectsAreEquals() {
 		SecurityContextImpl obj1 = new SecurityContextImpl();
 		SecurityContextImpl obj2 = new SecurityContextImpl();
-		assertTrue(obj1.equals(obj2));
+		assertThat(obj1.equals(obj2)).isTrue();
 	}
 
+	@Test
 	public void testSecurityContextCorrectOperation() {
 		SecurityContext context = new SecurityContextImpl();
 		Authentication auth = new UsernamePasswordAuthenticationToken("rod", "koala");
 		context.setAuthentication(auth);
-		assertEquals(auth, context.getAuthentication());
-		assertTrue(context.toString().lastIndexOf("rod") != -1);
+		assertThat(context.getAuthentication()).isEqualTo(auth);
+		assertThat(context.toString().lastIndexOf("rod") != -1).isTrue();
 	}
 }

@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -57,7 +58,6 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.security.web.util.UrlUtils;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.GenericFilterBean;
 
 /**
@@ -90,7 +90,7 @@ import org.springframework.web.filter.GenericFilterBean;
  * User processing filter and add to the filterChainProxy. Note that the filter must come
  * <b>after</b> the <tt>FilterSecurityInteceptor</tt> in the chain, in order to apply the
  * correct constraints to the <tt>switchUserUrl</tt>. Example:
- * 
+ *
  * <pre>
  * &lt;bean id="switchUserProcessingFilter" class="org.springframework.security.web.authentication.switchuser.SwitchUserFilter"&gt;
  *    &lt;property name="userDetailsService" ref="userDetailsService" /&gt;
@@ -102,10 +102,10 @@ import org.springframework.web.filter.GenericFilterBean;
  *
  * @author Mark St.Godard
  *
- * @see org.springframework.security.web.authentication.switchuser.SwitchUserGrantedAuthority
+ * @see SwitchUserGrantedAuthority
  */
-public class SwitchUserFilter extends GenericFilterBean implements
-		ApplicationEventPublisherAware, MessageSourceAware {
+public class SwitchUserFilter extends GenericFilterBean
+		implements ApplicationEventPublisherAware, MessageSourceAware {
 	// ~ Static fields/initializers
 	// =====================================================================================
 
@@ -123,6 +123,7 @@ public class SwitchUserFilter extends GenericFilterBean implements
 	private String targetUrl;
 	private String switchFailureUrl;
 	private String usernameParameter = SPRING_SECURITY_SWITCH_USERNAME_KEY;
+	private String switchAuthorityRole = ROLE_PREVIOUS_ADMINISTRATOR;
 	private SwitchUserAuthorityChanger switchUserAuthorityChanger;
 	private UserDetailsService userDetailsService;
 	private UserDetailsChecker userDetailsChecker = new AccountStatusUserDetailsChecker();
@@ -134,21 +135,23 @@ public class SwitchUserFilter extends GenericFilterBean implements
 
 	@Override
 	public void afterPropertiesSet() {
-		Assert.notNull(userDetailsService, "userDetailsService must be specified");
-		Assert.isTrue(successHandler != null || targetUrl != null,
+		Assert.notNull(this.userDetailsService, "userDetailsService must be specified");
+		Assert.isTrue(this.successHandler != null || this.targetUrl != null,
 				"You must set either a successHandler or the targetUrl");
-		if (targetUrl != null) {
-			Assert.isNull(successHandler,
+		if (this.targetUrl != null) {
+			Assert.isNull(this.successHandler,
 					"You cannot set both successHandler and targetUrl");
-			successHandler = new SimpleUrlAuthenticationSuccessHandler(targetUrl);
+			this.successHandler = new SimpleUrlAuthenticationSuccessHandler(
+					this.targetUrl);
 		}
 
-		if (failureHandler == null) {
-			failureHandler = switchFailureUrl == null ? new SimpleUrlAuthenticationFailureHandler()
-					: new SimpleUrlAuthenticationFailureHandler(switchFailureUrl);
+		if (this.failureHandler == null) {
+			this.failureHandler = this.switchFailureUrl == null
+					? new SimpleUrlAuthenticationFailureHandler()
+					: new SimpleUrlAuthenticationFailureHandler(this.switchFailureUrl);
 		}
 		else {
-			Assert.isNull(switchFailureUrl,
+			Assert.isNull(this.switchFailureUrl,
 					"You cannot set both a switchFailureUrl and a failureHandler");
 		}
 	}
@@ -168,11 +171,12 @@ public class SwitchUserFilter extends GenericFilterBean implements
 				SecurityContextHolder.getContext().setAuthentication(targetUser);
 
 				// redirect to target url
-				successHandler.onAuthenticationSuccess(request, response, targetUser);
+				this.successHandler.onAuthenticationSuccess(request, response,
+						targetUser);
 			}
 			catch (AuthenticationException e) {
-				logger.debug("Switch User failed", e);
-				failureHandler.onAuthenticationFailure(request, response, e);
+				this.logger.debug("Switch User failed", e);
+				this.failureHandler.onAuthenticationFailure(request, response, e);
 			}
 
 			return;
@@ -185,7 +189,7 @@ public class SwitchUserFilter extends GenericFilterBean implements
 			SecurityContextHolder.getContext().setAuthentication(originalUser);
 
 			// redirect to target url
-			successHandler.onAuthenticationSuccess(request, response, originalUser);
+			this.successHandler.onAuthenticationSuccess(request, response, originalUser);
 
 			return;
 		}
@@ -210,29 +214,29 @@ public class SwitchUserFilter extends GenericFilterBean implements
 			throws AuthenticationException {
 		UsernamePasswordAuthenticationToken targetUserRequest;
 
-		String username = request.getParameter(usernameParameter);
+		String username = request.getParameter(this.usernameParameter);
 
 		if (username == null) {
 			username = "";
 		}
 
-		if (logger.isDebugEnabled()) {
-			logger.debug("Attempt to switch to user [" + username + "]");
+		if (this.logger.isDebugEnabled()) {
+			this.logger.debug("Attempt to switch to user [" + username + "]");
 		}
 
-		UserDetails targetUser = userDetailsService.loadUserByUsername(username);
-		userDetailsChecker.check(targetUser);
+		UserDetails targetUser = this.userDetailsService.loadUserByUsername(username);
+		this.userDetailsChecker.check(targetUser);
 
 		// OK, create the switch user token
 		targetUserRequest = createSwitchUserToken(request, targetUser);
 
-		if (logger.isDebugEnabled()) {
-			logger.debug("Switch User Token [" + targetUserRequest + "]");
+		if (this.logger.isDebugEnabled()) {
+			this.logger.debug("Switch User Token [" + targetUserRequest + "]");
 		}
 
 		// publish event
 		if (this.eventPublisher != null) {
-			eventPublisher.publishEvent(new AuthenticationSwitchUserEvent(
+			this.eventPublisher.publishEvent(new AuthenticationSwitchUserEvent(
 					SecurityContextHolder.getContext().getAuthentication(), targetUser));
 		}
 
@@ -256,9 +260,9 @@ public class SwitchUserFilter extends GenericFilterBean implements
 		Authentication current = SecurityContextHolder.getContext().getAuthentication();
 
 		if (null == current) {
-			throw new AuthenticationCredentialsNotFoundException(messages.getMessage(
-					"SwitchUserFilter.noCurrentUser",
-					"No current user associated with this request"));
+			throw new AuthenticationCredentialsNotFoundException(
+					this.messages.getMessage("SwitchUserFilter.noCurrentUser",
+							"No current user associated with this request"));
 		}
 
 		// check to see if the current user did actual switch to another user
@@ -266,10 +270,10 @@ public class SwitchUserFilter extends GenericFilterBean implements
 		Authentication original = getSourceAuthentication(current);
 
 		if (original == null) {
-			logger.debug("Could not find original user Authentication object!");
-			throw new AuthenticationCredentialsNotFoundException(messages.getMessage(
-					"SwitchUserFilter.noOriginalAuthentication",
-					"Could not find original Authentication object"));
+			this.logger.debug("Could not find original user Authentication object!");
+			throw new AuthenticationCredentialsNotFoundException(
+					this.messages.getMessage("SwitchUserFilter.noOriginalAuthentication",
+							"Could not find original Authentication object"));
 		}
 
 		// get the source user details
@@ -282,8 +286,8 @@ public class SwitchUserFilter extends GenericFilterBean implements
 
 		// publish event
 		if (this.eventPublisher != null) {
-			eventPublisher.publishEvent(new AuthenticationSwitchUserEvent(current,
-					originalUser));
+			this.eventPublisher.publishEvent(
+					new AuthenticationSwitchUserEvent(current, originalUser));
 		}
 
 		return original;
@@ -319,14 +323,14 @@ public class SwitchUserFilter extends GenericFilterBean implements
 		}
 
 		GrantedAuthority switchAuthority = new SwitchUserGrantedAuthority(
-				ROLE_PREVIOUS_ADMINISTRATOR, currentAuth);
+				this.switchAuthorityRole, currentAuth);
 
 		// get the original authorities
 		Collection<? extends GrantedAuthority> orig = targetUser.getAuthorities();
 
 		// Allow subclasses to change the authorities to be granted
-		if (switchUserAuthorityChanger != null) {
-			orig = switchUserAuthorityChanger.modifyGrantedAuthorities(targetUser,
+		if (this.switchUserAuthorityChanger != null) {
+			orig = this.switchUserAuthorityChanger.modifyGrantedAuthorities(targetUser,
 					currentAuth, orig);
 		}
 
@@ -339,7 +343,8 @@ public class SwitchUserFilter extends GenericFilterBean implements
 				targetUser.getPassword(), newAuths);
 
 		// set details
-		targetUserRequest.setDetails(authenticationDetailsSource.buildDetails(request));
+		targetUserRequest
+				.setDetails(this.authenticationDetailsSource.buildDetails(request));
 
 		return targetUserRequest;
 	}
@@ -365,8 +370,8 @@ public class SwitchUserFilter extends GenericFilterBean implements
 			// check for switch user type of authority
 			if (auth instanceof SwitchUserGrantedAuthority) {
 				original = ((SwitchUserGrantedAuthority) auth).getSource();
-				logger.debug("Found original switch user granted authority [" + original
-						+ "]");
+				this.logger.debug("Found original switch user granted authority ["
+						+ original + "]");
 			}
 		}
 
@@ -386,7 +391,7 @@ public class SwitchUserFilter extends GenericFilterBean implements
 	protected boolean requiresExitUser(HttpServletRequest request) {
 		String uri = stripUri(request);
 
-		return uri.endsWith(request.getContextPath() + exitUserUrl);
+		return uri.endsWith(request.getContextPath() + this.exitUserUrl);
 	}
 
 	/**
@@ -402,7 +407,7 @@ public class SwitchUserFilter extends GenericFilterBean implements
 	protected boolean requiresSwitchUser(HttpServletRequest request) {
 		String uri = stripUri(request);
 
-		return uri.endsWith(request.getContextPath() + switchUserUrl);
+		return uri.endsWith(request.getContextPath() + this.switchUserUrl);
 	}
 
 	public void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher)
@@ -488,10 +493,8 @@ public class SwitchUserFilter extends GenericFilterBean implements
 	 * @param switchFailureUrl the url to redirect to.
 	 */
 	public void setSwitchFailureUrl(String switchFailureUrl) {
-		Assert.isTrue(
-				StringUtils.hasText(switchUserUrl)
-						&& UrlUtils.isValidRedirectUrl(switchFailureUrl),
-				"switchFailureUrl cannot be empty and must be a valid redirect URL");
+		Assert.isTrue(UrlUtils.isValidRedirectUrl(switchFailureUrl),
+				"switchFailureUrl must be a valid redirect URL");
 		this.switchFailureUrl = switchFailureUrl;
 	}
 
@@ -525,6 +528,17 @@ public class SwitchUserFilter extends GenericFilterBean implements
 	 */
 	public void setUsernameParameter(String usernameParameter) {
 		this.usernameParameter = usernameParameter;
+	}
+
+	/**
+	 * Allows the role of the switchAuthority to be customized.
+	 *
+	 * @param switchAuthorityRole the role name. Defaults to
+	 * {@link #ROLE_PREVIOUS_ADMINISTRATOR}
+	 */
+	public void setSwitchAuthorityRole(String switchAuthorityRole) {
+		Assert.notNull(switchAuthorityRole, "switchAuthorityRole cannot be null");
+		this.switchAuthorityRole = switchAuthorityRole;
 	}
 
 	/**

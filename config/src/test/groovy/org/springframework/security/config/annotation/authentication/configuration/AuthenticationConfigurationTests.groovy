@@ -23,7 +23,9 @@ import org.springframework.context.annotation.Import
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.security.access.annotation.Secured
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager
+import org.springframework.security.authentication.AuthenticationProvider
 import org.springframework.security.authentication.TestingAuthenticationToken
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider
@@ -422,5 +424,95 @@ class AuthenticationConfigurationTests extends BaseSpringSpec {
 		PasswordEncoder passwordEncoder() {
 			new BCryptPasswordEncoder()
 		}
+	}
+
+	def 'gh-3091: Allow Configure AuthenticationProvider'() {
+		setup:
+		AuthenticationProvider ap = Mock()
+		AuthenticationProviderBeanConfig.AP = ap
+		loadConfig(AuthenticationProviderBeanConfig)
+		AuthenticationManager am = context.getBean(AuthenticationConfiguration).getAuthenticationManager()
+		UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("user", "password");
+		User user = new User("user","password",AuthorityUtils.createAuthorityList("ROLE_USER"))
+		when:
+		am.authenticate(token)
+		then:
+		1 * ap.supports(_) >> true
+		1 * ap.authenticate(token) >> new UsernamePasswordAuthenticationToken(user, user.getPassword(), user.getAuthorities())
+	}
+
+	@Configuration
+	@Import([AuthenticationConfiguration, ObjectPostProcessorConfiguration])
+	static class AuthenticationProviderBeanConfig {
+		static AuthenticationProvider AP
+
+		@Bean
+		AuthenticationProvider authenticationProvider() {
+			AP
+		}
+	}
+
+	def 'AuthenticationProvider Bean Prioritized over UserDetailsService'() {
+		setup:
+		UserDetailsService uds = Mock()
+		AuthenticationProvider ap = Mock()
+		AuthenticationProviderBeanAndUserDetailsServiceConfig.AP = ap
+		AuthenticationProviderBeanAndUserDetailsServiceConfig.UDS = uds
+		loadConfig(AuthenticationProviderBeanAndUserDetailsServiceConfig)
+		AuthenticationManager am = context.getBean(AuthenticationConfiguration).getAuthenticationManager()
+		UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken("user", "password");
+		User user = new User("user","password",AuthorityUtils.createAuthorityList("ROLE_USER"))
+		when:
+		am.authenticate(token)
+		then:
+		1 * ap.supports(_) >> true
+		1 * ap.authenticate(token) >> new UsernamePasswordAuthenticationToken(user, user.getPassword(), user.getAuthorities())
+		0 * uds._
+	}
+
+	@Configuration
+	@Import([AuthenticationConfiguration, ObjectPostProcessorConfiguration])
+	static class AuthenticationProviderBeanAndUserDetailsServiceConfig {
+		static AuthenticationProvider AP
+		static UserDetailsService UDS
+
+		@Bean
+		AuthenticationProvider authenticationProvider() {
+			AP
+		}
+
+		@Bean
+		UserDetailsService uds() {
+			UDS
+		}
+	}
+
+	def 'EnableGlobalMethodSecurity configuration uses PreAuthorize does not cause BeanCurrentlyInCreationException'() {
+		when:
+		loadConfig(UsesPreAuthorizeMethodSecurityConfig,AuthenticationManagerBeanConfig)
+		then:
+		noExceptionThrown()
+	}
+
+	@Configuration
+	@EnableGlobalMethodSecurity(prePostEnabled = true)
+	static class UsesPreAuthorizeMethodSecurityConfig {
+		@PreAuthorize("denyAll")
+		void run() {}
+	}
+
+
+	def 'EnableGlobalMethodSecurity uses method security service'() {
+		when:
+		loadConfig(ServicesConfig,UsesPreAuthorizeMethodSecurityConfig,AuthenticationManagerBeanConfig)
+		then:
+		noExceptionThrown()
+	}
+
+	@Configuration
+	@EnableGlobalMethodSecurity(securedEnabled = true)
+	static class UsesServiceMethodSecurityConfig {
+		@Autowired
+		Service service
 	}
 }
