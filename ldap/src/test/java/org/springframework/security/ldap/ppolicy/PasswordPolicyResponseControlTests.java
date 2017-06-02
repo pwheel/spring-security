@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,12 +16,9 @@
 
 package org.springframework.security.ldap.ppolicy;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 
 import org.junit.Test;
-
-import javax.naming.ldap.Control;
-import java.util.*;
 
 /**
  * Tests for <tt>PasswordPolicyResponse</tt>.
@@ -66,7 +64,7 @@ public class PasswordPolicyResponseControlTests {
 	// PasswordPolicyResponseControl ctrl = getPPolicyResponseCtl(ctx);
 	// System.out.println(ctrl);
 	//
-	// assertNotNull(ctrl);
+	// assertThat(ctrl).isNotNull();
 	//
 	// //com.sun.jndi.ldap.LdapPoolManager.showStats(System.out);
 	// }
@@ -90,8 +88,8 @@ public class PasswordPolicyResponseControlTests {
 
 		PasswordPolicyResponseControl ctrl = new PasswordPolicyResponseControl(ctrlBytes);
 
-		assertTrue(ctrl.hasWarning());
-		assertEquals(33, ctrl.getTimeBeforeExpiration());
+		assertThat(ctrl.hasWarning()).isTrue();
+		assertThat(ctrl.getTimeBeforeExpiration()).isEqualTo(33);
 	}
 
 	@Test
@@ -101,8 +99,8 @@ public class PasswordPolicyResponseControlTests {
 
 		PasswordPolicyResponseControl ctrl = new PasswordPolicyResponseControl(ctrlBytes);
 
-		assertTrue(ctrl.hasWarning());
-		assertEquals(496, ctrl.getGraceLoginsRemaining());
+		assertThat(ctrl.hasWarning()).isTrue();
+		assertThat(ctrl.getGraceLoginsRemaining()).isEqualTo(496);
 	}
 
 	static final byte[] OPENLDAP_5_LOGINS_REMAINING_CTRL = { 0x30, 0x05, (byte) 0xA0,
@@ -113,8 +111,8 @@ public class PasswordPolicyResponseControlTests {
 		PasswordPolicyResponseControl ctrl = new PasswordPolicyResponseControl(
 				OPENLDAP_5_LOGINS_REMAINING_CTRL);
 
-		assertTrue(ctrl.hasWarning());
-		assertEquals(5, ctrl.getGraceLoginsRemaining());
+		assertThat(ctrl.hasWarning()).isTrue();
+		assertThat(ctrl.getGraceLoginsRemaining()).isEqualTo(5);
 	}
 
 	static final byte[] OPENLDAP_LOCKED_CTRL = { 0x30, 0x03, (byte) 0xA1, 0x01, 0x01 };
@@ -124,8 +122,8 @@ public class PasswordPolicyResponseControlTests {
 		PasswordPolicyResponseControl ctrl = new PasswordPolicyResponseControl(
 				OPENLDAP_LOCKED_CTRL);
 
-		assertTrue(ctrl.hasError() && ctrl.isLocked());
-		assertFalse(ctrl.hasWarning());
+		assertThat(ctrl.hasError() && ctrl.isLocked()).isTrue();
+		assertThat(ctrl.hasWarning()).isFalse();
 	}
 
 	@Test
@@ -134,7 +132,7 @@ public class PasswordPolicyResponseControlTests {
 
 		PasswordPolicyResponseControl ctrl = new PasswordPolicyResponseControl(ctrlBytes);
 
-		assertTrue(ctrl.hasError() && ctrl.isExpired());
-		assertFalse(ctrl.hasWarning());
+		assertThat(ctrl.hasError() && ctrl.isExpired()).isTrue();
+		assertThat(ctrl.hasWarning()).isFalse();
 	}
 }

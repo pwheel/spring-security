@@ -15,15 +15,14 @@
  */
 package org.springframework.security.config.http;
 
-import static org.springframework.security.config.http.HttpSecurityBeanDefinitionParser.*;
-import static org.springframework.security.config.http.SecurityFilters.*;
-
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
+
+import org.w3c.dom.Element;
 
 import org.springframework.beans.BeanMetadataElement;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -41,6 +40,7 @@ import org.springframework.security.access.vote.AffirmativeBased;
 import org.springframework.security.access.vote.AuthenticatedVoter;
 import org.springframework.security.access.vote.RoleVoter;
 import org.springframework.security.config.Elements;
+import org.springframework.security.config.http.GrantedAuthorityDefaultsParserUtils.AbstractGrantedAuthorityDefaultsBeanFactory;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.access.DefaultWebInvocationPrivilegeEvaluator;
 import org.springframework.security.web.access.channel.ChannelDecisionManagerImpl;
@@ -70,12 +70,30 @@ import org.springframework.security.web.servletapi.SecurityContextHolderAwareReq
 import org.springframework.security.web.session.ConcurrentSessionFilter;
 import org.springframework.security.web.session.SessionManagementFilter;
 import org.springframework.security.web.session.SimpleRedirectInvalidSessionStrategy;
+import org.springframework.security.web.session.SimpleRedirectSessionInformationExpiredStrategy;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.util.xml.DomUtils;
-import org.w3c.dom.Element;
+
+import static org.springframework.security.config.http.HttpSecurityBeanDefinitionParser.ATT_FILTERS;
+import static org.springframework.security.config.http.HttpSecurityBeanDefinitionParser.ATT_HTTP_METHOD;
+import static org.springframework.security.config.http.HttpSecurityBeanDefinitionParser.ATT_PATH_PATTERN;
+import static org.springframework.security.config.http.HttpSecurityBeanDefinitionParser.ATT_REQUEST_MATCHER_REF;
+import static org.springframework.security.config.http.HttpSecurityBeanDefinitionParser.ATT_REQUIRES_CHANNEL;
+import static org.springframework.security.config.http.SecurityFilters.CHANNEL_FILTER;
+import static org.springframework.security.config.http.SecurityFilters.CONCURRENT_SESSION_FILTER;
+import static org.springframework.security.config.http.SecurityFilters.CORS_FILTER;
+import static org.springframework.security.config.http.SecurityFilters.CSRF_FILTER;
+import static org.springframework.security.config.http.SecurityFilters.FILTER_SECURITY_INTERCEPTOR;
+import static org.springframework.security.config.http.SecurityFilters.HEADERS_FILTER;
+import static org.springframework.security.config.http.SecurityFilters.JAAS_API_SUPPORT_FILTER;
+import static org.springframework.security.config.http.SecurityFilters.REQUEST_CACHE_FILTER;
+import static org.springframework.security.config.http.SecurityFilters.SECURITY_CONTEXT_FILTER;
+import static org.springframework.security.config.http.SecurityFilters.SERVLET_API_SUPPORT_FILTER;
+import static org.springframework.security.config.http.SecurityFilters.SESSION_MANAGEMENT_FILTER;
+import static org.springframework.security.config.http.SecurityFilters.WEB_ASYNC_MANAGER_FILTER;
 
 /**
  * Stateful class which helps HttpSecurityBDP to create the configuration for the
@@ -97,7 +115,7 @@ class HttpConfigurationBuilder {
 	private static final String ATT_SESSION_AUTH_STRATEGY_REF = "session-authentication-strategy-ref";
 	private static final String ATT_SESSION_AUTH_ERROR_URL = "session-authentication-error-url";
 	private static final String ATT_SECURITY_CONTEXT_REPOSITORY = "security-context-repository-ref";
-
+	private static final String ATT_INVALID_SESSION_STRATEGY_REF = "invalid-session-strategy-ref";
 	private static final String ATT_DISABLE_URL_REWRITING = "disable-url-rewriting";
 
 	private static final String ATT_ACCESS_MGR = "access-decision-manager-ref";
@@ -127,6 +145,7 @@ class HttpConfigurationBuilder {
 	private BeanReference fsi;
 	private BeanReference requestCache;
 	private BeanDefinition addHeadersFilter;
+	private BeanMetadataElement corsFilter;
 	private BeanDefinition csrfFilter;
 	private BeanMetadataElement csrfLogoutHandler;
 	private BeanMetadataElement csrfAuthStrategy;
@@ -176,6 +195,7 @@ class HttpConfigurationBuilder {
 		createChannelProcessingFilter();
 		createFilterSecurityInterceptor(authenticationManager);
 		createAddHeadersFilter();
+		createCorsFilter();
 	}
 
 	private SessionCreationPolicy createPolicy(String createSession) {
@@ -287,6 +307,7 @@ class HttpConfigurationBuilder {
 
 		String sessionFixationAttribute = null;
 		String invalidSessionUrl = null;
+		String invalidSessionStrategyRef = null;
 		String sessionAuthStratRef = null;
 		String errorUrl = null;
 
@@ -302,12 +323,19 @@ class HttpConfigurationBuilder {
 			sessionFixationAttribute = sessionMgmtElt
 					.getAttribute(ATT_SESSION_FIXATION_PROTECTION);
 			invalidSessionUrl = sessionMgmtElt.getAttribute(ATT_INVALID_SESSION_URL);
+			invalidSessionStrategyRef = sessionMgmtElt.getAttribute(ATT_INVALID_SESSION_STRATEGY_REF);
+
 			sessionAuthStratRef = sessionMgmtElt
 					.getAttribute(ATT_SESSION_AUTH_STRATEGY_REF);
 			errorUrl = sessionMgmtElt.getAttribute(ATT_SESSION_AUTH_ERROR_URL);
 			sessionCtrlElt = DomUtils.getChildElementByTagName(sessionMgmtElt,
 					Elements.CONCURRENT_SESSIONS);
 			sessionControlEnabled = sessionCtrlElt != null;
+
+			if (StringUtils.hasText(invalidSessionUrl) && StringUtils.hasText(invalidSessionStrategyRef)) {
+				pc.getReaderContext().error(ATT_INVALID_SESSION_URL + " attribute cannot be used in combination with" +
+						" the " + ATT_INVALID_SESSION_STRATEGY_REF + " attribute.", sessionMgmtElt);
+			}
 
 			if (sessionControlEnabled) {
 				if (StringUtils.hasText(sessionAuthStratRef)) {
@@ -436,12 +464,16 @@ class HttpConfigurationBuilder {
 
 		}
 
+
+
 		if (StringUtils.hasText(invalidSessionUrl)) {
 			BeanDefinitionBuilder invalidSessionBldr = BeanDefinitionBuilder
 					.rootBeanDefinition(SimpleRedirectInvalidSessionStrategy.class);
 			invalidSessionBldr.addConstructorArgValue(invalidSessionUrl);
 			invalidSession = invalidSessionBldr.getBeanDefinition();
 			sessionMgmtFilter.addPropertyValue("invalidSessionStrategy", invalidSession);
+		} else if (StringUtils.hasText(invalidSessionStrategyRef)) {
+			sessionMgmtFilter.addPropertyReference("invalidSessionStrategy", invalidSessionStrategyRef);
 		}
 
 		sessionMgmtFilter.addConstructorArgReference(sessionAuthStratRef);
@@ -452,6 +484,7 @@ class HttpConfigurationBuilder {
 
 	private void createConcurrencyControlFilterAndSessionRegistry(Element element) {
 		final String ATT_EXPIRY_URL = "expired-url";
+		final String ATT_EXPIRED_SESSION_STRATEGY_REF = "expired-session-strategy-ref";
 		final String ATT_SESSION_REGISTRY_ALIAS = "session-registry-alias";
 		final String ATT_SESSION_REGISTRY_REF = "session-registry-ref";
 
@@ -487,10 +520,20 @@ class HttpConfigurationBuilder {
 		filterBuilder.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
 
 		String expiryUrl = element.getAttribute(ATT_EXPIRY_URL);
+		String expiredSessionStrategyRef = element.getAttribute(ATT_EXPIRED_SESSION_STRATEGY_REF);
+
+		if (StringUtils.hasText(expiryUrl) && StringUtils.hasText(expiredSessionStrategyRef)) {
+			pc.getReaderContext().error("Cannot use 'expired-url' attribute and 'expired-session-strategy-ref'" +
+					" attribute together.", source);
+		}
 
 		if (StringUtils.hasText(expiryUrl)) {
-			WebConfigUtils.validateHttpRedirect(expiryUrl, pc, source);
-			filterBuilder.addConstructorArgValue(expiryUrl);
+			BeanDefinitionBuilder expiredSessionBldr = BeanDefinitionBuilder
+					.rootBeanDefinition(SimpleRedirectSessionInformationExpiredStrategy.class);
+			expiredSessionBldr.addConstructorArgValue(expiryUrl);
+			filterBuilder.addConstructorArgValue(expiredSessionBldr.getBeanDefinition());
+		} else if (StringUtils.hasText(expiredSessionStrategyRef)) {
+			filterBuilder.addConstructorArgReference(expiredSessionStrategyRef);
 		}
 
 		pc.popAndRegisterContainingComponent();
@@ -518,8 +561,7 @@ class HttpConfigurationBuilder {
 		}
 
 		if ("true".equals(provideServletApi)) {
-			servApiFilter = new RootBeanDefinition(
-					SecurityContextHolderAwareRequestFilter.class);
+			servApiFilter = GrantedAuthorityDefaultsParserUtils.registerWithDefaultRolePrefix(pc, SecurityContextHolderAwareRequestFilterBeanFactory.class);
 			servApiFilter.getPropertyValues().add("authenticationManager",
 					authenticationManager);
 		}
@@ -541,7 +583,7 @@ class HttpConfigurationBuilder {
 	}
 
 	private void createChannelProcessingFilter() {
-		ManagedMap<BeanDefinition, BeanDefinition> channelRequestMap = parseInterceptUrlsForChannelSecurity();
+		ManagedMap<BeanMetadataElement, BeanDefinition> channelRequestMap = parseInterceptUrlsForChannelSecurity();
 
 		if (channelRequestMap.isEmpty()) {
 			return;
@@ -595,15 +637,17 @@ class HttpConfigurationBuilder {
 	 * will be empty unless the <tt>requires-channel</tt> attribute has been used on a URL
 	 * path.
 	 */
-	private ManagedMap<BeanDefinition, BeanDefinition> parseInterceptUrlsForChannelSecurity() {
+	private ManagedMap<BeanMetadataElement, BeanDefinition> parseInterceptUrlsForChannelSecurity() {
 
-		ManagedMap<BeanDefinition, BeanDefinition> channelRequestMap = new ManagedMap<BeanDefinition, BeanDefinition>();
+		ManagedMap<BeanMetadataElement, BeanDefinition> channelRequestMap = new ManagedMap<BeanMetadataElement, BeanDefinition>();
 
 		for (Element urlElt : interceptUrls) {
 			String path = urlElt.getAttribute(ATT_PATH_PATTERN);
 			String method = urlElt.getAttribute(ATT_HTTP_METHOD);
+			String matcherRef = urlElt.getAttribute(ATT_REQUEST_MATCHER_REF);
+			boolean hasMatcherRef = StringUtils.hasText(matcherRef);
 
-			if (!StringUtils.hasText(path)) {
+			if (!hasMatcherRef && !StringUtils.hasText(path)) {
 				pc.getReaderContext().error("pattern attribute cannot be empty or null",
 						urlElt);
 			}
@@ -611,7 +655,7 @@ class HttpConfigurationBuilder {
 			String requiredChannel = urlElt.getAttribute(ATT_REQUIRES_CHANNEL);
 
 			if (StringUtils.hasText(requiredChannel)) {
-				BeanDefinition matcher = matcherType.createMatcher(path, method);
+				BeanMetadataElement matcher = hasMatcherRef ? new RuntimeBeanReference(matcherRef) : matcherType.createMatcher(pc, path, method);
 
 				RootBeanDefinition channelAttributes = new RootBeanDefinition(
 						ChannelAttributeFactory.class);
@@ -690,7 +734,7 @@ class HttpConfigurationBuilder {
 			voters.add(expressionVoter.getBeanDefinition());
 		}
 		else {
-			voters.add(new RootBeanDefinition(RoleVoter.class));
+			voters.add(GrantedAuthorityDefaultsParserUtils.registerWithDefaultRolePrefix(pc, RoleVoterBeanFactory.class));
 			voters.add(new RootBeanDefinition(AuthenticatedVoter.class));
 		}
 		accessDecisionMgr = new RootBeanDefinition(AffirmativeBased.class);
@@ -737,6 +781,11 @@ class HttpConfigurationBuilder {
 	private void createAddHeadersFilter() {
 		Element elmt = DomUtils.getChildElementByTagName(httpElt, Elements.HEADERS);
 		this.addHeadersFilter = new HeadersBeanDefinitionParser().parse(elmt, pc);
+	}
+
+	private void createCorsFilter() {
+		Element elmt = DomUtils.getChildElementByTagName(this.httpElt, Elements.CORS);
+		this.corsFilter = new CorsBeanDefinitionParser().parse(elmt, this.pc);
 
 	}
 
@@ -808,6 +857,10 @@ class HttpConfigurationBuilder {
 			filters.add(new OrderDecorator(requestCacheAwareFilter, REQUEST_CACHE_FILTER));
 		}
 
+		if (this.corsFilter != null) {
+			filters.add(new OrderDecorator(this.corsFilter, CORS_FILTER));
+		}
+
 		if (addHeadersFilter != null) {
 			filters.add(new OrderDecorator(addHeadersFilter, HEADERS_FILTER));
 		}
@@ -817,5 +870,23 @@ class HttpConfigurationBuilder {
 		}
 
 		return filters;
+	}
+
+	static class RoleVoterBeanFactory extends AbstractGrantedAuthorityDefaultsBeanFactory {
+		private RoleVoter voter = new RoleVoter();
+
+		public RoleVoter getBean() {
+			voter.setRolePrefix(this.rolePrefix);
+			return voter;
+		}
+	}
+
+	static class SecurityContextHolderAwareRequestFilterBeanFactory extends GrantedAuthorityDefaultsParserUtils.AbstractGrantedAuthorityDefaultsBeanFactory {
+		private SecurityContextHolderAwareRequestFilter filter = new SecurityContextHolderAwareRequestFilter();
+
+		public SecurityContextHolderAwareRequestFilter getBean() {
+			filter.setRolePrefix(this.rolePrefix);
+			return filter;
+		}
 	}
 }

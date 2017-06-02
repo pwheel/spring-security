@@ -1,6 +1,22 @@
+/*
+ * Copyright 2002-2017 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.web.authentication.rememberme;
 
 import java.lang.reflect.Method;
+import java.util.Base64;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -18,7 +34,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.SpringSecurityMessageSource;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.core.authority.mapping.NullAuthoritiesMapper;
-import org.springframework.security.crypto.codec.Base64;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -35,6 +50,7 @@ import org.springframework.util.StringUtils;
  *
  * @author Luke Taylor
  * @author Rob Winch
+ * @author Edd� Mel�ndez
  * @since 2.0
  */
 public abstract class AbstractRememberMeServices implements RememberMeServices,
@@ -60,6 +76,7 @@ public abstract class AbstractRememberMeServices implements RememberMeServices,
 	private AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource = new WebAuthenticationDetailsSource();
 
 	private String cookieName = SPRING_SECURITY_REMEMBER_ME_COOKIE_KEY;
+	private String cookieDomain;
 	private String parameter = DEFAULT_PARAMETER;
 	private boolean alwaysRemember;
 	private String key;
@@ -198,13 +215,16 @@ public abstract class AbstractRememberMeServices implements RememberMeServices,
 			cookieValue = cookieValue + "=";
 		}
 
-		if (!Base64.isBase64(cookieValue.getBytes())) {
+		try {
+			Base64.getDecoder().decode(cookieValue.getBytes());
+		}
+		catch (IllegalArgumentException e) {
 			throw new InvalidCookieException(
 					"Cookie token was not Base64 encoded; value was '" + cookieValue
 							+ "'");
 		}
 
-		String cookieAsPlainText = new String(Base64.decode(cookieValue.getBytes()));
+		String cookieAsPlainText = new String(Base64.getDecoder().decode(cookieValue.getBytes()));
 
 		String[] tokens = StringUtils.delimitedListToStringArray(cookieAsPlainText,
 				DELIMITER);
@@ -239,7 +259,7 @@ public abstract class AbstractRememberMeServices implements RememberMeServices,
 
 		String value = sb.toString();
 
-		sb = new StringBuilder(new String(Base64.encode(value.getBytes())));
+		sb = new StringBuilder(new String(Base64.getEncoder().encode(value.getBytes())));
 
 		while (sb.charAt(sb.length() - 1) == '=') {
 			sb.deleteCharAt(sb.length() - 1);
@@ -347,7 +367,9 @@ public abstract class AbstractRememberMeServices implements RememberMeServices,
 		Cookie cookie = new Cookie(cookieName, null);
 		cookie.setMaxAge(0);
 		cookie.setPath(getCookiePath(request));
-
+		if (cookieDomain != null) {
+			cookie.setDomain(cookieDomain);
+		}
 		response.addCookie(cookie);
 	}
 
@@ -370,7 +392,9 @@ public abstract class AbstractRememberMeServices implements RememberMeServices,
 		Cookie cookie = new Cookie(cookieName, cookieValue);
 		cookie.setMaxAge(maxAge);
 		cookie.setPath(getCookiePath(request));
-
+		if (cookieDomain != null) {
+			cookie.setDomain(cookieDomain);
+		}
 		if (maxAge < 1) {
 			cookie.setVersion(1);
 		}
@@ -413,6 +437,11 @@ public abstract class AbstractRememberMeServices implements RememberMeServices,
 	public void setCookieName(String cookieName) {
 		Assert.hasLength(cookieName, "Cookie name cannot be empty or null");
 		this.cookieName = cookieName;
+	}
+
+	public void setCookieDomain(String cookieDomain) {
+		Assert.hasLength(cookieDomain, "Cookie domain cannot be empty or null");
+		this.cookieDomain = cookieDomain;
 	}
 
 	protected String getCookieName() {

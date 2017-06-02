@@ -1,3 +1,18 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.context;
 
 import java.util.Random;
@@ -27,17 +42,17 @@ public class SecurityContextHolderMTTests extends TestCase{
 
 	public void testSynchronizationCustomStrategyLoading() {
 		SecurityContextHolder.setStrategyName(InheritableThreadLocalSecurityContextHolderStrategy.class.getName());
-		assertTrue(new SecurityContextHolder().toString()
+		assertThat(new SecurityContextHolder().toString().isTrue()
 											.lastIndexOf("SecurityContextHolder[strategy='org.springframework.security.context.InheritableThreadLocalSecurityContextHolderStrategy'") != -1);
 		loadStartAndWaitForThreads(true, "Main_", NUM_THREADS, false, true);
-		assertEquals("Thread errors detected; review log output for details", 0, errors);
+		assertThat(errors).as("Thread errors detected; review log output for details").isEqualTo(0);
 	}
 
 	public void testSynchronizationGlobal() throws Exception {
 		SecurityContextHolder.clearContext();
 		SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_GLOBAL);
 		loadStartAndWaitForThreads(true, "Main_", NUM_THREADS, true, false);
-		assertEquals("Thread errors detected; review log output for details", 0, errors);
+		assertThat(errors).as("Thread errors detected; review log output for details").isEqualTo(0);
 	}
 
 	public void testSynchronizationInheritableThreadLocal()
@@ -45,14 +60,14 @@ public class SecurityContextHolderMTTests extends TestCase{
 		SecurityContextHolder.clearContext();
 		SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
 		loadStartAndWaitForThreads(true, "Main_", NUM_THREADS, false, true);
-		assertEquals("Thread errors detected; review log output for details", 0, errors);
+		assertThat(errors).as("Thread errors detected; review log output for details").isEqualTo(0);
 	}
 
 	public void testSynchronizationThreadLocal() throws Exception {
 		SecurityContextHolder.clearContext();
 		SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_THREADLOCAL);
 		loadStartAndWaitForThreads(true, "Main_", NUM_THREADS, false, false);
-		assertEquals("Thread errors detected; review log output for details", 0, errors);
+		assertThat(errors).as("Thread errors detected; review log output for details").isEqualTo(0);
 	}
 
 	private void startAndRun(Thread[] threads) {

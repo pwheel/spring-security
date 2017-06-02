@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,7 +25,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 
 /**
  * @author Filip Hanik
@@ -71,9 +72,9 @@ public class NestedLdapAuthoritiesPopulatorTests extends AbstractLdapIntegration
 				"uid=scaladude,ou=people,dc=springframework,dc=org");
 		Collection<GrantedAuthority> authorities = populator.getGrantedAuthorities(ctx,
 				"scaladude");
-		assertEquals(5, authorities.size());
-		assertEquals(Arrays.asList(javaDevelopers, scalaDevelopers,
-				circularJavaDevelopers, jDevelopers, groovyDevelopers), authorities);
+		assertThat(authorities).hasSize(5);
+		assertThat(Arrays.asList(javaDevelopers, scalaDevelopers,
+				circularJavaDevelopers, jDevelopers, groovyDevelopers)).isEqualTo(authorities);
 	}
 
 	@Test
@@ -82,9 +83,8 @@ public class NestedLdapAuthoritiesPopulatorTests extends AbstractLdapIntegration
 				"uid=javadude,ou=people,dc=springframework,dc=org");
 		Collection<GrantedAuthority> authorities = populator.getGrantedAuthorities(ctx,
 				"javadude");
-		assertEquals(3, authorities.size());
-		assertEquals(Arrays.asList(javaDevelopers, circularJavaDevelopers, jDevelopers),
-				authorities);
+		assertThat(authorities).hasSize(3);
+		assertThat(authorities).contains(javaDevelopers);
 	}
 
 	@Test
@@ -94,8 +94,8 @@ public class NestedLdapAuthoritiesPopulatorTests extends AbstractLdapIntegration
 				"uid=scaladude,ou=people,dc=springframework,dc=org");
 		Collection<GrantedAuthority> authorities = populator.getGrantedAuthorities(ctx,
 				"scaladude");
-		assertEquals(1, authorities.size());
-		assertEquals(Arrays.asList(scalaDevelopers), authorities);
+		assertThat(authorities).hasSize(1);
+		assertThat(authorities).isEqualTo(Arrays.asList(scalaDevelopers));
 	}
 
 	@Test
@@ -104,9 +104,9 @@ public class NestedLdapAuthoritiesPopulatorTests extends AbstractLdapIntegration
 				"uid=groovydude,ou=people,dc=springframework,dc=org");
 		Collection<GrantedAuthority> authorities = populator.getGrantedAuthorities(ctx,
 				"groovydude");
-		assertEquals(4, authorities.size());
-		assertEquals(Arrays.asList(javaDevelopers, circularJavaDevelopers, jDevelopers,
-				groovyDevelopers), authorities);
+		assertThat(authorities).hasSize(4);
+		assertThat(authorities).isEqualTo(Arrays.asList(javaDevelopers, circularJavaDevelopers, jDevelopers,
+				groovyDevelopers));
 	}
 
 	@Test
@@ -117,34 +117,31 @@ public class NestedLdapAuthoritiesPopulatorTests extends AbstractLdapIntegration
 				"uid=closuredude,ou=people,dc=springframework,dc=org");
 		Collection<GrantedAuthority> authorities = populator.getGrantedAuthorities(ctx,
 				"closuredude");
-		assertEquals(5, authorities.size());
-		assertEquals(Arrays.asList(closureDevelopers, javaDevelopers,
-				circularJavaDevelopers, jDevelopers, groovyDevelopers), authorities);
+		assertThat(authorities).hasSize(5);
+		assertThat(authorities).isEqualTo(Arrays.asList(closureDevelopers, javaDevelopers,
+				circularJavaDevelopers, jDevelopers, groovyDevelopers));
 
 		LdapAuthority[] ldapAuthorities = authorities.toArray(new LdapAuthority[0]);
-		assertEquals(5, ldapAuthorities.length);
+		assertThat(ldapAuthorities.length).isEqualTo(5);
 		// closure group
-		assertTrue(ldapAuthorities[0].getAttributes().containsKey("member"));
-		assertNotNull(ldapAuthorities[0].getAttributes().get("member"));
-		assertEquals(1, ldapAuthorities[0].getAttributes().get("member").size());
-		assertEquals("uid=closuredude,ou=people,dc=springframework,dc=org",
-				ldapAuthorities[0].getFirstAttributeValue("member"));
+		assertThat(ldapAuthorities[0].getAttributes().containsKey("member")).isTrue();
+		assertThat(ldapAuthorities[0].getAttributes().get("member")).isNotNull();
+		assertThat(ldapAuthorities[0].getAttributes().get("member")).hasSize(1);
+		assertThat(ldapAuthorities[0].getFirstAttributeValue("member")).isEqualTo("uid=closuredude,ou=people,dc=springframework,dc=org");
 
 		// java group
-		assertTrue(ldapAuthorities[1].getAttributes().containsKey("member"));
-		assertNotNull(ldapAuthorities[1].getAttributes().get("member"));
-		assertEquals(3, ldapAuthorities[1].getAttributes().get("member").size());
-		assertEquals(groovyDevelopers.getDn(),
-				ldapAuthorities[1].getFirstAttributeValue("member"));
-		assertEquals(new String[] { groovyDevelopers.getDn(), scalaDevelopers.getDn(),
-				"uid=javadude,ou=people,dc=springframework,dc=org" }, ldapAuthorities[1]
+		assertThat(ldapAuthorities[1].getAttributes().containsKey("member")).isTrue();
+		assertThat(ldapAuthorities[1].getAttributes().get("member")).isNotNull();
+		assertThat(ldapAuthorities[1].getAttributes().get("member")).hasSize(3);
+		assertThat(groovyDevelopers.getDn()).isEqualTo(ldapAuthorities[1].getFirstAttributeValue("member"));
+		assertThat(scalaDevelopers.getDn()).isEqualTo(ldapAuthorities[2]
 				.getAttributes().get("member"));
 
 		// test non existent attribute
-		assertNull(ldapAuthorities[2].getFirstAttributeValue("test"));
-		assertNotNull(ldapAuthorities[2].getAttributeValues("test"));
-		assertEquals(0, ldapAuthorities[2].getAttributeValues("test").size());
+		assertThat(ldapAuthorities[2].getFirstAttributeValue("test")).isNull();
+		assertThat(ldapAuthorities[2].getAttributeValues("test")).isNotNull();
+		assertThat(ldapAuthorities[2].getAttributeValues("test")).isEmpty();
 		// test role name
-		assertEquals(jDevelopers.getAuthority(), ldapAuthorities[3].getAuthority());
+		assertThat(ldapAuthorities[3].getAuthority()).isEqualTo(jDevelopers.getAuthority());
 	}
 }

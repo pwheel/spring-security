@@ -1,19 +1,30 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.acls.afterinvocation;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
+
+import static org.assertj.core.api.Assertions.*;
+
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.when;
 
 import org.junit.Test;
 import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.access.SecurityConfig;
 import org.springframework.security.acls.model.*;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.SpringSecurityMessageSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,13 +53,13 @@ public class AclEntryAfterInvocationCollectionFilteringProviderTests {
 		Object returned = provider.decide(mock(Authentication.class), new Object(),
 				SecurityConfig.createList("AFTER_ACL_COLLECTION_READ"), new ArrayList(
 						Arrays.asList(new Object(), new Object())));
-		assertTrue(returned instanceof List);
-		assertTrue(((List) returned).isEmpty());
+		assertThat(returned).isInstanceOf(List.class);
+		assertThat(((List) returned)).isEmpty();
 		returned = provider.decide(mock(Authentication.class), new Object(),
 				SecurityConfig.createList("UNSUPPORTED", "AFTER_ACL_COLLECTION_READ"),
 				new Object[] { new Object(), new Object() });
-		assertTrue(returned instanceof Object[]);
-		assertTrue(((Object[]) returned).length == 0);
+		assertThat(returned instanceof Object[]).isTrue();
+		assertThat(((Object[]) returned).length == 0).isTrue();
 	}
 
 	@Test
@@ -57,8 +68,8 @@ public class AclEntryAfterInvocationCollectionFilteringProviderTests {
 				mock(AclService.class), Arrays.asList(mock(Permission.class)));
 		Object returned = new Object();
 
-		assertSame(
-				returned,
+		assertThat(returned)
+			.isSameAs(
 				provider.decide(mock(Authentication.class), new Object(),
 						Collections.<ConfigAttribute> emptyList(), returned));
 	}
@@ -69,8 +80,9 @@ public class AclEntryAfterInvocationCollectionFilteringProviderTests {
 		AclEntryAfterInvocationCollectionFilteringProvider provider = new AclEntryAfterInvocationCollectionFilteringProvider(
 				service, Arrays.asList(mock(Permission.class)));
 
-		assertNull(provider.decide(mock(Authentication.class), new Object(),
-				SecurityConfig.createList("AFTER_ACL_COLLECTION_READ"), null));
+		assertThat(provider.decide(mock(Authentication.class), new Object(),
+				SecurityConfig.createList("AFTER_ACL_COLLECTION_READ"), null))
+				.isNull();;
 		verify(service, never()).readAclById(any(ObjectIdentity.class), any(List.class));
 	}
 

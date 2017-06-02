@@ -44,6 +44,7 @@ import org.springframework.security.web.savedrequest.RequestCacheAwareFilter;
 import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter;
 import org.springframework.security.web.session.ConcurrentSessionFilter;
 import org.springframework.security.web.session.SessionManagementFilter;
+import org.springframework.web.filter.CorsFilter;
 
 /**
  * An internal use only {@link Comparator} that sorts the Security {@link Filter}
@@ -70,9 +71,15 @@ final class FilterComparator implements Comparator<Filter>, Serializable {
 		order += STEP;
 		put(HeaderWriterFilter.class, order);
 		order += STEP;
+		put(CorsFilter.class, order);
+		order += STEP;
 		put(CsrfFilter.class, order);
 		order += STEP;
 		put(LogoutFilter.class, order);
+		order += STEP;
+		filterToOrder.put(
+			"org.springframework.security.oauth2.client.authentication.AuthorizationCodeRequestRedirectFilter",
+			order);
 		order += STEP;
 		put(X509AuthenticationFilter.class, order);
 		order += STEP;
@@ -80,6 +87,10 @@ final class FilterComparator implements Comparator<Filter>, Serializable {
 		order += STEP;
 		filterToOrder.put("org.springframework.security.cas.web.CasAuthenticationFilter",
 				order);
+		order += STEP;
+		filterToOrder.put(
+			"org.springframework.security.oauth2.client.authentication.AuthorizationCodeAuthenticationProcessingFilter",
+			order);
 		order += STEP;
 		put(UsernamePasswordAuthenticationFilter.class, order);
 		order += STEP;
@@ -147,6 +158,23 @@ final class FilterComparator implements Comparator<Filter>, Serializable {
 		}
 
 		put(filter, position + 1);
+	}
+
+	/**
+	 * Registers a {@link Filter} to exist at a particular {@link Filter} position
+	 * @param filter the {@link Filter} to register
+	 * @param atFilter the {@link Filter} that is already registered and that
+	 * {@code filter} should be placed at.
+	 */
+	public void registerAt(Class<? extends Filter> filter,
+			Class<? extends Filter> atFilter) {
+		Integer position = getOrder(atFilter);
+		if (position == null) {
+			throw new IllegalArgumentException(
+					"Cannot register after unregistered Filter " + atFilter);
+		}
+
+		put(filter, position);
 	}
 
 	/**

@@ -15,7 +15,7 @@
  */
 package org.springframework.security.test.web.servlet.request;
 
-import static org.fest.assertions.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.logout;
 
 import org.junit.Before;
@@ -37,7 +37,7 @@ public class SecurityMockMvcRequestBuildersFormLogoutTests {
 	public void defaults() throws Exception {
 		MockHttpServletRequest request = logout().buildRequest(servletContext);
 
-		CsrfToken token = (CsrfToken) request.getAttribute(CsrfRequestPostProcessor.TestCsrfTokenRepository.ATTR_NAME);
+		CsrfToken token = (CsrfToken) request.getAttribute(CsrfRequestPostProcessor.TestCsrfTokenRepository.TOKEN_ATTR_NAME);
 
 		assertThat(request.getMethod()).isEqualTo("POST");
 		assertThat(request.getParameter(token.getParameterName())).isEqualTo(
@@ -50,7 +50,7 @@ public class SecurityMockMvcRequestBuildersFormLogoutTests {
 		MockHttpServletRequest request = logout("/admin/logout").buildRequest(
 				servletContext);
 
-		CsrfToken token = (CsrfToken) request.getAttribute(CsrfRequestPostProcessor.TestCsrfTokenRepository.ATTR_NAME);
+		CsrfToken token = (CsrfToken) request.getAttribute(CsrfRequestPostProcessor.TestCsrfTokenRepository.TOKEN_ATTR_NAME);
 
 		assertThat(request.getMethod()).isEqualTo("POST");
 		assertThat(request.getParameter(token.getParameterName())).isEqualTo(

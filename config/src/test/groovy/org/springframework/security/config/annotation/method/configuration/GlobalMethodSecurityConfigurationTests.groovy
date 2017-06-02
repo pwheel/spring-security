@@ -15,17 +15,23 @@
  */
 package org.springframework.security.config.annotation.method.configuration
 
+
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl
+
 import java.lang.reflect.Proxy;
 
 import org.junit.After;
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.security.config.annotation.authentication.configurers.GlobalAuthenticationConfigurerAdapter
+import org.springframework.security.config.annotation.method.configuration.NamespaceGlobalMethodSecurityTests.BaseMethodConfig;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
+import org.springframework.security.config.core.GrantedAuthorityDefaults;
 
 import javax.sql.DataSource
 
-import static org.fest.assertions.Assertions.assertThat
+import static org.assertj.core.api.Assertions.*
 import static org.junit.Assert.fail
 
 import org.aopalliance.intercept.MethodInterceptor
@@ -426,6 +432,92 @@ public class GlobalMethodSecurityConfigurationTests extends BaseSpringSpec {
 		@Autowired
 		public void configureGlobal(AuthenticationManagerBuilder auth) {
 			auth.inMemoryAuthentication()
+		}
+	}
+
+	// gh-3797
+	def preAuthorizeBeanSpel() {
+		setup:
+			SecurityContextHolder.getContext().setAuthentication(
+				new TestingAuthenticationToken("user", "password","ROLE_USER"))
+			context = new AnnotationConfigApplicationContext(PreAuthorizeBeanSpelConfig)
+			BeanSpelService service = context.getBean(BeanSpelService)
+		when:
+			service.run(true)
+		then:
+			noExceptionThrown()
+		when:
+			service.run(false)
+		then:
+			thrown(AccessDeniedException)
+	}
+
+	@EnableGlobalMethodSecurity(prePostEnabled = true)
+	@Configuration
+	public static class PreAuthorizeBeanSpelConfig extends BaseMethodConfig {
+		@Bean
+		BeanSpelService service() {
+			return new BeanSpelService();
+		}
+		@Bean
+		BeanSpelSecurity security() {
+			return new BeanSpelSecurity();
+		}
+	}
+
+	static class BeanSpelService {
+		@PreAuthorize("@security.check(#arg)")
+		void run(boolean arg) {}
+	}
+
+	static class BeanSpelSecurity {
+		public boolean check(boolean arg) {
+			return arg;
+		}
+	}
+
+	// gh-3394
+	def roleHierarchy() {
+		setup:
+			SecurityContextHolder.getContext().setAuthentication(
+				new TestingAuthenticationToken("user", "password","ROLE_USER"))
+			context = new AnnotationConfigApplicationContext(RoleHierarchyConfig)
+			MethodSecurityService service = context.getBean(MethodSecurityService)
+		when:
+			service.preAuthorizeAdmin()
+		then:
+			noExceptionThrown()
+	}
+
+	@EnableGlobalMethodSecurity(prePostEnabled = true)
+	@Configuration
+	public static class RoleHierarchyConfig extends BaseMethodConfig {
+		@Bean
+		RoleHierarchy roleHierarchy() {
+			return new RoleHierarchyImpl(hierarchy:"ROLE_USER > ROLE_ADMIN")
+		}
+	}
+
+	def "GrantedAuthorityDefaults autowires"() {
+		when:
+			loadConfig(CustomGrantedAuthorityConfig)
+			def preAdviceVoter = context.getBean(MethodInterceptor).accessDecisionManager.decisionVoters.find { it instanceof PreInvocationAuthorizationAdviceVoter}
+		then:
+		preAdviceVoter.preAdvice.expressionHandler.defaultRolePrefix == "ROLE:"
+	}
+
+	@EnableGlobalMethodSecurity(prePostEnabled = true)
+	static class CustomGrantedAuthorityConfig extends GlobalMethodSecurityConfiguration {
+
+		@Override
+		protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+			auth
+				.inMemoryAuthentication()
+		}
+
+		@Bean
+		public GrantedAuthorityDefaults ga() {
+			return new GrantedAuthorityDefaults("ROLE:")
 		}
 	}
 }

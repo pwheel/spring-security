@@ -91,7 +91,20 @@ class ExceptionHandlingConfigurerTests extends BaseSpringSpec {
 			loadConfig(HttpBasicAndFormLoginEntryPointsConfig)
 			DelegatingAuthenticationEntryPoint delegateEntryPoint = findFilter(ExceptionTranslationFilter).authenticationEntryPoint
 		then:
-			delegateEntryPoint.entryPoints.keySet().collect {it.contentNegotiationStrategy.class} == [HeaderContentNegotiationStrategy,HeaderContentNegotiationStrategy]
+			def entryPoints = delegateEntryPoint.entryPoints.keySet() as List
+			entryPoints[0].requestMatchers[1].requestMatchers[1].contentNegotiationStrategy.class == HeaderContentNegotiationStrategy
+			entryPoints[1].requestMatchers[1].contentNegotiationStrategy.class == HeaderContentNegotiationStrategy
+	}
+
+	def "401 for text/plain and X-Requested-With:XMLHttpRequest"() {
+		setup:
+			loadConfig(HttpBasicAndFormLoginEntryPointsConfig)
+		when:
+			request.addHeader("Accept", MediaType.TEXT_PLAIN_VALUE)
+			request.addHeader("X-Requested-With", "XMLHttpRequest")
+			springSecurityFilterChain.doFilter(request,response,chain)
+		then:
+			response.status == HttpServletResponse.SC_UNAUTHORIZED
 	}
 
 	@EnableWebSecurity
@@ -123,7 +136,9 @@ class ExceptionHandlingConfigurerTests extends BaseSpringSpec {
 			loadConfig(OverrideContentNegotiationStrategySharedObjectConfig)
 			DelegatingAuthenticationEntryPoint delegateEntryPoint = findFilter(ExceptionTranslationFilter).authenticationEntryPoint
 		then:
-			delegateEntryPoint.entryPoints.keySet().collect {it.contentNegotiationStrategy} == [OverrideContentNegotiationStrategySharedObjectConfig.CNS,OverrideContentNegotiationStrategySharedObjectConfig.CNS]
+			def entryPoints = delegateEntryPoint.entryPoints.keySet() as List
+			entryPoints[0].requestMatchers[1].contentNegotiationStrategy == OverrideContentNegotiationStrategySharedObjectConfig.CNS
+			entryPoints[1].requestMatchers[1].requestMatchers[1].contentNegotiationStrategy == OverrideContentNegotiationStrategySharedObjectConfig.CNS
 	}
 
 	def "Override ContentNegotiationStrategy with @Bean"() {

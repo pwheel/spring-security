@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,8 +16,7 @@
 
 package org.springframework.security.web.access;
 
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.*;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import org.junit.Before;
@@ -67,8 +67,8 @@ public class DefaultWebInvocationPrivilegeEvaluatorTests {
 		DefaultWebInvocationPrivilegeEvaluator wipe = new DefaultWebInvocationPrivilegeEvaluator(
 				interceptor);
 		when(ods.getAttributes(anyObject())).thenReturn(null);
-		assertTrue(wipe.isAllowed("/context", "/foo/index.jsp", "GET",
-				mock(Authentication.class)));
+		assertThat(wipe.isAllowed("/context", "/foo/index.jsp", "GET",
+				mock(Authentication.class))).isTrue();
 	}
 
 	@Test
@@ -78,29 +78,29 @@ public class DefaultWebInvocationPrivilegeEvaluatorTests {
 				interceptor);
 		when(ods.getAttributes(anyObject())).thenReturn(null);
 		interceptor.setRejectPublicInvocations(true);
-		assertFalse(wipe.isAllowed("/context", "/foo/index.jsp", "GET",
-				mock(Authentication.class)));
+		assertThat(wipe.isAllowed("/context", "/foo/index.jsp", "GET",
+				mock(Authentication.class))).isFalse();
 	}
 
 	@Test
 	public void deniesAccessIfAuthenticationIsNull() throws Exception {
 		DefaultWebInvocationPrivilegeEvaluator wipe = new DefaultWebInvocationPrivilegeEvaluator(
 				interceptor);
-		assertFalse(wipe.isAllowed("/foo/index.jsp", null));
+		assertThat(wipe.isAllowed("/foo/index.jsp", null)).isFalse();
 	}
 
 	@Test
-	public void allowsAccessIfAccessDecisionMangerDoes() throws Exception {
+	public void allowsAccessIfAccessDecisionManagerDoes() throws Exception {
 		Authentication token = new TestingAuthenticationToken("test", "Password",
 				"MOCK_INDEX");
 		DefaultWebInvocationPrivilegeEvaluator wipe = new DefaultWebInvocationPrivilegeEvaluator(
 				interceptor);
-		assertTrue(wipe.isAllowed("/foo/index.jsp", token));
+		assertThat(wipe.isAllowed("/foo/index.jsp", token)).isTrue();
 	}
 
 	@SuppressWarnings("unchecked")
 	@Test
-	public void deniesAccessIfAccessDecisionMangerDoes() throws Exception {
+	public void deniesAccessIfAccessDecisionManagerDoes() throws Exception {
 		Authentication token = new TestingAuthenticationToken("test", "Password",
 				"MOCK_INDEX");
 		DefaultWebInvocationPrivilegeEvaluator wipe = new DefaultWebInvocationPrivilegeEvaluator(
@@ -109,6 +109,6 @@ public class DefaultWebInvocationPrivilegeEvaluatorTests {
 		doThrow(new AccessDeniedException("")).when(adm).decide(
 				any(Authentication.class), anyObject(), anyList());
 
-		assertFalse(wipe.isAllowed("/foo/index.jsp", token));
+		assertThat(wipe.isAllowed("/foo/index.jsp", token)).isFalse();
 	}
 }

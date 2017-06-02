@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,19 +16,18 @@
 
 package org.springframework.security.access.vote;
 
-import junit.framework.TestCase;
-
-import org.springframework.security.access.AccessDecisionVoter;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.ConfigAttribute;
-import org.springframework.security.access.SecurityConfig;
-import org.springframework.security.access.vote.AbstractAccessDecisionManager;
-import org.springframework.security.access.vote.RoleVoter;
-import org.springframework.security.core.Authentication;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Vector;
+
+import org.junit.Test;
+import org.springframework.security.access.AccessDecisionVoter;
+import org.springframework.security.access.ConfigAttribute;
+import org.springframework.security.access.SecurityConfig;
+import org.springframework.security.core.Authentication;
 
 /**
  * Tests {@link AbstractAccessDecisionManager}.
@@ -35,21 +35,22 @@ import java.util.Vector;
  * @author Ben Alex
  */
 @SuppressWarnings("unchecked")
-public class AbstractAccessDecisionManagerTests extends TestCase {
+public class AbstractAccessDecisionManagerTests {
 
 	// ~ Methods
 	// ========================================================================================================
-
+	@Test
 	public void testAllowIfAccessDecisionManagerDefaults() {
 		List list = new Vector();
 		DenyAgainVoter denyVoter = new DenyAgainVoter();
 		list.add(denyVoter);
 		MockDecisionManagerImpl mock = new MockDecisionManagerImpl(list);
-		assertTrue(!mock.isAllowIfAllAbstainDecisions()); // default
+		assertThat(!mock.isAllowIfAllAbstainDecisions()).isTrue(); // default
 		mock.setAllowIfAllAbstainDecisions(true);
-		assertTrue(mock.isAllowIfAllAbstainDecisions()); // changed
+		assertThat(mock.isAllowIfAllAbstainDecisions()).isTrue(); // changed
 	}
 
+	@Test
 	public void testDelegatesSupportsClassRequests() throws Exception {
 		List list = new Vector();
 		list.add(new DenyVoter());
@@ -57,10 +58,11 @@ public class AbstractAccessDecisionManagerTests extends TestCase {
 
 		MockDecisionManagerImpl mock = new MockDecisionManagerImpl(list);
 
-		assertTrue(mock.supports(String.class));
-		assertTrue(!mock.supports(Integer.class));
+		assertThat(mock.supports(String.class)).isTrue();
+		assertThat(!mock.supports(Integer.class)).isTrue();
 	}
 
+	@Test
 	public void testDelegatesSupportsRequests() throws Exception {
 		List list = new Vector();
 		DenyVoter voter = new DenyVoter();
@@ -71,12 +73,13 @@ public class AbstractAccessDecisionManagerTests extends TestCase {
 		MockDecisionManagerImpl mock = new MockDecisionManagerImpl(list);
 
 		ConfigAttribute attr = new SecurityConfig("DENY_AGAIN_FOR_SURE");
-		assertTrue(mock.supports(attr));
+		assertThat(mock.supports(attr)).isTrue();
 
 		ConfigAttribute badAttr = new SecurityConfig("WE_DONT_SUPPORT_THIS");
-		assertTrue(!mock.supports(badAttr));
+		assertThat(!mock.supports(badAttr)).isTrue();
 	}
 
+	@Test
 	public void testProperlyStoresListOfVoters() throws Exception {
 		List list = new Vector();
 		DenyVoter voter = new DenyVoter();
@@ -84,9 +87,10 @@ public class AbstractAccessDecisionManagerTests extends TestCase {
 		list.add(voter);
 		list.add(denyVoter);
 		MockDecisionManagerImpl mock = new MockDecisionManagerImpl(list);
-		assertEquals(list.size(), mock.getDecisionVoters().size());
+		assertThat(mock.getDecisionVoters().size()).isEqualTo(list.size());
 	}
 
+	@Test
 	public void testRejectsEmptyList() throws Exception {
 		List list = new Vector();
 
@@ -95,32 +99,35 @@ public class AbstractAccessDecisionManagerTests extends TestCase {
 			fail("Should have thrown IllegalArgumentException");
 		}
 		catch (IllegalArgumentException expected) {
-			assertTrue(true);
+
 		}
 	}
 
+	@Test
 	public void testRejectsNullVotersList() throws Exception {
 		try {
 			new MockDecisionManagerImpl(null);
 			fail("Should have thrown IllegalArgumentException");
 		}
 		catch (IllegalArgumentException expected) {
-			assertTrue(true);
+
 		}
 	}
 
+	@Test
 	public void testRoleVoterAlwaysReturnsTrueToSupports() {
 		RoleVoter rv = new RoleVoter();
-		assertTrue(rv.supports(String.class));
+		assertThat(rv.supports(String.class)).isTrue();
 	}
 
+	@Test
 	public void testWillNotStartIfDecisionVotersNotSet() throws Exception {
 		try {
 			new MockDecisionManagerImpl(null);
 			fail("Should have thrown IllegalArgumentException");
 		}
 		catch (IllegalArgumentException expected) {
-			assertTrue(true);
+
 		}
 	}
 
@@ -128,6 +135,7 @@ public class AbstractAccessDecisionManagerTests extends TestCase {
 	// ==================================================================================================
 
 	private class MockDecisionManagerImpl extends AbstractAccessDecisionManager {
+
 		protected MockDecisionManagerImpl(
 				List<AccessDecisionVoter<? extends Object>> decisionVoters) {
 			super(decisionVoters);
@@ -139,6 +147,7 @@ public class AbstractAccessDecisionManagerTests extends TestCase {
 	}
 
 	private class MockStringOnlyVoter implements AccessDecisionVoter<Object> {
+
 		public boolean supports(Class<?> clazz) {
 			return String.class.isAssignableFrom(clazz);
 		}

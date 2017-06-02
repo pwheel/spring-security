@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.util.Map;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AdviceMode;
@@ -43,6 +45,7 @@ import org.springframework.security.access.expression.method.ExpressionBasedAnno
 import org.springframework.security.access.expression.method.ExpressionBasedPostInvocationAdvice;
 import org.springframework.security.access.expression.method.ExpressionBasedPreInvocationAdvice;
 import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.intercept.AfterInvocationManager;
 import org.springframework.security.access.intercept.AfterInvocationProviderManager;
 import org.springframework.security.access.intercept.RunAsManager;
@@ -63,6 +66,7 @@ import org.springframework.security.authentication.DefaultAuthenticationEventPub
 import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.core.GrantedAuthorityDefaults;
 import org.springframework.util.Assert;
 
 /**
@@ -71,11 +75,13 @@ import org.springframework.util.Assert;
  * {@link EnableGlobalMethodSecurity} annotation on the subclass.
  *
  * @author Rob Winch
+ * @author Eddú Meléndez
  * @since 3.2
  * @see EnableGlobalMethodSecurity
  */
 @Configuration
-public class GlobalMethodSecurityConfiguration implements ImportAware {
+public class GlobalMethodSecurityConfiguration
+		implements ImportAware, SmartInitializingSingleton {
 	private static final Log logger = LogFactory
 			.getLog(GlobalMethodSecurityConfiguration.class);
 	private ObjectPostProcessor<Object> objectPostProcessor = new ObjectPostProcessor<Object>() {
@@ -93,6 +99,7 @@ public class GlobalMethodSecurityConfiguration implements ImportAware {
 	private ApplicationContext context;
 	private MethodSecurityExpressionHandler expressionHandler;
 	private Jsr250MethodSecurityMetadataSource jsr250MethodSecurityMetadataSource;
+	private MethodSecurityInterceptor methodSecurityInterceptor;
 
 	/**
 	 * Creates the default MethodInterceptor which is a MethodSecurityInterceptor using
@@ -116,18 +123,75 @@ public class GlobalMethodSecurityConfiguration implements ImportAware {
 	 */
 	@Bean
 	public MethodInterceptor methodSecurityInterceptor() throws Exception {
-		MethodSecurityInterceptor methodSecurityInterceptor = isAspectJ() ? new AspectJMethodSecurityInterceptor()
+		this.methodSecurityInterceptor = isAspectJ()
+				? new AspectJMethodSecurityInterceptor()
 				: new MethodSecurityInterceptor();
 		methodSecurityInterceptor.setAccessDecisionManager(accessDecisionManager());
 		methodSecurityInterceptor.setAfterInvocationManager(afterInvocationManager());
-		methodSecurityInterceptor.setAuthenticationManager(authenticationManager());
 		methodSecurityInterceptor
 				.setSecurityMetadataSource(methodSecurityMetadataSource());
 		RunAsManager runAsManager = runAsManager();
 		if (runAsManager != null) {
 			methodSecurityInterceptor.setRunAsManager(runAsManager);
 		}
-		return methodSecurityInterceptor;
+
+		return this.methodSecurityInterceptor;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see org.springframework.beans.factory.SmartInitializingSingleton#
+	 * afterSingletonsInstantiated()
+	 */
+	@Override
+	public void afterSingletonsInstantiated() {
+		try {
+			initializeMethodSecurityInterceptor();
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+
+		PermissionEvaluator permissionEvaluator = getSingleBeanOrNull(
+				PermissionEvaluator.class);
+		if (permissionEvaluator != null) {
+			this.defaultMethodExpressionHandler
+					.setPermissionEvaluator(permissionEvaluator);
+		}
+
+		RoleHierarchy roleHierarchy = getSingleBeanOrNull(RoleHierarchy.class);
+		if (roleHierarchy != null) {
+			this.defaultMethodExpressionHandler.setRoleHierarchy(roleHierarchy);
+		}
+
+		AuthenticationTrustResolver trustResolver = getSingleBeanOrNull(
+				AuthenticationTrustResolver.class);
+		if (trustResolver != null) {
+			this.defaultMethodExpressionHandler.setTrustResolver(trustResolver);
+		}
+
+		GrantedAuthorityDefaults grantedAuthorityDefaults = getSingleBeanOrNull(
+				GrantedAuthorityDefaults.class);
+		if (grantedAuthorityDefaults != null) {
+			this.defaultMethodExpressionHandler.setDefaultRolePrefix(
+					grantedAuthorityDefaults.getRolePrefix());
+		}
+	}
+
+	private <T> T getSingleBeanOrNull(Class<T> type) {
+		String[] beanNamesForType = this.context.getBeanNamesForType(type);
+		if (beanNamesForType == null || beanNamesForType.length != 1) {
+			return null;
+		}
+		return this.context.getBean(beanNamesForType[0], type);
+	}
+
+	private void initializeMethodSecurityInterceptor() throws Exception {
+		if(this.methodSecurityInterceptor == null) {
+			return;
+		}
+		this.methodSecurityInterceptor.setAuthenticationManager(authenticationManager());
 	}
 
 	/**
@@ -300,6 +364,12 @@ public class GlobalMethodSecurityConfiguration implements ImportAware {
 			sources.add(new SecuredAnnotationSecurityMetadataSource());
 		}
 		if (jsr250Enabled()) {
+			GrantedAuthorityDefaults grantedAuthorityDefaults =
+					getSingleBeanOrNull(GrantedAuthorityDefaults.class);
+			if (grantedAuthorityDefaults != null) {
+				this.jsr250MethodSecurityMetadataSource.setDefaultRolePrefix(
+						grantedAuthorityDefaults.getRolePrefix());
+			}
 			sources.add(jsr250MethodSecurityMetadataSource);
 		}
 		return new DelegatingMethodSecurityMetadataSource(sources);
@@ -329,11 +399,6 @@ public class GlobalMethodSecurityConfiguration implements ImportAware {
 	}
 
 	@Autowired(required = false)
-	public void setAuthenticationTrustResolver(AuthenticationTrustResolver trustResolver) {
-		this.defaultMethodExpressionHandler.setTrustResolver(trustResolver);
-	}
-
-	@Autowired(required = false)
 	public void setObjectPostProcessor(ObjectPostProcessor<Object> objectPostProcessor) {
 		this.objectPostProcessor = objectPostProcessor;
 		this.defaultMethodExpressionHandler = objectPostProcessor
@@ -347,20 +412,10 @@ public class GlobalMethodSecurityConfiguration implements ImportAware {
 	}
 
 	@Autowired(required = false)
-	public void setPermissionEvaluator(List<PermissionEvaluator> permissionEvaluators) {
-		if (permissionEvaluators.size() != 1) {
-			logger.debug("Not autwiring PermissionEvaluator since size != 1. Got "
-					+ permissionEvaluators);
-		}
-		this.defaultMethodExpressionHandler.setPermissionEvaluator(permissionEvaluators
-				.get(0));
-	}
-
-	@Autowired(required = false)
 	public void setMethodSecurityExpressionHandler(
 			List<MethodSecurityExpressionHandler> handlers) {
 		if (handlers.size() != 1) {
-			logger.debug("Not autwiring PermissionEvaluator since size != 1. Got "
+			logger.debug("Not autowiring MethodSecurityExpressionHandler since size != 1. Got "
 					+ handlers);
 			return;
 		}

@@ -15,9 +15,10 @@
  */
 package org.springframework.security.config.annotation.method.configuration
 
+import org.springframework.security.access.annotation.Jsr250MethodSecurityMetadataSource
 import org.springframework.security.access.intercept.aspectj.AspectJMethodSecurityInterceptor
 
-import static org.fest.assertions.Assertions.assertThat
+import static org.assertj.core.api.Assertions.assertThat
 import static org.junit.Assert.fail
 
 import java.lang.reflect.Method
@@ -48,7 +49,7 @@ import org.springframework.security.authentication.TestingAuthenticationToken
 import org.springframework.security.config.annotation.BaseSpringSpec
 import org.springframework.security.config.annotation.authentication.BaseAuthenticationConfig;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
-import org.springframework.security.config.annotation.method.configuration.GlobalMethodSecurityConfiguration;
+import org.springframework.security.config.annotation.method.configuration.GlobalMethodSecurityConfiguration
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.context.SecurityContextHolder
 

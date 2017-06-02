@@ -1,6 +1,21 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.web.authentication.preauth;
 
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.*;
 
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -24,8 +39,8 @@ public class PreAuthenticatedGrantedAuthoritiesWebAuthenticationDetailsTests {
 		PreAuthenticatedGrantedAuthoritiesWebAuthenticationDetails details = new PreAuthenticatedGrantedAuthoritiesWebAuthenticationDetails(
 				getRequest("testUser", new String[] {}), gas);
 		String toString = details.toString();
-		assertTrue("toString should contain Role1", toString.contains("Role1"));
-		assertTrue("toString should contain Role2", toString.contains("Role2"));
+		assertThat(toString.contains("Role1")).as("toString should contain Role1").isTrue();
+		assertThat(toString.contains("Role2")).as("toString should contain Role2").isTrue();
 	}
 
 	@Test
@@ -33,9 +48,9 @@ public class PreAuthenticatedGrantedAuthoritiesWebAuthenticationDetailsTests {
 		PreAuthenticatedGrantedAuthoritiesWebAuthenticationDetails details = new PreAuthenticatedGrantedAuthoritiesWebAuthenticationDetails(
 				getRequest("testUser", new String[] {}), gas);
 		List<GrantedAuthority> returnedGas = details.getGrantedAuthorities();
-		assertTrue("Collections do not contain same elements; expected: " + gas
-				+ ", returned: " + returnedGas, gas.containsAll(returnedGas)
-				&& returnedGas.containsAll(gas));
+		assertThat(gas.containsAll(returnedGas) && returnedGas.containsAll(gas))
+			.withFailMessage("Collections do not contain same elements; expected: " + gas
+				+ ", returned: " + returnedGas).isTrue();
 	}
 
 	private HttpServletRequest getRequest(final String userName, final String[] aRoles) {

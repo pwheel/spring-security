@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,33 +16,37 @@
 
 package org.springframework.security.web;
 
-import junit.framework.TestCase;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.security.web.PortMapperImpl;
+import org.junit.Test;
 
 /**
  * Tests {@link PortMapperImpl}.
  *
  * @author Ben Alex
  */
-public class PortMapperImplTests extends TestCase {
+public class PortMapperImplTests {
+
 	// ~ Methods
 	// ========================================================================================================
-
+	@Test
 	public void testDefaultMappingsAreKnown() throws Exception {
 		PortMapperImpl portMapper = new PortMapperImpl();
-		assertEquals(Integer.valueOf(80), portMapper.lookupHttpPort(Integer.valueOf(443)));
-		assertEquals(Integer.valueOf(8080),
+		assertThat(portMapper.lookupHttpPort(Integer.valueOf(443))).isEqualTo(
+				Integer.valueOf(80));
+		assertThat(Integer.valueOf(8080)).isEqualTo(
 				portMapper.lookupHttpPort(Integer.valueOf(8443)));
-		assertEquals(Integer.valueOf(443),
+		assertThat(Integer.valueOf(443)).isEqualTo(
 				portMapper.lookupHttpsPort(Integer.valueOf(80)));
-		assertEquals(Integer.valueOf(8443),
+		assertThat(Integer.valueOf(8443)).isEqualTo(
 				portMapper.lookupHttpsPort(Integer.valueOf(8080)));
 	}
 
+	@Test
 	public void testDetectsEmptyMap() throws Exception {
 		PortMapperImpl portMapper = new PortMapperImpl();
 
@@ -50,10 +55,11 @@ public class PortMapperImplTests extends TestCase {
 			fail("Should have thrown IllegalArgumentException");
 		}
 		catch (IllegalArgumentException expected) {
-			assertTrue(true);
+
 		}
 	}
 
+	@Test
 	public void testDetectsNullMap() throws Exception {
 		PortMapperImpl portMapper = new PortMapperImpl();
 
@@ -62,15 +68,17 @@ public class PortMapperImplTests extends TestCase {
 			fail("Should have thrown IllegalArgumentException");
 		}
 		catch (IllegalArgumentException expected) {
-			assertTrue(true);
+
 		}
 	}
 
+	@Test
 	public void testGetTranslatedPortMappings() {
 		PortMapperImpl portMapper = new PortMapperImpl();
-		assertEquals(2, portMapper.getTranslatedPortMappings().size());
+		assertThat(portMapper.getTranslatedPortMappings()).hasSize(2);
 	}
 
+	@Test
 	public void testRejectsOutOfRangeMappings() {
 		PortMapperImpl portMapper = new PortMapperImpl();
 		Map<String, String> map = new HashMap<String, String>();
@@ -81,15 +89,17 @@ public class PortMapperImplTests extends TestCase {
 			fail("Should have thrown IllegalArgumentException");
 		}
 		catch (IllegalArgumentException expected) {
-			assertTrue(true);
+
 		}
 	}
 
+	@Test
 	public void testReturnsNullIfHttpPortCannotBeFound() {
 		PortMapperImpl portMapper = new PortMapperImpl();
-		assertTrue(portMapper.lookupHttpPort(Integer.valueOf("34343")) == null);
+		assertThat(portMapper.lookupHttpPort(Integer.valueOf("34343")) == null).isTrue();
 	}
 
+	@Test
 	public void testSupportsCustomMappings() {
 		PortMapperImpl portMapper = new PortMapperImpl();
 		Map<String, String> map = new HashMap<String, String>();
@@ -97,8 +107,9 @@ public class PortMapperImplTests extends TestCase {
 
 		portMapper.setPortMappings(map);
 
-		assertEquals(Integer.valueOf(79), portMapper.lookupHttpPort(Integer.valueOf(442)));
-		assertEquals(Integer.valueOf(442),
+		assertThat(portMapper.lookupHttpPort(Integer.valueOf(442))).isEqualTo(
+				Integer.valueOf(79));
+		assertThat(Integer.valueOf(442)).isEqualTo(
 				portMapper.lookupHttpsPort(Integer.valueOf(79)));
 	}
 }

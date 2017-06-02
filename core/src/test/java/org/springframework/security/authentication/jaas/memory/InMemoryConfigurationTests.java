@@ -15,10 +15,6 @@
  */
 package org.springframework.security.authentication.jaas.memory;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Map;
@@ -28,11 +24,14 @@ import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag;
 
 import org.junit.Before;
 import org.junit.Test;
+
 import org.springframework.security.authentication.jaas.TestLoginModule;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests {@link InMemoryConfiguration}.
- * 
+ *
  * @author Rob Winch
  */
 public class InMemoryConfigurationTests {
@@ -42,20 +41,21 @@ public class InMemoryConfigurationTests {
 
 	@Before
 	public void setUp() {
-		defaultEntries = new AppConfigurationEntry[] { new AppConfigurationEntry(
+		this.defaultEntries = new AppConfigurationEntry[] { new AppConfigurationEntry(
 				TestLoginModule.class.getName(), LoginModuleControlFlag.REQUIRED,
-				Collections.<String, Object> emptyMap()) };
+				Collections.<String, Object>emptyMap()) };
 
-		mappedEntries = Collections.<String, AppConfigurationEntry[]> singletonMap(
-				"name", new AppConfigurationEntry[] { new AppConfigurationEntry(
+		this.mappedEntries = Collections.<String, AppConfigurationEntry[]>singletonMap(
+				"name",
+				new AppConfigurationEntry[] { new AppConfigurationEntry(
 						TestLoginModule.class.getName(), LoginModuleControlFlag.OPTIONAL,
-						Collections.<String, Object> emptyMap()) });
+						Collections.<String, Object>emptyMap()) });
 	}
 
 	@Test
 	public void constructorNullDefault() {
-		assertNull(new InMemoryConfiguration((AppConfigurationEntry[]) null)
-				.getAppConfigurationEntry("name"));
+		assertThat(new InMemoryConfiguration((AppConfigurationEntry[]) null)
+				.getAppConfigurationEntry("name")).isNull();
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -65,16 +65,16 @@ public class InMemoryConfigurationTests {
 
 	@Test
 	public void constructorEmptyMap() {
-		assertNull(new InMemoryConfiguration(
-				Collections.<String, AppConfigurationEntry[]> emptyMap())
-				.getAppConfigurationEntry("name"));
+		assertThat(new InMemoryConfiguration(
+				Collections.<String, AppConfigurationEntry[]>emptyMap())
+						.getAppConfigurationEntry("name")).isNull();
 	}
 
 	@Test
 	public void constructorEmptyMapNullDefault() {
-		assertNull(new InMemoryConfiguration(
-				Collections.<String, AppConfigurationEntry[]> emptyMap(), null)
-				.getAppConfigurationEntry("name"));
+		assertThat(new InMemoryConfiguration(
+				Collections.<String, AppConfigurationEntry[]>emptyMap(), null)
+						.getAppConfigurationEntry("name")).isNull();
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -84,23 +84,25 @@ public class InMemoryConfigurationTests {
 
 	@Test
 	public void nonnullDefault() {
-		InMemoryConfiguration configuration = new InMemoryConfiguration(defaultEntries);
-		assertArrayEquals(defaultEntries, configuration.getAppConfigurationEntry("name"));
+		InMemoryConfiguration configuration = new InMemoryConfiguration(
+				this.defaultEntries);
+		assertThat(configuration.getAppConfigurationEntry("name"))
+				.isEqualTo(this.defaultEntries);
 	}
 
 	@Test
 	public void mappedNonnullDefault() {
-		InMemoryConfiguration configuration = new InMemoryConfiguration(mappedEntries,
-				defaultEntries);
-		assertArrayEquals(defaultEntries,
-				configuration.getAppConfigurationEntry("missing"));
-		assertArrayEquals(mappedEntries.get("name"),
-				configuration.getAppConfigurationEntry("name"));
+		InMemoryConfiguration configuration = new InMemoryConfiguration(
+				this.mappedEntries, this.defaultEntries);
+		assertThat(this.defaultEntries)
+				.isEqualTo(configuration.getAppConfigurationEntry("missing"));
+		assertThat(this.mappedEntries.get("name"))
+				.isEqualTo(configuration.getAppConfigurationEntry("name"));
 	}
 
 	@Test
 	public void jdk5Compatable() throws Exception {
 		Method method = InMemoryConfiguration.class.getDeclaredMethod("refresh");
-		assertEquals(InMemoryConfiguration.class, method.getDeclaringClass());
+		assertThat(method.getDeclaringClass()).isEqualTo(InMemoryConfiguration.class);
 	}
 }

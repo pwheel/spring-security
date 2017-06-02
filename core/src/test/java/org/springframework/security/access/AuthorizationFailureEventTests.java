@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +16,7 @@
 
 package org.springframework.security.access;
 
-import static org.junit.Assert.assertSame;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.Test;
 import org.springframework.security.access.event.AuthorizationFailureEvent;
@@ -61,8 +62,8 @@ public class AuthorizationFailureEventTests {
 	public void gettersReturnCtorSuppliedData() throws Exception {
 		AuthorizationFailureEvent event = new AuthorizationFailureEvent(new Object(),
 				attributes, foo, exception);
-		assertSame(attributes, event.getConfigAttributes());
-		assertSame(exception, event.getAccessDeniedException());
-		assertSame(foo, event.getAuthentication());
+		assertThat(event.getConfigAttributes()).isSameAs(attributes);
+		assertThat(event.getAccessDeniedException()).isSameAs(exception);
+		assertThat(event.getAuthentication()).isSameAs(foo);
 	}
 }

@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,6 +18,7 @@ package org.springframework.security.remoting.httpinvoker;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.Base64;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -24,7 +26,6 @@ import org.springframework.remoting.httpinvoker.SimpleHttpInvokerRequestExecutor
 import org.springframework.security.authentication.AuthenticationTrustResolver;
 import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.codec.Base64;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
@@ -89,7 +90,7 @@ public class AuthenticationSimpleHttpInvokerRequestExecutor extends
 				&& !trustResolver.isAnonymous(auth)) {
 			String base64 = auth.getName() + ":" + auth.getCredentials().toString();
 			con.setRequestProperty("Authorization",
-					"Basic " + new String(Base64.encode(base64.getBytes())));
+					"Basic " + new String(Base64.getEncoder().encode(base64.getBytes())));
 
 			if (logger.isDebugEnabled()) {
 				logger.debug("HttpInvocation now presenting via BASIC authentication SecurityContextHolder-derived: "

@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,10 +16,9 @@
 
 package org.springframework.security.authentication.encoding;
 
-import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
+import java.util.Base64;
 
-import org.springframework.security.crypto.codec.Base64;
 import org.springframework.security.crypto.codec.Utf8;
 import org.springframework.util.Assert;
 
@@ -107,13 +107,13 @@ public class LdapShaPasswordEncoder implements PasswordEncoder {
 			prefix = forceLowerCasePrefix ? SSHA_PREFIX_LC : SSHA_PREFIX;
 		}
 
-		return prefix + Utf8.decode(Base64.encode(hash));
+		return prefix + Utf8.decode(Base64.getEncoder().encode(hash));
 	}
 
 	private byte[] extractSalt(String encPass) {
 		String encPassNoLabel = encPass.substring(6);
 
-		byte[] hashAndSalt = Base64.decode(encPassNoLabel.getBytes());
+		byte[] hashAndSalt = Base64.getDecoder().decode(encPassNoLabel.getBytes());
 		int saltLength = hashAndSalt.length - SHA_LENGTH;
 		byte[] salt = new byte[saltLength];
 		System.arraycopy(hashAndSalt, SHA_LENGTH, salt, 0, saltLength);

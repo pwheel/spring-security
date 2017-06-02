@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,26 +17,27 @@ package org.springframework.security.config.annotation.web.configurers
 
 import javax.servlet.http.Cookie
 
+import org.springframework.beans.factory.BeanCreationException
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.annotation.Configuration
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockHttpSession
 import org.springframework.security.authentication.RememberMeAuthenticationToken
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.AnyObjectPostProcessor
 import org.springframework.security.config.annotation.BaseSpringSpec
+import org.springframework.security.config.annotation.ObjectPostProcessor
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
-import org.springframework.security.config.annotation.authentication.configurers.provisioning.InMemoryUserDetailsManagerConfigurer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
-import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.authority.AuthorityUtils
 import org.springframework.security.core.context.SecurityContext
-import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetailsService
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager
+import org.springframework.security.web.authentication.RememberMeServices
 import org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter
 import org.springframework.security.web.context.HttpRequestResponseHolder
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository
@@ -45,6 +46,7 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
  * Tests for RememberMeConfigurer that flex edge cases. {@link NamespaceRememberMeTests} demonstrate mapping of the XML namespace to Java Config.
  *
  * @author Rob Winch
+ * @author Eddú Meléndez
  */
 public class RememberMeConfigurerTests extends BaseSpringSpec {
 
@@ -157,6 +159,46 @@ public class RememberMeConfigurerTests extends BaseSpringSpec {
 			response.getRedirectedUrl() == "http://localhost/login"
 	}
 
+	def "http/remember-me with cookie domain"() {
+		setup:
+			loadConfig(RememberMeCookieDomainConfig)
+		when:
+			super.setup()
+			request.servletPath = "/login"
+			request.method = "POST"
+			request.parameters.username = ["user"] as String[]
+			request.parameters.password = ["password"] as String[]
+			request.parameters.'remember-me' = ["true"] as String[]
+			springSecurityFilterChain.doFilter(request,response,chain)
+			Cookie rememberMeCookie = getRememberMeCookie()
+		then: "response contains remember me cookie"
+			rememberMeCookie != null
+			rememberMeCookie.domain == "spring.io"
+	}
+
+	def "http/remember-me with cookie name and custom rememberMeServices throws BeanCreationException"() {
+		setup:
+		RememberMeCookieDomainCustomRememberMeServicesConfig.REMEMBER_ME = Mock(RememberMeServices)
+		when:
+		loadConfig(RememberMeCookieDomainCustomRememberMeServicesConfig)
+		then: "response contains remember me cookie"
+		def ex = thrown(BeanCreationException)
+		ex instanceof BeanCreationException
+	}
+
+	def "http/remember-me with cookie name and custom rememberMeServices throws IllegalArgumentException"() {
+		setup:
+		def httpSec = new HttpSecurity(Mock(ObjectPostProcessor), Mock(AuthenticationManagerBuilder), [:])
+		RememberMeConfigurer<HttpSecurity> config = new RememberMeConfigurer<HttpSecurity>();
+		config.rememberMeCookieName("COOKIE_NAME")
+		config.rememberMeServices(Mock(RememberMeServices))
+		when:
+		config.init(httpSec)
+		then:
+		IllegalArgumentException ex = thrown()
+		ex.message == 'Can not set rememberMeCookieName and custom rememberMeServices.'
+	}
+
 	@EnableWebSecurity
 	static class RememberMeConfig extends WebSecurityConfigurerAdapter {
 		protected void configure(HttpSecurity http) throws Exception {
@@ -175,6 +217,54 @@ public class RememberMeConfigurerTests extends BaseSpringSpec {
 				.inMemoryAuthentication()
 					.withUser("user").password("password").roles("USER");
 		}
+	}
+
+	@EnableWebSecurity
+	static class RememberMeCookieDomainConfig extends WebSecurityConfigurerAdapter {
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+					.authorizeRequests()
+					.anyRequest().hasRole("USER")
+					.and()
+					.formLogin()
+					.and()
+					.rememberMe()
+					.rememberMeCookieDomain("spring.io")
+		}
+
+		@Autowired
+		public void configureGlobal(AuthenticationManagerBuilder auth) {
+			auth
+					.inMemoryAuthentication()
+					.withUser("user").password("password").roles("USER");
+		}
+	}
+
+	@EnableWebSecurity
+	static class RememberMeCookieDomainCustomRememberMeServicesConfig extends
+			WebSecurityConfigurerAdapter {
+		static RememberMeServices REMEMBER_ME
+
+		protected void configure(HttpSecurity http) throws Exception {
+			http
+					.authorizeRequests()
+					.anyRequest().hasRole("USER")
+					.and()
+					.formLogin()
+					.and()
+					.rememberMe()
+					.rememberMeCookieName("SPRING_COOKIE_DOMAIN")
+					.rememberMeCookieDomain("spring.io")
+					.rememberMeServices(REMEMBER_ME);
+		}
+
+		@Autowired
+		public void configureGlobal(AuthenticationManagerBuilder auth) {
+			auth
+					.inMemoryAuthentication()
+					.withUser("user").password("password").roles("USER");
+		}
+
 	}
 
 	Cookie createRememberMeCookie() {

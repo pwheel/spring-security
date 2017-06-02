@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -37,12 +38,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.SpringSecurityMessageSource;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.WebAttributes;
 import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
-import org.springframework.security.web.util.UrlUtils;
 import org.springframework.util.Assert;
 import org.springframework.web.filter.GenericFilterBean;
 
@@ -163,10 +162,6 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 	@Override
 	public void afterPropertiesSet() {
 		Assert.notNull(authenticationManager, "authenticationManager must be specified");
-
-		if (rememberMeServices == null) {
-			rememberMeServices = new NullRememberMeServices();
-		}
 	}
 
 	/**
@@ -347,7 +342,7 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 		SecurityContextHolder.clearContext();
 
 		if (logger.isDebugEnabled()) {
-			logger.debug("Authentication request failed: " + failed.toString());
+			logger.debug("Authentication request failed: " + failed.toString(), failed);
 			logger.debug("Updated SecurityContextHolder to contain null Authentication");
 			logger.debug("Delegating to authentication failure handler " + failureHandler);
 		}
@@ -386,7 +381,7 @@ public abstract class AbstractAuthenticationProcessingFilter extends GenericFilt
 	}
 
 	public void setRememberMeServices(RememberMeServices rememberMeServices) {
-		Assert.notNull("rememberMeServices cannot be null");
+		Assert.notNull(rememberMeServices, "rememberMeServices cannot be null");
 		this.rememberMeServices = rememberMeServices;
 	}
 

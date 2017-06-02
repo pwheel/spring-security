@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,21 +16,22 @@
 
 package org.springframework.security.core.session;
 
-import junit.framework.TestCase;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Date;
 
-import org.springframework.security.core.session.SessionInformation;
+import org.junit.Test;
 
 /**
  * Tests {@link SessionInformation}.
  *
  * @author Ben Alex
  */
-public class SessionInformationTests extends TestCase {
+public class SessionInformationTests {
+
 	// ~ Methods
 	// ========================================================================================================
-
+	@Test
 	public void testObject() throws Exception {
 		Object principal = "Some principal object";
 		String sessionId = "1234567890";
@@ -37,14 +39,14 @@ public class SessionInformationTests extends TestCase {
 
 		SessionInformation info = new SessionInformation(principal, sessionId,
 				currentDate);
-		assertEquals(principal, info.getPrincipal());
-		assertEquals(sessionId, info.getSessionId());
-		assertEquals(currentDate, info.getLastRequest());
+		assertThat(info.getPrincipal()).isEqualTo(principal);
+		assertThat(info.getSessionId()).isEqualTo(sessionId);
+		assertThat(info.getLastRequest()).isEqualTo(currentDate);
 
 		Thread.sleep(10);
 
 		info.refreshLastRequest();
 
-		assertTrue(info.getLastRequest().after(currentDate));
+		assertThat(info.getLastRequest().after(currentDate)).isTrue();
 	}
 }

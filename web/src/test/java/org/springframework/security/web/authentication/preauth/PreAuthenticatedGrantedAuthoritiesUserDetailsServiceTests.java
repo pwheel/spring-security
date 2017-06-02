@@ -1,6 +1,21 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.web.authentication.preauth;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 
 import java.util.*;
 
@@ -58,21 +73,18 @@ public class PreAuthenticatedGrantedAuthoritiesUserDetailsServiceTests {
 			}
 		});
 		UserDetails ud = svc.loadUserDetails(token);
-		assertTrue(ud.isAccountNonExpired());
-		assertTrue(ud.isAccountNonLocked());
-		assertTrue(ud.isCredentialsNonExpired());
-		assertTrue(ud.isEnabled());
-		assertEquals(ud.getUsername(), userName);
+		assertThat(ud.isAccountNonExpired()).isTrue();
+		assertThat(ud.isAccountNonLocked()).isTrue();
+		assertThat(ud.isCredentialsNonExpired()).isTrue();
+		assertThat(ud.isEnabled()).isTrue();
+		assertThat(userName).isEqualTo(ud.getUsername());
 
 		// Password is not saved by
 		// PreAuthenticatedGrantedAuthoritiesUserDetailsService
-		// assertEquals(ud.getPassword(),password);
+		// assertThat(password).isEqualTo(ud.getPassword());
 
-		assertTrue(
-				"GrantedAuthority collections do not match; result: "
-						+ ud.getAuthorities() + ", expected: " + gas,
-				gas.containsAll(ud.getAuthorities())
-						&& ud.getAuthorities().containsAll(gas));
+		assertThat(gas.containsAll(ud.getAuthorities())
+						&& ud.getAuthorities().containsAll(gas)).withFailMessage("GrantedAuthority collections do not match; result: "+ ud.getAuthorities() + ", expected: " + gas).isTrue();
 	}
 
 }

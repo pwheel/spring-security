@@ -1,3 +1,18 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.ldap.userdetails;
 
 import org.junit.Before;
@@ -9,8 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Filip Hanik
@@ -31,27 +45,25 @@ public class LdapAuthorityTests {
 
 	@Test
 	public void testGetDn() throws Exception {
-		assertEquals(DN, authority.getDn());
-		assertNotNull(authority.getAttributeValues(SpringSecurityLdapTemplate.DN_KEY));
-		assertEquals(1, authority.getAttributeValues(SpringSecurityLdapTemplate.DN_KEY)
-				.size());
-		assertEquals(DN,
-				authority.getFirstAttributeValue(SpringSecurityLdapTemplate.DN_KEY));
+		assertThat(authority.getDn()).isEqualTo(DN);
+		assertThat(authority.getAttributeValues(SpringSecurityLdapTemplate.DN_KEY)).isNotNull();
+		assertThat(authority.getAttributeValues(SpringSecurityLdapTemplate.DN_KEY)).hasSize(1);
+		assertThat(authority.getFirstAttributeValue(SpringSecurityLdapTemplate.DN_KEY)).isEqualTo(DN);
 	}
 
 	@Test
 	public void testGetAttributes() throws Exception {
-		assertNotNull(authority.getAttributes());
-		assertNotNull(authority.getAttributeValues("mail"));
-		assertEquals(2, authority.getAttributeValues("mail").size());
-		assertEquals("filip@ldap.test.org", authority.getFirstAttributeValue("mail"));
-		assertEquals("filip@ldap.test.org", authority.getAttributeValues("mail").get(0));
-		assertEquals("filip@ldap.test2.org", authority.getAttributeValues("mail").get(1));
+		assertThat(authority.getAttributes()).isNotNull();
+		assertThat(authority.getAttributeValues("mail")).isNotNull();
+		assertThat(authority.getAttributeValues("mail")).hasSize(2);
+		assertThat(authority.getFirstAttributeValue("mail")).isEqualTo("filip@ldap.test.org");
+		assertThat(authority.getAttributeValues("mail").get(0)).isEqualTo("filip@ldap.test.org");
+		assertThat(authority.getAttributeValues("mail").get(1)).isEqualTo("filip@ldap.test2.org");
 	}
 
 	@Test
 	public void testGetAuthority() throws Exception {
-		assertNotNull(authority.getAuthority());
-		assertEquals("testRole", authority.getAuthority());
+		assertThat(authority.getAuthority()).isNotNull();
+		assertThat(authority.getAuthority()).isEqualTo("testRole");
 	}
 }

@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +16,7 @@
 
 package org.springframework.security.web.session;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 
 import javax.servlet.http.HttpSessionEvent;
 
@@ -60,17 +61,17 @@ public class HttpSessionEventPublisherTests {
 
 		publisher.sessionCreated(event);
 
-		assertNotNull(listener.getCreatedEvent());
-		assertNull(listener.getDestroyedEvent());
-		assertEquals(session, listener.getCreatedEvent().getSession());
+		assertThat(listener.getCreatedEvent()).isNotNull();
+		assertThat(listener.getDestroyedEvent()).isNull();
+		assertThat(listener.getCreatedEvent().getSession()).isEqualTo(session);
 
 		listener.setCreatedEvent(null);
 		listener.setDestroyedEvent(null);
 
 		publisher.sessionDestroyed(event);
-		assertNotNull(listener.getDestroyedEvent());
-		assertNull(listener.getCreatedEvent());
-		assertEquals(session, listener.getDestroyedEvent().getSession());
+		assertThat(listener.getDestroyedEvent()).isNotNull();
+		assertThat(listener.getCreatedEvent()).isNull();
+		assertThat(listener.getDestroyedEvent().getSession()).isEqualTo(session);
 	}
 
 	@Test
@@ -96,17 +97,17 @@ public class HttpSessionEventPublisherTests {
 
 		publisher.sessionCreated(event);
 
-		assertNotNull(listener.getCreatedEvent());
-		assertNull(listener.getDestroyedEvent());
-		assertEquals(session, listener.getCreatedEvent().getSession());
+		assertThat(listener.getCreatedEvent()).isNotNull();
+		assertThat(listener.getDestroyedEvent()).isNull();
+		assertThat(listener.getCreatedEvent().getSession()).isEqualTo(session);
 
 		listener.setCreatedEvent(null);
 		listener.setDestroyedEvent(null);
 
 		publisher.sessionDestroyed(event);
-		assertNotNull(listener.getDestroyedEvent());
-		assertNull(listener.getCreatedEvent());
-		assertEquals(session, listener.getDestroyedEvent().getSession());
+		assertThat(listener.getDestroyedEvent()).isNotNull();
+		assertThat(listener.getCreatedEvent()).isNull();
+		assertThat(listener.getDestroyedEvent().getSession()).isEqualTo(session);
 	}
 
 	// SEC-2599

@@ -1,9 +1,23 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.access.expression;
 
-import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.fest.assertions.Assertions.*;
+import static org.assertj.core.api.Assertions.*;
 
 import java.util.Collection;
 
@@ -35,10 +49,10 @@ public class SecurityExpressionRootTests {
 
 	@Test
 	public void denyAllIsFalsePermitAllTrue() throws Exception {
-		assertFalse(root.denyAll());
-		assertFalse(root.denyAll);
-		assertTrue(root.permitAll());
-		assertTrue(root.permitAll);
+		assertThat(root.denyAll()).isFalse();
+		assertThat(root.denyAll).isFalse();
+		assertThat(root.permitAll()).isTrue();
+		assertThat(root.permitAll).isTrue();
 	}
 
 	@Test
@@ -46,8 +60,8 @@ public class SecurityExpressionRootTests {
 		AuthenticationTrustResolver atr = mock(AuthenticationTrustResolver.class);
 		root.setTrustResolver(atr);
 		when(atr.isRememberMe(JOE)).thenReturn(true);
-		assertTrue(root.isRememberMe());
-		assertFalse(root.isFullyAuthenticated());
+		assertThat(root.isRememberMe()).isTrue();
+		assertThat(root.isFullyAuthenticated()).isFalse();
 	}
 
 	@Test
@@ -59,13 +73,13 @@ public class SecurityExpressionRootTests {
 			}
 		});
 
-		assertTrue(root.hasRole("C"));
-		assertTrue(root.hasAuthority("ROLE_C"));
-		assertFalse(root.hasRole("A"));
-		assertFalse(root.hasRole("B"));
-		assertTrue(root.hasAnyRole("C", "A", "B"));
-		assertTrue(root.hasAnyAuthority("ROLE_C", "ROLE_A", "ROLE_B"));
-		assertFalse(root.hasAnyRole("A", "B"));
+		assertThat(root.hasRole("C")).isTrue();
+		assertThat(root.hasAuthority("ROLE_C")).isTrue();
+		assertThat(root.hasRole("A")).isFalse();
+		assertThat(root.hasRole("B")).isFalse();
+		assertThat(root.hasAnyRole("C", "A", "B")).isTrue();
+		assertThat(root.hasAnyAuthority("ROLE_C", "ROLE_A", "ROLE_B")).isTrue();
+		assertThat(root.hasAnyRole("A", "B")).isFalse();
 	}
 
 	@Test

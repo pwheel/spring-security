@@ -18,10 +18,12 @@ package org.springframework.security.test.web.support;
 import java.util.List;
 
 import javax.servlet.Filter;
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.security.web.FilterChainProxy;
+import org.springframework.security.config.BeanIds;
+import org.springframework.security.web.context.AbstractSecurityWebApplicationInitializer;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextPersistenceFilter;
 import org.springframework.security.web.context.SecurityContextRepository;
@@ -98,8 +100,7 @@ public abstract class WebTestUtils {
 	}
 
 	/**
-	 * Sets the {@link CsrfTokenRepository} for the specified
-	 * {@link HttpServletRequest}.
+	 * Sets the {@link CsrfTokenRepository} for the specified {@link HttpServletRequest}.
 	 *
 	 * @param request the {@link HttpServletRequest} to obtain the
 	 * {@link CsrfTokenRepository}
@@ -114,26 +115,41 @@ public abstract class WebTestUtils {
 	}
 
 	@SuppressWarnings("unchecked")
-	private static <T extends Filter> T findFilter(HttpServletRequest request,
+	static <T extends Filter> T findFilter(HttpServletRequest request,
 			Class<T> filterClass) {
-		WebApplicationContext webApplicationContext = WebApplicationContextUtils
-				.getWebApplicationContext(request.getServletContext());
-		if (webApplicationContext == null) {
+		ServletContext servletContext = request.getServletContext();
+		Filter springSecurityFilterChain = getSpringSecurityFilterChain(servletContext);
+		if (springSecurityFilterChain == null) {
 			return null;
 		}
-		FilterChainProxy springSecurityFilterChain = null;
-		try {
-			springSecurityFilterChain = webApplicationContext
-					.getBean(FilterChainProxy.class);
-		}
-		catch (NoSuchBeanDefinitionException notFound) {
+		List<Filter> filters = (List<Filter>) ReflectionTestUtils
+				.invokeMethod(springSecurityFilterChain, "getFilters", request);
+		if (filters == null) {
 			return null;
 		}
-		List<Filter> filters = (List<Filter>) ReflectionTestUtils.invokeMethod(
-				springSecurityFilterChain, "getFilters", request);
 		for (Filter filter : filters) {
 			if (filterClass.isAssignableFrom(filter.getClass())) {
 				return (T) filter;
+			}
+		}
+		return null;
+	}
+
+	private static Filter getSpringSecurityFilterChain(ServletContext servletContext) {
+		Filter result = (Filter) servletContext
+				.getAttribute(BeanIds.SPRING_SECURITY_FILTER_CHAIN);
+		if (result != null) {
+			return result;
+		}
+		WebApplicationContext webApplicationContext = WebApplicationContextUtils
+				.getWebApplicationContext(servletContext);
+		if (webApplicationContext != null) {
+			try {
+				return webApplicationContext.getBean(
+						AbstractSecurityWebApplicationInitializer.DEFAULT_FILTER_NAME,
+						Filter.class);
+			}
+			catch (NoSuchBeanDefinitionException notFound) {
 			}
 		}
 		return null;

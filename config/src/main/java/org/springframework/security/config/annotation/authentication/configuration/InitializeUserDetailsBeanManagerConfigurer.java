@@ -25,16 +25,18 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
- * Lazily initializes the global authentication with a
- * {@link UserDetailsService} if it is not yet configured and there is only a
- * single Bean of that type. Optionally, if a {@link PasswordEncoder} is defined
- * will wire this up too.
+ * Lazily initializes the global authentication with a {@link UserDetailsService} if it is
+ * not yet configured and there is only a single Bean of that type. Optionally, if a
+ * {@link PasswordEncoder} is defined will wire this up too.
  *
  * @author Rob Winch
  * @since 4.1
  */
-@Order(Ordered.LOWEST_PRECEDENCE - 5000)
-class InitializeUserDetailsBeanManagerConfigurer extends GlobalAuthenticationConfigurerAdapter {
+@Order(InitializeUserDetailsBeanManagerConfigurer.DEFAULT_ORDER)
+class InitializeUserDetailsBeanManagerConfigurer
+		extends GlobalAuthenticationConfigurerAdapter {
+
+	static final int DEFAULT_ORDER = Ordered.LOWEST_PRECEDENCE - 5000;
 
 	private final ApplicationContext context;
 
@@ -50,14 +52,16 @@ class InitializeUserDetailsBeanManagerConfigurer extends GlobalAuthenticationCon
 		auth.apply(new InitializeUserDetailsManagerConfigurer());
 	}
 
-	class InitializeUserDetailsManagerConfigurer extends GlobalAuthenticationConfigurerAdapter {
+	class InitializeUserDetailsManagerConfigurer
+			extends GlobalAuthenticationConfigurerAdapter {
 		@Override
 		public void configure(AuthenticationManagerBuilder auth) throws Exception {
 			if (auth.isConfigured()) {
 				return;
 			}
-			UserDetailsService userDetailsService = getBeanOrNull(UserDetailsService.class);
-			if(userDetailsService == null) {
+			UserDetailsService userDetailsService = getBeanOrNull(
+					UserDetailsService.class);
+			if (userDetailsService == null) {
 				return;
 			}
 
@@ -65,24 +69,25 @@ class InitializeUserDetailsBeanManagerConfigurer extends GlobalAuthenticationCon
 
 			DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
 			provider.setUserDetailsService(userDetailsService);
-			if(passwordEncoder != null) {
+			if (passwordEncoder != null) {
 				provider.setPasswordEncoder(passwordEncoder);
 			}
 
-			auth
-				.authenticationProvider(provider);
+			auth.authenticationProvider(provider);
 		}
 
 		/**
 		 * @return
 		 */
 		private <T> T getBeanOrNull(Class<T> type) {
-			String[] userDetailsBeanNames = context.getBeanNamesForType(type);
-			if(userDetailsBeanNames.length != 1) {
+			String[] userDetailsBeanNames = InitializeUserDetailsBeanManagerConfigurer.this.context
+					.getBeanNamesForType(type);
+			if (userDetailsBeanNames.length != 1) {
 				return null;
 			}
 
-			return context.getBean(userDetailsBeanNames[0], type);
+			return InitializeUserDetailsBeanManagerConfigurer.this.context
+					.getBean(userDetailsBeanNames[0], type);
 		}
 	}
 }

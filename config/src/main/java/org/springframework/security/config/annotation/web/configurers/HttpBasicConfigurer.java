@@ -15,6 +15,7 @@
  */
 package org.springframework.security.config.annotation.web.configurers;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 
@@ -31,9 +32,13 @@ import org.springframework.security.web.authentication.DelegatingAuthenticationE
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestHeaderRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.accept.ContentNegotiationStrategy;
@@ -74,6 +79,10 @@ import org.springframework.web.accept.HeaderContentNegotiationStrategy;
  */
 public final class HttpBasicConfigurer<B extends HttpSecurityBuilder<B>> extends
 		AbstractHttpConfigurer<HttpBasicConfigurer<B>, B> {
+
+	private static final RequestHeaderRequestMatcher X_REQUESTED_WITH = new RequestHeaderRequestMatcher("X-Requested-With",
+			"XMLHttpRequest");
+
 	private static final String DEFAULT_REALM = "Realm";
 
 	private AuthenticationEntryPoint authenticationEntryPoint;
@@ -89,13 +98,12 @@ public final class HttpBasicConfigurer<B extends HttpSecurityBuilder<B>> extends
 		realmName(DEFAULT_REALM);
 
 		LinkedHashMap<RequestMatcher, AuthenticationEntryPoint> entryPoints = new LinkedHashMap<RequestMatcher, AuthenticationEntryPoint>();
-		entryPoints.put(new RequestHeaderRequestMatcher("X-Requested-With",
-				"XMLHttpRequest"), new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED));
+		entryPoints.put(X_REQUESTED_WITH, new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED));
 
 		DelegatingAuthenticationEntryPoint defaultEntryPoint = new DelegatingAuthenticationEntryPoint(
 				entryPoints);
-		defaultEntryPoint.setDefaultEntryPoint(basicAuthEntryPoint);
-		authenticationEntryPoint = defaultEntryPoint;
+		defaultEntryPoint.setDefaultEntryPoint(this.basicAuthEntryPoint);
+		this.authenticationEntryPoint = defaultEntryPoint;
 	}
 
 	/**
@@ -108,8 +116,8 @@ public final class HttpBasicConfigurer<B extends HttpSecurityBuilder<B>> extends
 	 * @throws Exception
 	 */
 	public HttpBasicConfigurer<B> realmName(String realmName) throws Exception {
-		basicAuthEntryPoint.setRealmName(realmName);
-		basicAuthEntryPoint.afterPropertiesSet();
+		this.basicAuthEntryPoint.setRealmName(realmName);
+		this.basicAuthEntryPoint.afterPropertiesSet();
 		return this;
 	}
 
@@ -142,31 +150,55 @@ public final class HttpBasicConfigurer<B extends HttpSecurityBuilder<B>> extends
 		return this;
 	}
 
+	@Override
 	public void init(B http) throws Exception {
-		registerDefaultAuthenticationEntryPoint(http);
+		registerDefaults(http);
 	}
 
-	@SuppressWarnings("unchecked")
-	private void registerDefaultAuthenticationEntryPoint(B http) {
-		ExceptionHandlingConfigurer<B> exceptionHandling = http
-				.getConfigurer(ExceptionHandlingConfigurer.class);
-		if (exceptionHandling == null) {
-			return;
-		}
+	private void registerDefaults(B http) {
 		ContentNegotiationStrategy contentNegotiationStrategy = http
 				.getSharedObject(ContentNegotiationStrategy.class);
 		if (contentNegotiationStrategy == null) {
 			contentNegotiationStrategy = new HeaderContentNegotiationStrategy();
 		}
-		MediaTypeRequestMatcher preferredMatcher = new MediaTypeRequestMatcher(
+
+		MediaTypeRequestMatcher restMatcher = new MediaTypeRequestMatcher(
 				contentNegotiationStrategy, MediaType.APPLICATION_ATOM_XML,
 				MediaType.APPLICATION_FORM_URLENCODED, MediaType.APPLICATION_JSON,
 				MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_XML,
 				MediaType.MULTIPART_FORM_DATA, MediaType.TEXT_XML);
-		preferredMatcher.setIgnoredMediaTypes(Collections.singleton(MediaType.ALL));
-		exceptionHandling.defaultAuthenticationEntryPointFor(
-				postProcess(authenticationEntryPoint), preferredMatcher);
+		restMatcher.setIgnoredMediaTypes(Collections.singleton(MediaType.ALL));
 
+		RequestMatcher notHtmlMatcher = new NegatedRequestMatcher(
+				new MediaTypeRequestMatcher(contentNegotiationStrategy,
+						MediaType.TEXT_HTML));
+		RequestMatcher restNotHtmlMatcher = new AndRequestMatcher(
+				Arrays.<RequestMatcher>asList(notHtmlMatcher, restMatcher));
+
+		RequestMatcher preferredMatcher = new OrRequestMatcher(Arrays.asList(X_REQUESTED_WITH, restNotHtmlMatcher));
+
+		registerDefaultEntryPoint(http, preferredMatcher);
+		registerDefaultLogoutSuccessHandler(http, preferredMatcher);
+	}
+
+	private void registerDefaultEntryPoint(B http, RequestMatcher preferredMatcher) {
+		ExceptionHandlingConfigurer<B> exceptionHandling = http
+				.getConfigurer(ExceptionHandlingConfigurer.class);
+		if (exceptionHandling == null) {
+			return;
+		}
+		exceptionHandling.defaultAuthenticationEntryPointFor(
+				postProcess(this.authenticationEntryPoint), preferredMatcher);
+	}
+
+	private void registerDefaultLogoutSuccessHandler(B http, RequestMatcher preferredMatcher) {
+		LogoutConfigurer<B> logout = http
+				.getConfigurer(LogoutConfigurer.class);
+		if (logout == null) {
+			return;
+		}
+		LogoutConfigurer<B> handler = logout.defaultLogoutSuccessHandlerFor(
+				postProcess(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)), preferredMatcher);
 	}
 
 	@Override
@@ -174,10 +206,10 @@ public final class HttpBasicConfigurer<B extends HttpSecurityBuilder<B>> extends
 		AuthenticationManager authenticationManager = http
 				.getSharedObject(AuthenticationManager.class);
 		BasicAuthenticationFilter basicAuthenticationFilter = new BasicAuthenticationFilter(
-				authenticationManager, authenticationEntryPoint);
-		if (authenticationDetailsSource != null) {
+				authenticationManager, this.authenticationEntryPoint);
+		if (this.authenticationDetailsSource != null) {
 			basicAuthenticationFilter
-					.setAuthenticationDetailsSource(authenticationDetailsSource);
+					.setAuthenticationDetailsSource(this.authenticationDetailsSource);
 		}
 		RememberMeServices rememberMeServices = http.getSharedObject(RememberMeServices.class);
 		if(rememberMeServices != null) {

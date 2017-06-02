@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2013 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ import org.springframework.util.Assert;
 
 /**
  * Provides lifecycle services for the embedded apacheDS server defined by the supplied
- * configuration. Used by {code LdapServerBeanDefinitionParser}. An instance will be
+ * configuration. Used by {@code LdapServerBeanDefinitionParser}. An instance will be
  * stored in the application context for each embedded server instance. It will start the
  * server when the context is initialized and shut it down when it is closed. It is
  * intended for temporary embedded use and will not retain changes across start/stop
@@ -62,11 +62,12 @@ import org.springframework.util.Assert;
  * application context is closed to allow the bean to be disposed of and the server
  * shutdown prior to attempting to start it again.
  * <p>
- * This class is intended for testing and internal security namespace use and is not
- * considered part of framework public API.
+ * This class is intended for testing and internal security namespace use, only, and is not
+ * considered part of the framework's public API.
  *
  * @author Luke Taylor
  * @author Rob Winch
+ * @author Gunnar Hillert
  */
 public class ApacheDSContainer implements InitializingBean, DisposableBean, Lifecycle,
 		ApplicationContextAware {
@@ -83,6 +84,10 @@ public class ApacheDSContainer implements InitializingBean, DisposableBean, Life
 	private final JdbmPartition partition;
 	private final String root;
 	private int port = 53389;
+
+	private boolean ldapOverSslEnabled;
+	private File keyStoreFile;
+	private String certificatePassord;
 
 	public ApacheDSContainer(String root, String ldifs) throws Exception {
 		this.ldifResources = ldifs;
@@ -126,11 +131,21 @@ public class ApacheDSContainer implements InitializingBean, DisposableBean, Life
 
 			setWorkingDirectory(new File(apacheWorkDir));
 		}
+		if (this.ldapOverSslEnabled && this.keyStoreFile == null) {
+			throw new IllegalArgumentException("When LdapOverSsl is enabled, the keyStoreFile property must be set.");
+		}
 
 		server = new LdapServer();
 		server.setDirectoryService(service);
 		// AbstractLdapIntegrationTests assume IPv4, so we specify the same here
-		server.setTransports(new TcpTransport(port));
+
+		TcpTransport transport = new TcpTransport(port);
+		if (ldapOverSslEnabled) {
+				transport.setEnableSSL(true);
+				server.setKeystoreFile(this.keyStoreFile.getAbsolutePath());
+				server.setCertificatePassword(this.certificatePassord);
+		}
+		server.setTransports(transport);
 		start();
 	}
 
@@ -144,7 +159,7 @@ public class ApacheDSContainer implements InitializingBean, DisposableBean, Life
 	}
 
 	public void setWorkingDirectory(File workingDir) {
-		Assert.notNull(workingDir);
+		Assert.notNull(workingDir, "workingDir cannot be null");
 
 		logger.info("Setting working directory for LDAP_PROVIDER: "
 				+ workingDir.getAbsolutePath());
@@ -165,6 +180,35 @@ public class ApacheDSContainer implements InitializingBean, DisposableBean, Life
 
 	public void setPort(int port) {
 		this.port = port;
+	}
+
+	/**
+	 * If set to {@code true} will enable LDAP over SSL (LDAPs). If set to {@code true}
+	 * {@link ApacheDSContainer#setCertificatePassord(String)} must be set as well.
+	 *
+	 * @param ldapOverSslEnabled If not set, will default to false
+	 */
+	public void setLdapOverSslEnabled(boolean ldapOverSslEnabled) {
+		this.ldapOverSslEnabled = ldapOverSslEnabled;
+	}
+
+	/**
+	 * The keyStore must not be null and must be a valid file. Will set the keyStore file on the underlying {@link LdapServer}.
+	 * @param keyStoreFile Mandatory if LDAPs is enabled
+	 */
+	public void setKeyStoreFile(File keyStoreFile) {
+		Assert.notNull(keyStoreFile, "The keyStoreFile must not be null.");
+		Assert.isTrue(keyStoreFile.isFile(), "The keyStoreFile must be a file.");
+		this.keyStoreFile = keyStoreFile;
+	}
+
+	/**
+	 * Will set the certificate password on the underlying {@link LdapServer}.
+	 *
+	 * @param certificatePassord May be null
+	 */
+	public void setCertificatePassord(String certificatePassord) {
+		this.certificatePassord = certificatePassord;
 	}
 
 	public DefaultDirectoryService getService() {
@@ -195,7 +239,7 @@ public class ApacheDSContainer implements InitializingBean, DisposableBean, Life
 		catch (LdapNameNotFoundException e) {
 			try {
 				LdapDN dn = new LdapDN(root);
-				Assert.isTrue(root.startsWith("dc="));
+				Assert.isTrue(root.startsWith("dc="), "root must start with dc=");
 				String dc = root.substring(3, root.indexOf(','));
 				ServerEntry entry = service.newEntry(dn);
 				entry.add("objectClass", "top", "domain", "extensibleObject");

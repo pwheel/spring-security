@@ -1,6 +1,21 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.web.authentication.preauth.j2ee;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 
 import java.util.Arrays;
 import java.util.List;
@@ -32,13 +47,11 @@ public class WebXmlJ2eeDefinedRolesRetrieverTests {
 
 		rolesRetriever.afterPropertiesSet();
 		Set<String> j2eeRoles = rolesRetriever.getMappableAttributes();
-		assertNotNull(j2eeRoles);
-		assertTrue("J2eeRoles expected size: " + ROLE1TO4_EXPECTED_ROLES.size()
-				+ ", actual size: " + j2eeRoles.size(),
-				j2eeRoles.size() == ROLE1TO4_EXPECTED_ROLES.size());
-		assertTrue("J2eeRoles expected contents (arbitrary order): "
-				+ ROLE1TO4_EXPECTED_ROLES + ", actual content: " + j2eeRoles,
-				j2eeRoles.containsAll(ROLE1TO4_EXPECTED_ROLES));
+		assertThat(j2eeRoles).isNotNull();
+		assertThat(j2eeRoles.size()).withFailMessage("J2eeRoles expected size: " + ROLE1TO4_EXPECTED_ROLES.size()
+				+ ", actual size: " + j2eeRoles.size()).isEqualTo(ROLE1TO4_EXPECTED_ROLES.size());
+		assertThat(j2eeRoles).withFailMessage("J2eeRoles expected contents (arbitrary order).isTrue(): "
+				+ ROLE1TO4_EXPECTED_ROLES + ", actual content: " + j2eeRoles).containsAll(ROLE1TO4_EXPECTED_ROLES);
 	}
 
 	@Test
@@ -56,7 +69,6 @@ public class WebXmlJ2eeDefinedRolesRetrieverTests {
 		});
 		rolesRetriever.afterPropertiesSet();
 		Set<String> j2eeRoles = rolesRetriever.getMappableAttributes();
-		assertEquals("J2eeRoles expected size: 0, actual size: " + j2eeRoles.size(), 0,
-				j2eeRoles.size());
+		assertThat(j2eeRoles).withFailMessage("actual size: " + j2eeRoles.size() + "J2eeRoles expected size: 0").isEmpty();
 	}
 }

@@ -15,13 +15,6 @@
  */
 package org.springframework.security.config.http
 
-import static org.junit.Assert.assertSame
-import static org.mockito.Mockito.*
-
-import javax.servlet.http.HttpServletRequest
-import javax.servlet.http.HttpServletResponse
-
-import org.mockito.Mockito
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -41,7 +34,6 @@ import org.springframework.security.web.authentication.logout.CookieClearingLogo
 import org.springframework.security.web.authentication.logout.LogoutFilter
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler
 import org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter
-import org.springframework.security.web.authentication.session.SessionAuthenticationException
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy
 import org.springframework.security.web.context.NullSecurityContextRepository
 import org.springframework.security.web.context.SaveContextOnUpdateOrErrorResponseWrapper
@@ -49,6 +41,13 @@ import org.springframework.security.web.context.SecurityContextPersistenceFilter
 import org.springframework.security.web.savedrequest.RequestCacheAwareFilter
 import org.springframework.security.web.session.ConcurrentSessionFilter
 import org.springframework.security.web.session.SessionManagementFilter
+
+import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.HttpServletResponse
+
+import static org.junit.Assert.assertSame
+import static org.mockito.Matchers.any
+import static org.mockito.Mockito.verify
 
 /**
  * Tests session-related functionality for the &lt;http&gt; namespace element and &lt;session-management&gt;
@@ -164,13 +163,13 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
 
 		then:
 		concurrentSessionFilter instanceof ConcurrentSessionFilter
-		concurrentSessionFilter.expiredUrl == '/expired'
+		concurrentSessionFilter.sessionInformationExpiredStrategy.destinationUrl == '/expired'
 		appContext.getBean("sr") != null
 		getFilter(SessionManagementFilter.class) != null
 		sessionRegistryIsValid();
 
-		concurrentSessionFilter.handlers.size() == 1
-		def logoutHandler = concurrentSessionFilter.handlers[0]
+		concurrentSessionFilter.handlers.logoutHandlers.size() == 1
+		def logoutHandler = concurrentSessionFilter.handlers.logoutHandlers[0]
 		logoutHandler instanceof SecurityContextLogoutHandler
 		logoutHandler.invalidateHttpSession
 
@@ -190,7 +189,7 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
 
 		List filters = getFilters("/someurl")
 		ConcurrentSessionFilter concurrentSessionFilter = filters.get(1)
-		def logoutHandlers = concurrentSessionFilter.handlers
+		def logoutHandlers = concurrentSessionFilter.handlers.logoutHandlers
 
 		then: 'ConcurrentSessionFilter contains the customized LogoutHandlers'
 		logoutHandlers.size() == 3
@@ -216,7 +215,7 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
 
 		List filters = getFilters("/someurl")
 		ConcurrentSessionFilter concurrentSessionFilter = filters.get(1)
-		def logoutHandlers = concurrentSessionFilter.handlers
+		def logoutHandlers = concurrentSessionFilter.handlers.logoutHandlers
 
 		then: 'SecurityContextLogoutHandler and RememberMeServices are in ConcurrentSessionFilter logoutHandlers'
 		!filters.find { it instanceof LogoutFilter }
@@ -238,7 +237,7 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
 
 		List filters = getFilters("/someurl")
 		ConcurrentSessionFilter concurrentSessionFilter = filters.get(1)
-		def logoutHandlers = concurrentSessionFilter.handlers
+		def logoutHandlers = concurrentSessionFilter.handlers.logoutHandlers
 
 		then: 'Only SecurityContextLogoutHandler is found in ConcurrentSessionFilter logoutHandlers'
 		!filters.find { it instanceof LogoutFilter }
@@ -271,7 +270,7 @@ class SessionManagementConfigTests extends AbstractHttpConfigTests {
 		List filters = getFilters("/someurl");
 
 		expect:
-		filters.get(1).expiredUrl == null
+		filters.get(1).sessionInformationExpiredStrategy.class.name == 'org.springframework.security.web.session.ConcurrentSessionFilter$ResponseBodySessionInformationExpiredStrategy'
 	}
 
 	def externalSessionStrategyIsSupported() {

@@ -1,28 +1,43 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.config.authentication;
-
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
 
 import org.junit.After;
 import org.junit.Test;
+import org.w3c.dom.Element;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication
+		.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.BeanIds;
-import org.springframework.security.config.authentication.AbstractUserDetailsServiceBeanDefinitionParser;
-import org.springframework.security.config.authentication.CachingUserDetailsService;
-import org.springframework.security.config.authentication.JdbcUserServiceBeanDefinitionParser;
 import org.springframework.security.config.util.InMemoryXmlApplicationContext;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.util.FieldUtils;
-import org.w3c.dom.Element;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 /**
  * @author Ben Alex
  * @author Luke Taylor
+ * @author Eddú Meléndez
  */
 public class JdbcUserServiceBeanDefinitionParserTests {
 	private static String USER_CACHE_XML = "<b:bean id='userCache' class='org.springframework.security.authentication.dao.MockUserCache'/>";
@@ -46,7 +61,7 @@ public class JdbcUserServiceBeanDefinitionParserTests {
 
 	@Test
 	public void beanNameIsCorrect() throws Exception {
-		assertEquals(JdbcUserDetailsManager.class.getName(),
+		assertThat(JdbcUserDetailsManager.class.getName()).isEqualTo(
 				new JdbcUserServiceBeanDefinitionParser()
 						.getBeanClassName(mock(Element.class)));
 	}
@@ -56,14 +71,14 @@ public class JdbcUserServiceBeanDefinitionParserTests {
 		setContext("<jdbc-user-service data-source-ref='dataSource'/>" + DATA_SOURCE);
 		JdbcUserDetailsManager mgr = (JdbcUserDetailsManager) appContext
 				.getBean(BeanIds.USER_DETAILS_SERVICE);
-		assertNotNull(mgr.loadUserByUsername("rod"));
+		assertThat(mgr.loadUserByUsername("rod")).isNotNull();
 	}
 
 	@Test
 	public void beanIdIsParsedCorrectly() {
 		setContext("<jdbc-user-service id='myUserService' data-source-ref='dataSource'/>"
 				+ DATA_SOURCE);
-		assertTrue(appContext.getBean("myUserService") instanceof JdbcUserDetailsManager);
+		assertThat(appContext.getBean("myUserService") instanceof JdbcUserDetailsManager).isTrue();
 	}
 
 	@Test
@@ -76,10 +91,9 @@ public class JdbcUserServiceBeanDefinitionParserTests {
 				+ "'/>" + DATA_SOURCE);
 		JdbcUserDetailsManager mgr = (JdbcUserDetailsManager) appContext
 				.getBean("myUserService");
-		assertEquals(userQuery, FieldUtils.getFieldValue(mgr, "usersByUsernameQuery"));
-		assertEquals(authoritiesQuery,
-				FieldUtils.getFieldValue(mgr, "authoritiesByUsernameQuery"));
-		assertTrue(mgr.loadUserByUsername("rod") != null);
+		assertThat(FieldUtils.getFieldValue(mgr,"usersByUsernameQuery")).isEqualTo(userQuery);
+		assertThat(FieldUtils.getFieldValue(mgr, "authoritiesByUsernameQuery")).isEqualTo(authoritiesQuery);
+		assertThat(mgr.loadUserByUsername("rod") != null).isTrue();
 	}
 
 	@Test
@@ -89,9 +103,8 @@ public class JdbcUserServiceBeanDefinitionParserTests {
 				+ "group-authorities-by-username-query='blah blah'/>" + DATA_SOURCE);
 		JdbcUserDetailsManager mgr = (JdbcUserDetailsManager) appContext
 				.getBean("myUserService");
-		assertEquals("blah blah",
-				FieldUtils.getFieldValue(mgr, "groupAuthoritiesByUsernameQuery"));
-		assertTrue((Boolean) FieldUtils.getFieldValue(mgr, "enableGroups"));
+		assertThat(FieldUtils.getFieldValue(mgr, "groupAuthoritiesByUsernameQuery")).isEqualTo("blah blah");
+		assertThat((Boolean) FieldUtils.getFieldValue(mgr, "enableGroups")).isTrue();
 	}
 
 	@Test
@@ -101,9 +114,9 @@ public class JdbcUserServiceBeanDefinitionParserTests {
 		CachingUserDetailsService cachingUserService = (CachingUserDetailsService) appContext
 				.getBean("myUserService"
 						+ AbstractUserDetailsServiceBeanDefinitionParser.CACHING_SUFFIX);
-		assertSame(cachingUserService.getUserCache(), appContext.getBean("userCache"));
-		assertNotNull(cachingUserService.loadUserByUsername("rod"));
-		assertNotNull(cachingUserService.loadUserByUsername("rod"));
+		assertThat(appContext.getBean("userCache")).isSameAs(cachingUserService.getUserCache());
+		assertThat(cachingUserService.loadUserByUsername("rod")).isNotNull();
+		assertThat(cachingUserService.loadUserByUsername("rod")).isNotNull();
 	}
 
 	@Test
@@ -128,10 +141,10 @@ public class JdbcUserServiceBeanDefinitionParserTests {
 				.getBean(BeanIds.AUTHENTICATION_MANAGER);
 		DaoAuthenticationProvider provider = (DaoAuthenticationProvider) mgr
 				.getProviders().get(0);
-		assertSame(provider.getUserCache(), appContext.getBean("userCache"));
+		assertThat(appContext.getBean("userCache")).isSameAs(provider.getUserCache());
 		provider.authenticate(new UsernamePasswordAuthenticationToken("rod", "koala"));
-		assertNotNull("Cache should contain user after authentication", provider
-				.getUserCache().getUserFromCache("rod"));
+		assertThat(provider
+				.getUserCache().getUserFromCache("rod")).isNotNull().withFailMessage("Cache should contain user after authentication");
 	}
 
 	@Test
@@ -141,8 +154,8 @@ public class JdbcUserServiceBeanDefinitionParserTests {
 		JdbcUserDetailsManager mgr = (JdbcUserDetailsManager) appContext
 				.getBean("myUserService");
 		UserDetails rod = mgr.loadUserByUsername("rod");
-		assertTrue(AuthorityUtils.authorityListToSet(rod.getAuthorities()).contains(
-				"PREFIX_ROLE_SUPERVISOR"));
+		assertThat(AuthorityUtils.authorityListToSet(rod.getAuthorities()))
+				.contains("PREFIX_ROLE_SUPERVISOR");
 	}
 
 	private void setContext(String context) {

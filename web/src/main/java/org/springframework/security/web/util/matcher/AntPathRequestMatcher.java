@@ -1,23 +1,29 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.springframework.security.web.util.matcher;
+
+import java.util.Collections;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.http.HttpMethod;
-import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -46,7 +52,8 @@ import org.springframework.util.StringUtils;
  *
  * @see org.springframework.util.AntPathMatcher
  */
-public final class AntPathRequestMatcher implements RequestMatcher {
+public final class AntPathRequestMatcher
+		implements RequestMatcher, RequestVariablesExtractor {
 	private static final Log logger = LogFactory.getLog(AntPathRequestMatcher.class);
 	private static final String MATCH_ALL = "/**";
 
@@ -74,7 +81,7 @@ public final class AntPathRequestMatcher implements RequestMatcher {
 	 * the incoming request doesn't have the same method.
 	 */
 	public AntPathRequestMatcher(String pattern, String httpMethod) {
-		this(pattern, httpMethod, false);
+		this(pattern, httpMethod, true);
 	}
 
 	/**
@@ -86,35 +93,33 @@ public final class AntPathRequestMatcher implements RequestMatcher {
 	 * the incoming request doesn't doesn't have the same method.
 	 * @param caseSensitive true if the matcher should consider case, else false
 	 */
-	public AntPathRequestMatcher(String pattern, String httpMethod, boolean caseSensitive) {
+	public AntPathRequestMatcher(String pattern, String httpMethod,
+			boolean caseSensitive) {
 		Assert.hasText(pattern, "Pattern cannot be null or empty");
 		this.caseSensitive = caseSensitive;
 
 		if (pattern.equals(MATCH_ALL) || pattern.equals("**")) {
 			pattern = MATCH_ALL;
-			matcher = null;
+			this.matcher = null;
 		}
 		else {
-			if (!caseSensitive) {
-				pattern = pattern.toLowerCase();
-			}
-
 			// If the pattern ends with {@code /**} and has no other wildcards or path
 			// variables, then optimize to a sub-path match
 			if (pattern.endsWith(MATCH_ALL)
-					&& (pattern.indexOf('?') == -1 && pattern.indexOf('{') == -1 && pattern
-							.indexOf('}') == -1)
+					&& (pattern.indexOf('?') == -1 && pattern.indexOf('{') == -1
+							&& pattern.indexOf('}') == -1)
 					&& pattern.indexOf("*") == pattern.length() - 2) {
-				matcher = new SubpathMatcher(pattern.substring(0, pattern.length() - 3));
+				this.matcher = new SubpathMatcher(
+						pattern.substring(0, pattern.length() - 3), caseSensitive);
 			}
 			else {
-				matcher = new SpringAntMatcher(pattern);
+				this.matcher = new SpringAntMatcher(pattern, caseSensitive);
 			}
 		}
 
 		this.pattern = pattern;
-		this.httpMethod = StringUtils.hasText(httpMethod) ? HttpMethod
-				.valueOf(httpMethod) : null;
+		this.httpMethod = StringUtils.hasText(httpMethod) ? HttpMethod.valueOf(httpMethod)
+				: null;
 	}
 
 	/**
@@ -124,19 +129,20 @@ public final class AntPathRequestMatcher implements RequestMatcher {
 	 * @param request the request to match against. The ant pattern will be matched
 	 * against the {@code servletPath} + {@code pathInfo} of the request.
 	 */
+	@Override
 	public boolean matches(HttpServletRequest request) {
-		if (httpMethod != null && StringUtils.hasText(request.getMethod())
-				&& httpMethod != valueOf(request.getMethod())) {
+		if (this.httpMethod != null && StringUtils.hasText(request.getMethod())
+				&& this.httpMethod != valueOf(request.getMethod())) {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Request '" + request.getMethod() + " "
-						+ getRequestPath(request) + "'" + " doesn't match '" + httpMethod
-						+ " " + pattern);
+						+ getRequestPath(request) + "'" + " doesn't match '"
+						+ this.httpMethod + " " + this.pattern);
 			}
 
 			return false;
 		}
 
-		if (pattern.equals(MATCH_ALL)) {
+		if (this.pattern.equals(MATCH_ALL)) {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Request '" + getRequestPath(request)
 						+ "' matched by universal pattern '/**'");
@@ -148,11 +154,20 @@ public final class AntPathRequestMatcher implements RequestMatcher {
 		String url = getRequestPath(request);
 
 		if (logger.isDebugEnabled()) {
-			logger.debug("Checking match of request : '" + url + "'; against '" + pattern
-					+ "'");
+			logger.debug("Checking match of request : '" + url + "'; against '"
+					+ this.pattern + "'");
 		}
 
-		return matcher.matches(url);
+		return this.matcher.matches(url);
+	}
+
+	@Override
+	public Map<String, String> extractUriTemplateVariables(HttpServletRequest request) {
+		if (this.matcher == null || !matches(request)) {
+			return Collections.emptyMap();
+		}
+		String url = getRequestPath(request);
+		return this.matcher.extractUriTemplateVariables(url);
 	}
 
 	private String getRequestPath(HttpServletRequest request) {
@@ -162,15 +177,11 @@ public final class AntPathRequestMatcher implements RequestMatcher {
 			url += request.getPathInfo();
 		}
 
-		if (!caseSensitive) {
-			url = url.toLowerCase();
-		}
-
 		return url;
 	}
 
 	public String getPattern() {
-		return pattern;
+		return this.pattern;
 	}
 
 	@Override
@@ -186,9 +197,9 @@ public final class AntPathRequestMatcher implements RequestMatcher {
 
 	@Override
 	public int hashCode() {
-		int code = 31 ^ pattern.hashCode();
-		if (httpMethod != null) {
-			code ^= httpMethod.hashCode();
+		int code = 31 ^ this.pattern.hashCode();
+		if (this.httpMethod != null) {
+			code ^= this.httpMethod.hashCode();
 		}
 		return code;
 	}
@@ -196,10 +207,10 @@ public final class AntPathRequestMatcher implements RequestMatcher {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("Ant [pattern='").append(pattern).append("'");
+		sb.append("Ant [pattern='").append(this.pattern).append("'");
 
-		if (httpMethod != null) {
-			sb.append(", ").append(httpMethod);
+		if (this.httpMethod != null) {
+			sb.append(", ").append(this.httpMethod);
 		}
 
 		sb.append("]");
@@ -227,19 +238,35 @@ public final class AntPathRequestMatcher implements RequestMatcher {
 
 	private static interface Matcher {
 		boolean matches(String path);
+
+		Map<String, String> extractUriTemplateVariables(String path);
 	}
 
 	private static class SpringAntMatcher implements Matcher {
-		private static final AntPathMatcher antMatcher = new AntPathMatcher();
+		private final AntPathMatcher antMatcher;
 
 		private final String pattern;
 
-		private SpringAntMatcher(String pattern) {
+		private SpringAntMatcher(String pattern, boolean caseSensitive) {
 			this.pattern = pattern;
+			this.antMatcher = createMatcher(caseSensitive);
 		}
 
+		@Override
 		public boolean matches(String path) {
-			return antMatcher.match(pattern, path);
+			return this.antMatcher.match(this.pattern, path);
+		}
+
+		@Override
+		public Map<String, String> extractUriTemplateVariables(String path) {
+			return this.antMatcher.extractUriTemplateVariables(this.pattern, path);
+		}
+
+		private static AntPathMatcher createMatcher(boolean caseSensitive) {
+			AntPathMatcher matcher = new AntPathMatcher();
+			matcher.setTrimTokens(false);
+			matcher.setCaseSensitive(caseSensitive);
+			return matcher;
 		}
 	}
 
@@ -249,16 +276,27 @@ public final class AntPathRequestMatcher implements RequestMatcher {
 	private static class SubpathMatcher implements Matcher {
 		private final String subpath;
 		private final int length;
+		private final boolean caseSensitive;
 
-		private SubpathMatcher(String subpath) {
-			assert !subpath.contains("*");
-			this.subpath = subpath;
+		private SubpathMatcher(String subpath, boolean caseSensitive) {
+			assert!subpath.contains("*");
+			this.subpath = caseSensitive ? subpath : subpath.toLowerCase();
 			this.length = subpath.length();
+			this.caseSensitive = caseSensitive;
 		}
 
+		@Override
 		public boolean matches(String path) {
-			return path.startsWith(subpath)
-					&& (path.length() == length || path.charAt(length) == '/');
+			if (!this.caseSensitive) {
+				path = path.toLowerCase();
+			}
+			return path.startsWith(this.subpath)
+					&& (path.length() == this.length || path.charAt(this.length) == '/');
+		}
+
+		@Override
+		public Map<String, String> extractUriTemplateVariables(String path) {
+			return Collections.emptyMap();
 		}
 	}
 }

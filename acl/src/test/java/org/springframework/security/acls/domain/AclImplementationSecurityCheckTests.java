@@ -1,6 +1,21 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.acls.domain;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 
 import org.junit.*;
 import org.springframework.security.access.AccessDeniedException;
@@ -162,7 +177,7 @@ public class AclImplementationSecurityCheckTests {
 		try {
 			aclAuthorizationStrategy.securityCheck(aclFirstAllow,
 					AclAuthorizationStrategy.CHANGE_AUDITING);
-			assertTrue(true);
+
 		}
 		catch (AccessDeniedException notExpected) {
 			fail("It shouldn't have thrown AccessDeniedException");
@@ -177,13 +192,13 @@ public class AclImplementationSecurityCheckTests {
 			fail("It should have thrown NotFoundException");
 		}
 		catch (NotFoundException expected) {
-			assertTrue(true);
+
 		}
 		// and still grant access for CHANGE_GENERAL
 		try {
 			aclAuthorizationStrategy.securityCheck(aclNoACE,
 					AclAuthorizationStrategy.CHANGE_GENERAL);
-			assertTrue(true);
+
 		}
 		catch (NotFoundException expected) {
 			fail("It shouldn't have thrown NotFoundException");
@@ -221,7 +236,7 @@ public class AclImplementationSecurityCheckTests {
 			fail("It should have thrown NotFoundException");
 		}
 		catch (NotFoundException expected) {
-			assertTrue(true);
+
 		}
 
 		// Link the child with its parent and test again against the
@@ -231,7 +246,7 @@ public class AclImplementationSecurityCheckTests {
 		try {
 			aclAuthorizationStrategy.securityCheck(childAcl,
 					AclAuthorizationStrategy.CHANGE_OWNERSHIP);
-			assertTrue(true);
+
 		}
 		catch (NotFoundException expected) {
 			fail("It shouldn't have thrown NotFoundException");
@@ -250,7 +265,7 @@ public class AclImplementationSecurityCheckTests {
 		try {
 			aclAuthorizationStrategy.securityCheck(childAcl,
 					AclAuthorizationStrategy.CHANGE_OWNERSHIP);
-			assertTrue(true);
+
 		}
 		catch (NotFoundException expected) {
 			fail("It shouldn't have thrown NotFoundException");

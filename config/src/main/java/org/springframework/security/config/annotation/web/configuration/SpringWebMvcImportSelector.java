@@ -20,7 +20,7 @@ import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.ClassUtils;
 
 /**
- * Used by {@link EnableWebSecurity} to conditionaly import
+ * Used by {@link EnableWebSecurity} to conditionally import
  * {@link WebMvcSecurityConfiguration} when the DispatcherServlet is present on the
  * classpath.
  *
@@ -31,16 +31,17 @@ class SpringWebMvcImportSelector implements ImportSelector {
 
 	/*
 	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.springframework.context.annotation.ImportSelector#selectImports(org.springframework
-	 * .core.type.AnnotationMetadata)
+	 *
+	 * @see org.springframework.context.annotation.ImportSelector#selectImports(org.
+	 * springframework .core.type.AnnotationMetadata)
 	 */
 	public String[] selectImports(AnnotationMetadata importingClassMetadata) {
 		boolean webmvcPresent = ClassUtils.isPresent(
-				"org.springframework.web.servlet.DispatcherServlet", getClass()
-						.getClassLoader());
-		return webmvcPresent ? new String[] { "org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration" }
+				"org.springframework.web.servlet.DispatcherServlet",
+				getClass().getClassLoader());
+		return webmvcPresent
+				? new String[] {
+						"org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration" }
 				: new String[] {};
 	}
 }

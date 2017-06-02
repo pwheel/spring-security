@@ -20,18 +20,23 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 
+import org.springframework.context.ApplicationContext;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.AccessDecisionVoter;
 import org.springframework.security.access.ConfigAttribute;
 import org.springframework.security.access.SecurityConfig;
 import org.springframework.security.access.expression.SecurityExpressionHandler;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.authentication.AuthenticationTrustResolver;
 import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.HttpSecurityBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.core.GrantedAuthorityDefaults;
 import org.springframework.security.web.FilterInvocation;
 import org.springframework.security.web.access.expression.DefaultWebSecurityExpressionHandler;
 import org.springframework.security.web.access.expression.ExpressionBasedFilterInvocationSecurityMetadataSource;
 import org.springframework.security.web.access.expression.WebExpressionVoter;
+import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -82,7 +87,7 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 	private static final String fullyAuthenticated = "fullyAuthenticated";
 	private static final String rememberMe = "rememberMe";
 
-	private final ExpressionInterceptUrlRegistry REGISTRY = new ExpressionInterceptUrlRegistry();
+	private final ExpressionInterceptUrlRegistry REGISTRY;
 
 	private SecurityExpressionHandler<FilterInvocation> expressionHandler;
 
@@ -90,7 +95,8 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 	 * Creates a new instance
 	 * @see HttpSecurity#authorizeRequests()
 	 */
-	public ExpressionUrlAuthorizationConfigurer() {
+	public ExpressionUrlAuthorizationConfigurer(ApplicationContext context) {
+		this.REGISTRY = new ExpressionInterceptUrlRegistry(context);
 	}
 
 	public ExpressionInterceptUrlRegistry getRegistry() {
@@ -100,6 +106,23 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 	public class ExpressionInterceptUrlRegistry
 			extends
 			ExpressionUrlAuthorizationConfigurer<H>.AbstractInterceptUrlRegistry<ExpressionInterceptUrlRegistry, AuthorizedUrl> {
+
+		/**
+		 * @param context
+		 */
+		private ExpressionInterceptUrlRegistry(ApplicationContext context) {
+			setApplicationContext(context);
+		}
+
+		@Override
+		public MvcMatchersAuthorizedUrl mvcMatchers(HttpMethod method, String... mvcPatterns) {
+			return new MvcMatchersAuthorizedUrl(createMvcMatchers(method, mvcPatterns));
+		}
+
+		@Override
+		public MvcMatchersAuthorizedUrl mvcMatchers(String... patterns) {
+			return mvcMatchers(null, patterns);
+		}
 
 		@Override
 		protected final AuthorizedUrl chainRequestMatchersInternal(
@@ -174,7 +197,7 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 				.createRequestMap();
 		if (requestMap.isEmpty()) {
 			throw new IllegalStateException(
-					"At least one mapping is required (i.e. authorizeRequests().anyRequest.authenticated())");
+					"At least one mapping is required (i.e. authorizeRequests().anyRequest().authenticated())");
 		}
 		return new ExpressionBasedFilterInvocationSecurityMetadataSource(requestMap,
 				getExpressionHandler(http));
@@ -188,6 +211,19 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 			if (trustResolver != null) {
 				defaultHandler.setTrustResolver(trustResolver);
 			}
+			ApplicationContext context = http.getSharedObject(ApplicationContext.class);
+			if(context != null) {
+				String[] roleHiearchyBeanNames = context.getBeanNamesForType(RoleHierarchy.class);
+				if(roleHiearchyBeanNames.length == 1) {
+					defaultHandler.setRoleHierarchy(context.getBean(roleHiearchyBeanNames[0], RoleHierarchy.class));
+				}
+				String[] grantedAuthorityDefaultsBeanNames = context.getBeanNamesForType(GrantedAuthorityDefaults.class);
+				if(grantedAuthorityDefaultsBeanNames.length == 1) {
+					GrantedAuthorityDefaults grantedAuthorityDefaults = context.getBean(grantedAuthorityDefaultsBeanNames[0], GrantedAuthorityDefaults.class);
+					defaultHandler.setDefaultRolePrefix(grantedAuthorityDefaults.getRolePrefix());
+				}
+			}
+
 			expressionHandler = postProcess(defaultHandler);
 		}
 
@@ -223,8 +259,32 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 		return "hasIpAddress('" + ipAddressExpression + "')";
 	}
 
-	public final class AuthorizedUrl {
-		private List<RequestMatcher> requestMatchers;
+	/**
+	 * An {@link AuthorizedUrl} that allows optionally configuring the
+	 * {@link MvcRequestMatcher#setMethod(HttpMethod)}
+	 *
+	 * @author Rob Winch
+	 */
+	public class MvcMatchersAuthorizedUrl extends AuthorizedUrl {
+		/**
+		 * Creates a new instance
+		 *
+		 * @param requestMatchers the {@link RequestMatcher} instances to map
+		 */
+		private MvcMatchersAuthorizedUrl(List<MvcRequestMatcher> requestMatchers) {
+			super(requestMatchers);
+		}
+
+		public AuthorizedUrl servletPath(String servletPath) {
+			for (MvcRequestMatcher matcher : (List<MvcRequestMatcher>) getMatchers()) {
+				matcher.setServletPath(servletPath);
+			}
+			return this;
+		}
+	}
+
+	public class AuthorizedUrl {
+		private List<? extends RequestMatcher> requestMatchers;
 		private boolean not;
 
 		/**
@@ -232,8 +292,12 @@ public final class ExpressionUrlAuthorizationConfigurer<H extends HttpSecurityBu
 		 *
 		 * @param requestMatchers the {@link RequestMatcher} instances to map
 		 */
-		private AuthorizedUrl(List<RequestMatcher> requestMatchers) {
+		private AuthorizedUrl(List<? extends RequestMatcher> requestMatchers) {
 			this.requestMatchers = requestMatchers;
+		}
+
+		protected List<? extends RequestMatcher> getMatchers() {
+			return this.requestMatchers;
 		}
 
 		/**

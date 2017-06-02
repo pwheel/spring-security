@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +16,7 @@
 
 package org.springframework.security.taglibs.authz;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.*;
 
 import javax.servlet.jsp.JspException;
 import javax.servlet.jsp.tagext.Tag;
@@ -55,9 +56,9 @@ public class AuthenticationTagTests {
 		SecurityContextHolder.getContext().setAuthentication(auth);
 
 		authenticationTag.setProperty("name");
-		assertEquals(Tag.SKIP_BODY, authenticationTag.doStartTag());
-		assertEquals(Tag.EVAL_PAGE, authenticationTag.doEndTag());
-		assertEquals("rodUserDetails", authenticationTag.getLastMessage());
+		assertThat(authenticationTag.doStartTag()).isEqualTo(Tag.SKIP_BODY);
+		assertThat(authenticationTag.doEndTag()).isEqualTo(Tag.EVAL_PAGE);
+		assertThat(authenticationTag.getLastMessage()).isEqualTo("rodUserDetails");
 	}
 
 	@Test
@@ -67,9 +68,9 @@ public class AuthenticationTagTests {
 						AuthorityUtils.NO_AUTHORITIES));
 
 		authenticationTag.setProperty("principal");
-		assertEquals(Tag.SKIP_BODY, authenticationTag.doStartTag());
-		assertEquals(Tag.EVAL_PAGE, authenticationTag.doEndTag());
-		assertEquals("rodAsString", authenticationTag.getLastMessage());
+		assertThat(authenticationTag.doStartTag()).isEqualTo(Tag.SKIP_BODY);
+		assertThat(authenticationTag.doEndTag()).isEqualTo(Tag.EVAL_PAGE);
+		assertThat(authenticationTag.getLastMessage()).isEqualTo("rodAsString");
 	}
 
 	@Test
@@ -77,9 +78,9 @@ public class AuthenticationTagTests {
 		SecurityContextHolder.getContext().setAuthentication(auth);
 
 		authenticationTag.setProperty("principal.username");
-		assertEquals(Tag.SKIP_BODY, authenticationTag.doStartTag());
-		assertEquals(Tag.EVAL_PAGE, authenticationTag.doEndTag());
-		assertEquals("rodUserDetails", authenticationTag.getLastMessage());
+		assertThat(authenticationTag.doStartTag()).isEqualTo(Tag.SKIP_BODY);
+		assertThat(authenticationTag.doEndTag()).isEqualTo(Tag.EVAL_PAGE);
+		assertThat(authenticationTag.getLastMessage()).isEqualTo("rodUserDetails");
 	}
 
 	@Test
@@ -89,8 +90,8 @@ public class AuthenticationTagTests {
 						AuthorityUtils.NO_AUTHORITIES));
 
 		authenticationTag.setProperty("principal");
-		assertEquals(Tag.SKIP_BODY, authenticationTag.doStartTag());
-		assertEquals(Tag.EVAL_PAGE, authenticationTag.doEndTag());
+		assertThat(authenticationTag.doStartTag()).isEqualTo(Tag.SKIP_BODY);
+		assertThat(authenticationTag.doEndTag()).isEqualTo(Tag.EVAL_PAGE);
 	}
 
 	@Test
@@ -98,16 +99,16 @@ public class AuthenticationTagTests {
 		SecurityContextHolder.getContext().setAuthentication(null);
 
 		authenticationTag.setProperty("principal");
-		assertEquals(Tag.SKIP_BODY, authenticationTag.doStartTag());
-		assertEquals(Tag.EVAL_PAGE, authenticationTag.doEndTag());
-		assertEquals(null, authenticationTag.getLastMessage());
+		assertThat(authenticationTag.doStartTag()).isEqualTo(Tag.SKIP_BODY);
+		assertThat(authenticationTag.doEndTag()).isEqualTo(Tag.EVAL_PAGE);
+		assertThat(authenticationTag.getLastMessage()).isEqualTo(null);
 	}
 
 	@Test
 	public void testSkipsBodyIfNullOrEmptyOperation() throws Exception {
 		authenticationTag.setProperty("");
-		assertEquals(Tag.SKIP_BODY, authenticationTag.doStartTag());
-		assertEquals(Tag.EVAL_PAGE, authenticationTag.doEndTag());
+		assertThat(authenticationTag.doStartTag()).isEqualTo(Tag.SKIP_BODY);
+		assertThat(authenticationTag.doEndTag()).isEqualTo(Tag.EVAL_PAGE);
 	}
 
 	@Test
@@ -131,7 +132,7 @@ public class AuthenticationTagTests {
 		authenticationTag.setProperty("name");
 		authenticationTag.doStartTag();
 		authenticationTag.doEndTag();
-		assertEquals("&lt;&gt;&amp;&#32;", authenticationTag.getLastMessage());
+		assertThat(authenticationTag.getLastMessage()).isEqualTo("&lt;&gt;&amp;&#32;");
 	}
 
 	@Test
@@ -142,7 +143,7 @@ public class AuthenticationTagTests {
 		authenticationTag.setHtmlEscape("false");
 		authenticationTag.doStartTag();
 		authenticationTag.doEndTag();
-		assertEquals("<>& ", authenticationTag.getLastMessage());
+		assertThat(authenticationTag.getLastMessage()).isEqualTo("<>& ");
 	}
 
 	// ~ Inner Classes

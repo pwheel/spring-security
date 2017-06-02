@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,8 +16,8 @@
 
 package org.springframework.security.access.vote;
 
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
@@ -97,7 +98,7 @@ public class AffirmativeBasedTests {
 	public void onlyAbstainVotesDeniesAccessWithDefault() throws Exception {
 		mgr = new AffirmativeBased(Arrays.<AccessDecisionVoter<? extends Object>> asList(
 				abstain, abstain, abstain));
-		assertTrue(!mgr.isAllowIfAllAbstainDecisions()); // check default
+		assertThat(!mgr.isAllowIfAllAbstainDecisions()).isTrue(); // check default
 
 		mgr.decide(user, new Object(), attrs);
 	}
@@ -108,7 +109,7 @@ public class AffirmativeBasedTests {
 		mgr = new AffirmativeBased(Arrays.<AccessDecisionVoter<? extends Object>> asList(
 				abstain, abstain, abstain));
 		mgr.setAllowIfAllAbstainDecisions(true);
-		assertTrue(mgr.isAllowIfAllAbstainDecisions()); // check changed
+		assertThat(mgr.isAllowIfAllAbstainDecisions()).isTrue(); // check changed
 
 		mgr.decide(user, new Object(), attrs);
 	}

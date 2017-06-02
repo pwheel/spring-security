@@ -1,10 +1,23 @@
+/*
+ * Copyright 2002-2016 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.security.acls.sid;
 
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.*;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.util.Collection;
 import java.util.List;
 
 import org.junit.Test;
@@ -16,7 +29,6 @@ import org.springframework.security.acls.model.Sid;
 import org.springframework.security.acls.model.SidRetrievalStrategy;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
 
 /**
@@ -38,19 +50,19 @@ public class SidRetrievalStrategyTests {
 		SidRetrievalStrategy retrStrategy = new SidRetrievalStrategyImpl();
 		List<Sid> sids = retrStrategy.getSids(authentication);
 
-		assertNotNull(sids);
-		assertEquals(4, sids.size());
-		assertNotNull(sids.get(0));
-		assertTrue(sids.get(0) instanceof PrincipalSid);
+		assertThat(sids).isNotNull();
+		assertThat(sids).hasSize(4);
+		assertThat(sids.get(0)).isNotNull();
+		assertThat(sids.get(0) instanceof PrincipalSid).isTrue();
 
 		for (int i = 1; i < sids.size(); i++) {
-			assertTrue(sids.get(i) instanceof GrantedAuthoritySid);
+			assertThat(sids.get(i) instanceof GrantedAuthoritySid).isTrue();
 		}
 
-		assertEquals("scott", ((PrincipalSid) sids.get(0)).getPrincipal());
-		assertEquals("A", ((GrantedAuthoritySid) sids.get(1)).getGrantedAuthority());
-		assertEquals("B", ((GrantedAuthoritySid) sids.get(2)).getGrantedAuthority());
-		assertEquals("C", ((GrantedAuthoritySid) sids.get(3)).getGrantedAuthority());
+		assertThat(((PrincipalSid) sids.get(0)).getPrincipal()).isEqualTo("scott");
+		assertThat(((GrantedAuthoritySid) sids.get(1)).getGrantedAuthority()).isEqualTo("A");
+		assertThat(((GrantedAuthoritySid) sids.get(2)).getGrantedAuthority()).isEqualTo("B");
+		assertThat(((GrantedAuthoritySid) sids.get(3)).getGrantedAuthority()).isEqualTo("C");
 	}
 
 	@Test
@@ -62,9 +74,9 @@ public class SidRetrievalStrategyTests {
 		SidRetrievalStrategy strat = new SidRetrievalStrategyImpl(rh);
 
 		List<Sid> sids = strat.getSids(authentication);
-		assertEquals(2, sids.size());
-		assertNotNull(sids.get(0));
-		assertTrue(sids.get(0) instanceof PrincipalSid);
-		assertEquals("D", ((GrantedAuthoritySid) sids.get(1)).getGrantedAuthority());
+		assertThat(sids).hasSize(2);
+		assertThat(sids.get(0)).isNotNull();
+		assertThat(sids.get(0) instanceof PrincipalSid).isTrue();
+		assertThat(((GrantedAuthoritySid) sids.get(1)).getGrantedAuthority()).isEqualTo("D");
 	}
 }

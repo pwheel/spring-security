@@ -38,8 +38,7 @@ public class BasicLookupStrategyTestsDbHelper {
             sqlClassPathResource = ACL_SCHEMA_SQL_FILE_WITH_ACL_CLASS_ID;
 
         }
-        dataSource = new SingleConnectionDataSource(connectionUrl,
-            "sa", "", true);
+        dataSource = new SingleConnectionDataSource(connectionUrl, "sa", "", true);
         dataSource.setDriverClassName("org.hsqldb.jdbcDriver");
         jdbcTemplate = new JdbcTemplate(dataSource);
 

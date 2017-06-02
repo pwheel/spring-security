@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 the original author or authors.
+ * Copyright 2011-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -132,7 +132,7 @@ final class DefaultServiceAuthenticationDetails extends WebAuthenticationDetails
 	 * @return
 	 */
 	static Pattern createArtifactPattern(String artifactParameterName) {
-		Assert.hasLength(artifactParameterName);
+		Assert.hasLength(artifactParameterName, "artifactParameterName is expected to have a length");
 		return Pattern.compile("&?" + Pattern.quote(artifactParameterName) + "=[^&]*");
 	}
 

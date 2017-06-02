@@ -1,20 +1,22 @@
 /*
- * Copyright 2002-2012 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 package org.springframework.security.web.util.matcher;
 
-import static org.fest.assertions.Assertions.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import javax.servlet.http.HttpServletRequest;
@@ -24,7 +26,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 
 /**
  * @author Luke Taylor
@@ -32,6 +33,7 @@ import org.springframework.security.web.util.matcher.RegexRequestMatcher;
  */
 @RunWith(MockitoJUnitRunner.class)
 public class RegexRequestMatcherTests {
+
 	@Mock
 	private HttpServletRequest request;
 
@@ -41,7 +43,7 @@ public class RegexRequestMatcherTests {
 
 		MockHttpServletRequest request = new MockHttpServletRequest("POST", "/anything");
 
-		assertFalse(matcher.matches(request));
+		assertThat(matcher.matches(request)).isFalse();
 	}
 
 	@Test
@@ -51,7 +53,7 @@ public class RegexRequestMatcherTests {
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/anything");
 		request.setServletPath("/anything");
 
-		assertTrue(matcher.matches(request));
+		assertThat(matcher.matches(request)).isTrue();
 	}
 
 	@Test
@@ -64,14 +66,14 @@ public class RegexRequestMatcherTests {
 		request.setPathInfo("/path");
 		request.setQueryString("x=y");
 
-		assertTrue(matcher.matches(request));
+		assertThat(matcher.matches(request)).isTrue();
 	}
 
 	@Test
 	public void requestHasNullMethodMatches() {
 		RegexRequestMatcher matcher = new RegexRequestMatcher("/something/.*", "GET");
 		HttpServletRequest request = createRequestWithNullMethod("/something/here");
-		assertTrue(matcher.matches(request));
+		assertThat(matcher.matches(request)).isTrue();
 	}
 
 	// SEC-2084
@@ -79,21 +81,21 @@ public class RegexRequestMatcherTests {
 	public void requestHasNullMethodNoMatch() {
 		RegexRequestMatcher matcher = new RegexRequestMatcher("/something/.*", "GET");
 		HttpServletRequest request = createRequestWithNullMethod("/nomatch");
-		assertFalse(matcher.matches(request));
+		assertThat(matcher.matches(request)).isFalse();
 	}
 
 	@Test
 	public void requestHasNullMethodAndNullMatcherMatches() {
 		RegexRequestMatcher matcher = new RegexRequestMatcher("/something/.*", null);
 		HttpServletRequest request = createRequestWithNullMethod("/something/here");
-		assertTrue(matcher.matches(request));
+		assertThat(matcher.matches(request)).isTrue();
 	}
 
 	@Test
 	public void requestHasNullMethodAndNullMatcherNoMatch() {
 		RegexRequestMatcher matcher = new RegexRequestMatcher("/something/.*", null);
 		HttpServletRequest request = createRequestWithNullMethod("/nomatch");
-		assertFalse(matcher.matches(request));
+		assertThat(matcher.matches(request)).isFalse();
 	}
 
 	// SEC-2831

@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,8 +16,7 @@
 
 package org.springframework.security.config;
 
-import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
@@ -29,7 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.springframework.beans.factory.BeanCreationException;
+
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -41,7 +41,6 @@ import org.springframework.security.web.context.SecurityContextPersistenceFilter
 import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
-import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
  * Tests {@link FilterChainProxy}.
@@ -105,7 +104,7 @@ public class FilterChainProxyConfigTests {
 	public void pathWithNoMatchHasNoFilters() throws Exception {
 		FilterChainProxy filterChainProxy = appCtx.getBean(
 				"newFilterChainProxyNoDefaultPath", FilterChainProxy.class);
-		assertEquals(null, filterChainProxy.getFilters("/nomatch"));
+		assertThat(filterChainProxy.getFilters("/nomatch")).isEqualTo(null);
 	}
 
 	// SEC-1235
@@ -115,9 +114,9 @@ public class FilterChainProxyConfigTests {
 				FilterChainProxy.class);
 
 		List<SecurityFilterChain> chains = fcp.getFilterChains();
-		assertEquals("/login*", getPattern(chains.get(0)));
-		assertEquals("/logout", getPattern(chains.get(1)));
-		assertTrue(((DefaultSecurityFilterChain) chains.get(2)).getRequestMatcher() instanceof AnyRequestMatcher);
+		assertThat(getPattern(chains.get(0))).isEqualTo("/login*");
+		assertThat(getPattern(chains.get(1))).isEqualTo("/logout");
+		assertThat(((DefaultSecurityFilterChain) chains.get(2)).getRequestMatcher() instanceof AnyRequestMatcher).isTrue();
 	}
 
 	private String getPattern(SecurityFilterChain chain) {
@@ -128,24 +127,24 @@ public class FilterChainProxyConfigTests {
 	private void checkPathAndFilterOrder(FilterChainProxy filterChainProxy)
 			throws Exception {
 		List<Filter> filters = filterChainProxy.getFilters("/foo/blah;x=1");
-		assertEquals(1, filters.size());
-		assertTrue(filters.get(0) instanceof SecurityContextHolderAwareRequestFilter);
+		assertThat(filters).hasSize(1);
+		assertThat(filters.get(0) instanceof SecurityContextHolderAwareRequestFilter).isTrue();
 
 		filters = filterChainProxy.getFilters("/some;x=2,y=3/other/path;z=4/blah");
-		assertNotNull(filters);
-		assertEquals(3, filters.size());
-		assertTrue(filters.get(0) instanceof SecurityContextPersistenceFilter);
-		assertTrue(filters.get(1) instanceof SecurityContextHolderAwareRequestFilter);
-		assertTrue(filters.get(2) instanceof SecurityContextHolderAwareRequestFilter);
+		assertThat(filters).isNotNull();
+		assertThat(filters).hasSize(3);
+		assertThat(filters.get(0) instanceof SecurityContextPersistenceFilter).isTrue();
+		assertThat(filters.get(1) instanceof SecurityContextHolderAwareRequestFilter).isTrue();
+		assertThat(filters.get(2) instanceof SecurityContextHolderAwareRequestFilter).isTrue();
 
 		filters = filterChainProxy.getFilters("/do/not/filter;x=7");
-		assertEquals(0, filters.size());
+		assertThat(filters).isEmpty();
 
 		filters = filterChainProxy.getFilters("/another/nonspecificmatch");
-		assertEquals(3, filters.size());
-		assertTrue(filters.get(0) instanceof SecurityContextPersistenceFilter);
-		assertTrue(filters.get(1) instanceof UsernamePasswordAuthenticationFilter);
-		assertTrue(filters.get(2) instanceof SecurityContextHolderAwareRequestFilter);
+		assertThat(filters).hasSize(3);
+		assertThat(filters.get(0) instanceof SecurityContextPersistenceFilter).isTrue();
+		assertThat(filters.get(1) instanceof UsernamePasswordAuthenticationFilter).isTrue();
+		assertThat(filters.get(2) instanceof SecurityContextHolderAwareRequestFilter).isTrue();
 	}
 
 	private void doNormalOperation(FilterChainProxy filterChainProxy) throws Exception {

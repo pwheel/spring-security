@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,28 +16,30 @@
 
 package org.springframework.security.core;
 
-import junit.framework.TestCase;
-
-import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.context.support.MessageSourceAccessor;
-import org.springframework.security.core.SpringSecurityMessageSource;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Locale;
+
+import org.junit.Test;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.context.support.MessageSourceAccessor;
 
 /**
  * Tests {@link org.springframework.security.core.SpringSecurityMessageSource}.
  */
-public class SpringSecurityMessageSourceTests extends TestCase {
+public class SpringSecurityMessageSourceTests {
+
 	// ~ Methods
 	// ========================================================================================================
-
+	@Test
 	public void testOperation() {
 		SpringSecurityMessageSource msgs = new SpringSecurityMessageSource();
-		assertEquals("\u4E0D\u5141\u8BB8\u8BBF\u95EE", msgs.getMessage(
-				"AbstractAccessDecisionManager.accessDenied", null,
-				Locale.SIMPLIFIED_CHINESE));
+		assertThat("\u4E0D\u5141\u8BB8\u8BBF\u95EE").isEqualTo(
+				msgs.getMessage("AbstractAccessDecisionManager.accessDenied", null,
+						Locale.SIMPLIFIED_CHINESE));
 	}
 
+	@Test
 	public void testReplacableLookup() {
 		// Change Locale to English
 		Locale before = LocaleContextHolder.getLocale();
@@ -44,15 +47,16 @@ public class SpringSecurityMessageSourceTests extends TestCase {
 
 		// Cause a message to be generated
 		MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
-		assertEquals("Le jeton nonce est compromis FOOBAR", messages.getMessage(
-				"DigestAuthenticationFilter.nonceCompromised", new Object[] { "FOOBAR" },
-				"ERROR - FAILED TO LOOKUP"));
+		assertThat("Le jeton nonce est compromis FOOBAR").isEqualTo(
+				messages.getMessage("DigestAuthenticationFilter.nonceCompromised",
+						new Object[] { "FOOBAR" }, "ERROR - FAILED TO LOOKUP"));
 
 		// Revert to original Locale
 		LocaleContextHolder.setLocale(before);
 	}
 
 	// SEC-3013
+	@Test
 	public void germanSystemLocaleWithEnglishLocaleContextHolder() {
 		Locale beforeSystem = Locale.getDefault();
 		Locale.setDefault(Locale.GERMAN);
@@ -61,8 +65,8 @@ public class SpringSecurityMessageSourceTests extends TestCase {
 		LocaleContextHolder.setLocale(Locale.US);
 
 		MessageSourceAccessor msgs = SpringSecurityMessageSource.getAccessor();
-		assertEquals("Access is denied", msgs.getMessage(
-				"AbstractAccessDecisionManager.accessDenied", "Ooops"));
+		assertThat("Access is denied").isEqualTo(
+				msgs.getMessage("AbstractAccessDecisionManager.accessDenied", "Ooops"));
 
 		// Revert to original Locale
 		Locale.setDefault(beforeSystem);

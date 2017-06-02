@@ -1,10 +1,11 @@
-/* Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
+/*
+ * Copyright 2004, 2005, 2006 Acegi Technology Pty Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +20,7 @@ import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.ldap.core.DirContextAdapter;
 import org.springframework.ldap.core.DirContextOperations;
 import org.springframework.security.core.GrantedAuthority;
@@ -33,6 +35,7 @@ import org.springframework.util.Assert;
  * object.
  *
  * @author Luke Taylor
+ * @author Eddú Meléndez
  */
 public class LdapUserDetailsMapper implements UserDetailsContextMapper {
 	// ~ Instance fields
@@ -47,16 +50,17 @@ public class LdapUserDetailsMapper implements UserDetailsContextMapper {
 	// ~ Methods
 	// ========================================================================================================
 
+	@Override
 	public UserDetails mapUserFromContext(DirContextOperations ctx, String username,
 			Collection<? extends GrantedAuthority> authorities) {
 		String dn = ctx.getNameInNamespace();
 
-		logger.debug("Mapping user details from context with DN: " + dn);
+		this.logger.debug("Mapping user details from context with DN: " + dn);
 
 		LdapUserDetailsImpl.Essence essence = new LdapUserDetailsImpl.Essence();
 		essence.setDn(dn);
 
-		Object passwordValue = ctx.getObjectAttribute(passwordAttributeName);
+		Object passwordValue = ctx.getObjectAttribute(this.passwordAttributeName);
 
 		if (passwordValue != null) {
 			essence.setPassword(mapPassword(passwordValue));
@@ -65,12 +69,13 @@ public class LdapUserDetailsMapper implements UserDetailsContextMapper {
 		essence.setUsername(username);
 
 		// Map the roles
-		for (int i = 0; (roleAttributes != null) && (i < roleAttributes.length); i++) {
-			String[] rolesForAttribute = ctx.getStringAttributes(roleAttributes[i]);
+		for (int i = 0; (this.roleAttributes != null)
+				&& (i < this.roleAttributes.length); i++) {
+			String[] rolesForAttribute = ctx.getStringAttributes(this.roleAttributes[i]);
 
 			if (rolesForAttribute == null) {
-				logger.debug("Couldn't read role attribute '" + roleAttributes[i]
-						+ "' for user " + dn);
+				this.logger.debug("Couldn't read role attribute '"
+						+ this.roleAttributes[i] + "' for user " + dn);
 				continue;
 			}
 
@@ -103,6 +108,7 @@ public class LdapUserDetailsMapper implements UserDetailsContextMapper {
 
 	}
 
+	@Override
 	public void mapUserToContext(UserDetails user, DirContextAdapter ctx) {
 		throw new UnsupportedOperationException(
 				"LdapUserDetailsMapper only supports reading from a context. Please"
@@ -142,10 +148,10 @@ public class LdapUserDetailsMapper implements UserDetailsContextMapper {
 	 */
 	protected GrantedAuthority createAuthority(Object role) {
 		if (role instanceof String) {
-			if (convertToUpperCase) {
+			if (this.convertToUpperCase) {
 				role = ((String) role).toUpperCase();
 			}
-			return new SimpleGrantedAuthority(rolePrefix + role);
+			return new SimpleGrantedAuthority(this.rolePrefix + role);
 		}
 		return null;
 	}
