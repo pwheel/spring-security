@@ -17,13 +17,21 @@
  */
 package org.springframework.security.web.server;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Function;
 
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcherEntry;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 
+import org.springframework.web.server.handler.DefaultWebFilterChain;
+import org.springframework.web.server.handler.FilteringWebHandler;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -31,38 +39,34 @@ import reactor.core.publisher.Mono;
  * @since 5.0
  */
 public class WebFilterChainFilter implements WebFilter {
-	private final List<WebFilter> filters;
+	private final Flux<SecurityWebFilterChain> filters;
 
-	public WebFilterChainFilter(List<WebFilter> filters) {
-		super();
+	public WebFilterChainFilter(Flux<SecurityWebFilterChain> filters) {
 		this.filters = filters;
 	}
 
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-		SecurityWebFilterChain delegate = new SecurityWebFilterChain(chain, filters.iterator());
-		return delegate.filter(exchange);
+		return filters
+				.filterWhen( securityWebFilterChain -> securityWebFilterChain.matches(exchange))
+				.next()
+				.flatMap( securityWebFilterChain -> securityWebFilterChain.getWebFilters()
+					.collectList()
+				)
+				.map( filters -> new FilteringWebHandler(webHandler -> chain.filter(webHandler), filters))
+				.map( handler -> new DefaultWebFilterChain(handler) )
+				.flatMap( securedChain -> securedChain.filter(exchange));
 	}
 
-	static class SecurityWebFilterChain implements WebFilterChain {
-		private final WebFilterChain delegate;
-		private final Iterator<WebFilter> filters;
+	public static WebFilterChainFilter fromWebFiltersList(List<WebFilter> filters) {
+		return new WebFilterChainFilter(Flux.just(new MatcherSecurityWebFilterChain(ServerWebExchangeMatchers.anyExchange(), filters)));
+	}
 
-		public SecurityWebFilterChain(WebFilterChain delegate, Iterator<WebFilter> filters) {
-			super();
-			this.delegate = delegate;
-			this.filters = filters;
-		}
+	public static WebFilterChainFilter fromSecurityWebFilterChainsList(List<SecurityWebFilterChain> securityWebFilterChains) {
+		return new WebFilterChainFilter(Flux.fromIterable(securityWebFilterChains));
+	}
 
-		@Override
-		public Mono<Void> filter(ServerWebExchange exchange) {
-			if (filters.hasNext()) {
-				WebFilter filter = filters.next();
-				return filter.filter(exchange, this);
-			} else {
-				return delegate.filter(exchange);
-			}
-		}
-
+	public static WebFilterChainFilter fromSecurityWebFilterChains(SecurityWebFilterChain... securityWebFilterChains) {
+		return fromSecurityWebFilterChainsList(Arrays.asList(securityWebFilterChains));
 	}
 }

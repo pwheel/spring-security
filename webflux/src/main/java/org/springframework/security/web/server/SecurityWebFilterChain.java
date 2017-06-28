@@ -16,22 +16,20 @@
  *
  */
 
-package org.springframework.security.config.annotation.web.reactive;
+package org.springframework.security.web.server;
 
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
-
-import javax.servlet.http.HttpServletRequest;
-import java.lang.annotation.*;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Rob Winch
  * @since 5.0
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-@Documented
-@Import({HttpSecurityConfiguration.class, WebFluxSecurityConfiguration.class})
-@Configuration
-public @interface EnableWebFluxSecurity {
+public interface SecurityWebFilterChain {
+
+	Mono<Boolean> matches(ServerWebExchange exchange);
+
+	Flux<WebFilter> getWebFilters();
 }

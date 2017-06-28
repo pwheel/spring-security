@@ -19,13 +19,14 @@
 package sample;
 
 import org.springframework.context.annotation.Bean;
-import org.springframework.security.authentication.MapUserDetailsRepository;
+import org.springframework.security.core.userdetails.MapUserDetailsRepository;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.HttpSecurity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.WebFilterChainFilter;
 import org.springframework.security.web.server.authorization.AuthorizationContext;
 import reactor.core.publisher.Mono;
@@ -38,13 +39,14 @@ import reactor.core.publisher.Mono;
 public class SecurityConfig {
 
 	@Bean
-	WebFilterChainFilter springSecurityFilterChain(HttpSecurity http) throws Exception {
-		http.authorizeExchange()
-			.antMatchers("/admin/**").hasRole("ADMIN")
-			.antMatchers("/users/{user}/**").access(this::currentUserMatchesPath)
-			.anyExchange().authenticated();
-
-		return http.build();
+	SecurityWebFilterChain httpSecurity(HttpSecurity http) throws Exception {
+		return http
+			.authorizeExchange()
+				.pathMatchers("/admin/**").hasRole("ADMIN")
+				.pathMatchers("/users/{user}/**").access(this::currentUserMatchesPath)
+				.anyExchange().authenticated()
+				.and()
+			.build();
 	}
 
 	private Mono<AuthorizationDecision> currentUserMatchesPath(Mono<Authentication> authentication, AuthorizationContext context) {
