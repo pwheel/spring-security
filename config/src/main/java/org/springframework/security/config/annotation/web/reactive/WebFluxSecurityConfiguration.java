@@ -19,62 +19,51 @@
 package org.springframework.security.config.annotation.web.reactive;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.ReactiveAdapterRegistry;
-import org.springframework.security.authentication.ReactiveAuthenticationManager;
-import org.springframework.security.authentication.UserDetailsRepository;
-import org.springframework.security.authentication.UserDetailsRepositoryAuthenticationManager;
 import org.springframework.security.config.web.server.HttpSecurity;
-import org.springframework.security.web.reactive.result.method.annotation.AuthenticationPrincipalArgumentResolver;
-import org.springframework.security.web.server.context.WebSessionSecurityContextRepository;
-import org.springframework.web.reactive.config.WebFluxConfigurer;
-import org.springframework.web.reactive.result.method.annotation.ArgumentResolverConfigurer;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.WebFilterChainFilter;
+import org.springframework.util.ObjectUtils;
 
-import static org.springframework.security.config.web.server.HttpSecurity.http;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author Rob Winch
  * @since 5.0
  */
 @Configuration
-public class WebFluxSecurityConfiguration implements WebFluxConfigurer {
-	@Autowired(required = false)
-	private ReactiveAdapterRegistry adapterRegistry = new ReactiveAdapterRegistry();
+public class WebFluxSecurityConfiguration {
+	private static final String BEAN_NAME_PREFIX = "org.springframework.security.config.annotation.web.reactive.WebFluxSecurityConfiguration.";
+
+	private static final String SPRING_SECURITY_WEBFILTERCHAINFILTER_BEAN_NAME = BEAN_NAME_PREFIX + "WebFilterChainFilter";
 
 	@Autowired(required = false)
-	private ReactiveAuthenticationManager authenticationManager;
+	private List<SecurityWebFilterChain> securityWebFilterChains;
 
-	@Autowired(required = false)
-	private UserDetailsRepository userDetailsRepository;
+	@Autowired
+	ApplicationContext context;
 
-	@Override
-	public void configureArgumentResolvers(ArgumentResolverConfigurer configurer) {
-		configurer.addCustomResolver(authenticationPrincipalArgumentResolver());
+	@Bean(SPRING_SECURITY_WEBFILTERCHAINFILTER_BEAN_NAME)
+	public WebFilterChainFilter springSecurityWebFilterChainFilter() {
+		return WebFilterChainFilter.fromSecurityWebFilterChainsList(getSecurityWebFilterChains());
 	}
 
-	@Bean
-	public AuthenticationPrincipalArgumentResolver authenticationPrincipalArgumentResolver() {
-		return new AuthenticationPrincipalArgumentResolver(adapterRegistry);
-	}
-
-	@Bean
-	public HttpSecurity httpSecurity() {
-		HttpSecurity http = http();
-		http.httpBasic();
-		http.authenticationManager(authenticationManager());
-		http.securityContextRepository(new WebSessionSecurityContextRepository());
-		return http;
-	}
-
-	private ReactiveAuthenticationManager authenticationManager() {
-		if(authenticationManager != null) {
-			return authenticationManager;
+	private List<SecurityWebFilterChain> getSecurityWebFilterChains() {
+		List<SecurityWebFilterChain> result = securityWebFilterChains;
+		if(ObjectUtils.isEmpty(result)) {
+			return defaultSecurityWebFilterChains();
 		}
-		if(userDetailsRepository != null) {
-			return new UserDetailsRepositoryAuthenticationManager(userDetailsRepository);
-		}
-		return null;
+		return result;
+	}
+
+	private List<SecurityWebFilterChain> defaultSecurityWebFilterChains() {
+		HttpSecurity http = context.getBean(HttpSecurity.class);
+		http
+			.authorizeExchange()
+				.anyExchange().authenticated();
+		return Arrays.asList(http.build());
 	}
 }
