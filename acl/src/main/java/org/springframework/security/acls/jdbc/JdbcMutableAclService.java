@@ -20,23 +20,13 @@ import java.sql.SQLException;
 import java.util.List;
 
 import javax.sql.DataSource;
-
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.security.acls.domain.AccessControlEntryImpl;
 import org.springframework.security.acls.domain.GrantedAuthoritySid;
 import org.springframework.security.acls.domain.ObjectIdentityImpl;
 import org.springframework.security.acls.domain.PrincipalSid;
-import org.springframework.security.acls.model.AccessControlEntry;
-import org.springframework.security.acls.model.Acl;
-import org.springframework.security.acls.model.AclCache;
-import org.springframework.security.acls.model.AlreadyExistsException;
-import org.springframework.security.acls.model.ChildrenExistException;
-import org.springframework.security.acls.model.MutableAcl;
-import org.springframework.security.acls.model.MutableAclService;
-import org.springframework.security.acls.model.NotFoundException;
-import org.springframework.security.acls.model.ObjectIdentity;
-import org.springframework.security.acls.model.Sid;
+import org.springframework.security.acls.model.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -60,6 +50,14 @@ import org.springframework.util.Assert;
 public class JdbcMutableAclService extends JdbcAclService implements MutableAclService {
 	private static final String DEFAULT_INSERT_INTO_ACL_CLASS = "insert into acl_class (class) values (?)";
 	private static final String DEFAULT_INSERT_INTO_ACL_CLASS_WITH_ID = "insert into acl_class (class, class_id_type) values (?, ?)";
+
+	private static final String DEFAULT_SELECT_ACL_WITH_PARENT_SQL_WITH_CLASS_ID =
+			"SELECT obj.object_id_identity as obj_id, class.class as class, class.class_id_type as id_type "
+					+ "from acl_object_identity obj, acl_object_identity parent, acl_class class "
+					+ "where obj.parent_object = parent.id and obj.object_id_class = class.id "
+					+ "and parent.object_id_identity = ? and parent.object_id_class = ("
+					+ "select id from acl_class where acl_class.class = ?)";
+
 	// ~ Instance fields
 	// ================================================================================================
 
@@ -91,7 +89,8 @@ public class JdbcMutableAclService extends JdbcAclService implements MutableAclS
 	// ===================================================================================================
 
 	public JdbcMutableAclService(DataSource dataSource, LookupStrategy lookupStrategy,
-			AclCache aclCache) {
+			AclCache aclCache)
+	{
 		super(dataSource, lookupStrategy);
 		Assert.notNull(aclCache, "AclCache required");
 		this.aclCache = aclCache;
@@ -101,7 +100,8 @@ public class JdbcMutableAclService extends JdbcAclService implements MutableAclS
 	// ========================================================================================================
 
 	public MutableAcl createAcl(ObjectIdentity objectIdentity)
-			throws AlreadyExistsException {
+			throws AlreadyExistsException
+	{
 		Assert.notNull(objectIdentity, "Object Identity required");
 
 		// Check this object identity hasn't already been persisted
@@ -226,12 +226,10 @@ public class JdbcMutableAclService extends JdbcAclService implements MutableAclS
 
 		if (sid instanceof PrincipalSid) {
 			sidName = ((PrincipalSid) sid).getPrincipal();
-		}
-		else if (sid instanceof GrantedAuthoritySid) {
+		} else if (sid instanceof GrantedAuthoritySid) {
 			sidName = ((GrantedAuthoritySid) sid).getGrantedAuthority();
 			sidIsPrincipal = false;
-		}
-		else {
+		} else {
 			throw new IllegalArgumentException("Unsupported implementation of Sid");
 		}
 
@@ -241,13 +239,15 @@ public class JdbcMutableAclService extends JdbcAclService implements MutableAclS
 	/**
 	 * Retrieves the primary key from acl_sid, creating a new row if needed and the
 	 * allowCreate property is true.
+	 *
 	 * @param sidName name of Sid to find or to create
 	 * @param sidIsPrincipal whether it's a user or granted authority like role
 	 * @param allowCreate true if creation is permitted if not found
 	 * @return the primary key or null if not found
 	 */
 	protected Long createOrRetrieveSidPrimaryKey(String sidName, boolean sidIsPrincipal,
-			boolean allowCreate) {
+			boolean allowCreate)
+	{
 
 		List<Long> sidIds = jdbcTemplate.queryForList(selectSidPrimaryKey, new Object[] {
 				Boolean.valueOf(sidIsPrincipal), sidName }, Long.class);
@@ -267,7 +267,8 @@ public class JdbcMutableAclService extends JdbcAclService implements MutableAclS
 	}
 
 	public void deleteAcl(ObjectIdentity objectIdentity, boolean deleteChildren)
-			throws ChildrenExistException {
+			throws ChildrenExistException
+	{
 		Assert.notNull(objectIdentity, "Object Identity required");
 		Assert.notNull(objectIdentity.getIdentifier(),
 				"Object Identity doesn't provide an identifier");
@@ -279,8 +280,7 @@ public class JdbcMutableAclService extends JdbcAclService implements MutableAclS
 					deleteAcl(child, true);
 				}
 			}
-		}
-		else {
+		} else {
 			if (!foreignKeysInDatabase) {
 				// We need to perform a manual verification for what a FK would normally
 				// do
@@ -335,15 +335,14 @@ public class JdbcMutableAclService extends JdbcAclService implements MutableAclS
 	 * NOT create a row (use {@link #createObjectIdentity(ObjectIdentity, Sid)} instead).
 	 *
 	 * @param oid to find
-	 *
 	 * @return the object identity or null if not found
 	 */
-	protected Long retrieveObjectIdentityPrimaryKey(ObjectIdentity oid) {
+	protected Long retrieveObjectIdentityPrimaryKey(ObjectIdentity oid)
+	{
 		try {
 			return jdbcTemplate.queryForObject(selectObjectIdentityPrimaryKey, Long.class,
 					oid.getType(), oid.getIdentifier());
-		}
-		catch (DataAccessException notFound) {
+		} catch (DataAccessException notFound) {
 			return null;
 		}
 	}
@@ -399,7 +398,7 @@ public class JdbcMutableAclService extends JdbcAclService implements MutableAclS
 
 		if (acl.getParentAcl() != null) {
 			Assert.isInstanceOf(ObjectIdentityImpl.class, acl.getParentAcl()
-					.getObjectIdentity(),
+							.getObjectIdentity(),
 					"Implementation only supports ObjectIdentityImpl");
 
 			ObjectIdentityImpl oii = (ObjectIdentityImpl) acl.getParentAcl()
@@ -443,12 +442,14 @@ public class JdbcMutableAclService extends JdbcAclService implements MutableAclS
 	}
 
 	public void setDeleteEntryByObjectIdentityForeignKeySql(
-			String deleteEntryByObjectIdentityForeignKey) {
+			String deleteEntryByObjectIdentityForeignKey)
+	{
 		this.deleteEntryByObjectIdentityForeignKey = deleteEntryByObjectIdentityForeignKey;
 	}
 
 	public void setDeleteObjectIdentityByPrimaryKeySql(
-			String deleteObjectIdentityByPrimaryKey) {
+			String deleteObjectIdentityByPrimaryKey)
+	{
 		this.deleteObjectIdentityByPrimaryKey = deleteObjectIdentityByPrimaryKey;
 	}
 
@@ -501,6 +502,12 @@ public class JdbcMutableAclService extends JdbcAclService implements MutableAclS
 				this.insertClass = DEFAULT_INSERT_INTO_ACL_CLASS_WITH_ID;
 			} else {
 				log.debug("Insert class statement has already been overridden, so not overridding the default");
+			}
+			//Change the default find children statement if hasn't been overriden
+			if (this.findChildrenSql.equals(DEFAULT_SELECT_ACL_WITH_PARENT_SQL)) {
+				this.findChildrenSql = DEFAULT_SELECT_ACL_WITH_PARENT_SQL_WITH_CLASS_ID;
+			} else {
+				log.debug("Find children statement has already been overridden, so not overridding the default");
 			}
 		}
 	}
