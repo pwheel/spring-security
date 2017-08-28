@@ -15,6 +15,7 @@
  */
 package org.springframework.security.acls.jdbc;
 
+import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -22,17 +23,12 @@ import java.util.List;
 import java.util.Map;
 
 import javax.sql.DataSource;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.security.acls.domain.ObjectIdentityImpl;
-import org.springframework.security.acls.model.Acl;
-import org.springframework.security.acls.model.AclService;
-import org.springframework.security.acls.model.NotFoundException;
-import org.springframework.security.acls.model.ObjectIdentity;
-import org.springframework.security.acls.model.Sid;
+import org.springframework.security.acls.model.*;
 import org.springframework.util.Assert;
 
 /**
@@ -49,18 +45,18 @@ public class JdbcAclService implements AclService {
 	// =====================================================================================
 
 	protected static final Log log = LogFactory.getLog(JdbcAclService.class);
-	private static final String DEFAULT_SELECT_ACL_WITH_PARENT_SQL = "select obj.object_id_identity as obj_id, class.class as class "
+	protected static final String DEFAULT_SELECT_ACL_WITH_PARENT_SQL = "select obj.object_id_identity as obj_id, class.class as class "
 			+ "from acl_object_identity obj, acl_object_identity parent, acl_class class "
 			+ "where obj.parent_object = parent.id and obj.object_id_class = class.id "
 			+ "and parent.object_id_identity = ? and parent.object_id_class = ("
-			+ "select id FROM acl_class where acl_class.class = ?)";
+			+ "select id from acl_class where acl_class.class = ?)";
 
 	// ~ Instance fields
 	// ================================================================================================
 
 	protected final JdbcTemplate jdbcTemplate;
 	private final LookupStrategy lookupStrategy;
-	private String findChildrenSql = DEFAULT_SELECT_ACL_WITH_PARENT_SQL;
+	protected String findChildrenSql = DEFAULT_SELECT_ACL_WITH_PARENT_SQL;
 
 	// ~ Constructors
 	// ===================================================================================================
@@ -80,15 +76,30 @@ public class JdbcAclService implements AclService {
 		List<ObjectIdentity> objects = jdbcTemplate.query(findChildrenSql, args,
 				new RowMapper<ObjectIdentity>() {
 					public ObjectIdentity mapRow(ResultSet rs, int rowNum)
-							throws SQLException {
+							throws SQLException
+					{
 						String javaType = rs.getString("class");
-						Long identifier = new Long(rs.getLong("obj_id"));
+						Serializable identifier;
+						try {
+							String type = rs.getString("id_type");
+							try {
+								identifier = (Serializable) rs.getObject("obj_id", Class.forName(type));
+							} catch (ClassNotFoundException e) {
+								e.printStackTrace();
+								identifier = rs.getString("obj_id");
+							}
+						} catch (SQLException e) {
+							//no aclClassIdSupported set, thus no column for id class exists
+							identifier = new Long(rs.getLong("obj_id"));
+						}
 
 						return new ObjectIdentityImpl(javaType, identifier);
 					}
 				});
 
-		if (objects.size() == 0) {
+		if (objects.size() == 0)
+
+		{
 			return null;
 		}
 
@@ -96,7 +107,8 @@ public class JdbcAclService implements AclService {
 	}
 
 	public Acl readAclById(ObjectIdentity object, List<Sid> sids)
-			throws NotFoundException {
+			throws NotFoundException
+	{
 		Map<ObjectIdentity, Acl> map = readAclsById(Arrays.asList(object), sids);
 		Assert.isTrue(map.containsKey(object),
 				"There should have been an Acl entry for ObjectIdentity " + object);
@@ -109,12 +121,14 @@ public class JdbcAclService implements AclService {
 	}
 
 	public Map<ObjectIdentity, Acl> readAclsById(List<ObjectIdentity> objects)
-			throws NotFoundException {
+			throws NotFoundException
+	{
 		return readAclsById(objects, null);
 	}
 
 	public Map<ObjectIdentity, Acl> readAclsById(List<ObjectIdentity> objects,
-			List<Sid> sids) throws NotFoundException {
+			List<Sid> sids) throws NotFoundException
+	{
 		Map<ObjectIdentity, Acl> result = lookupStrategy.readAclsById(objects, sids);
 
 		// Check every requested object identity was found (throw NotFoundException if
